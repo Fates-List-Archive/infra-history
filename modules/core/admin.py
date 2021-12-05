@@ -62,7 +62,7 @@ class BotActions():
             if banner:
                 banner = ireplacem((("(", ""), (")", ""), ("http://", "https://")), banner)
                 if not banner.startswith("https://"):
-                    return f"Your {banner_name} does not use https://. Please change it" # Check banner and ensure HTTPS
+                    return f"Your {banner_name} does not use the secure protocol (https://). Please change it" # Check banner and ensure HTTPS
                 try:
                     async with aiohttp.ClientSession() as sess:
                         async with sess.head(banner, timeout=30) as res:
@@ -70,12 +70,12 @@ class BotActions():
                                 # Banner URL does not support head, try get
                                 async with sess.get(self.banner, timeout=30) as res_fallback:
                                     if res_fallback.status != 200:
-                                        return f"Could not download {banner_name} using either GET or HEAD! Is your URL correct"
+                                        return f"Could not download {banner_name} using either GET or HEAD! Is your URL correct?"
                                     imgres = res_fallback
                             else:
                                 imgres = res
                 except Exception as exc:
-                    return f"Something happened when trying to get the url for {banner_name}: {exc}"
+                    return f"Something wrong happened when trying to get the url for {banner_name}: {exc}"
             
                 ct = imgres.headers.get("Content-Type", "").replace(" ", "")
                 if ct.split("/")[0] != "image":
@@ -98,7 +98,7 @@ class BotActions():
                 return "Your privacy policy must be a proper URL starting with https://. URLs which start with http:// will be automatically converted to HTTPS while adding"
         check = await vanity_check(self.bot_id, self.vanity) # Check if vanity is already being used or is reserved
         if check:
-            return "Your custom vanity URL is already in use or is reserved"
+            return "The custom vanity URL you are trying to get is already in use or is reserved"
         if self.webhook_secret and len(self.webhook_secret) < 8:
             return "Your webhook secret must be at least 8 characters long"
 
@@ -111,7 +111,7 @@ class BotActions():
         lock = await self.db.fetchval("SELECT lock FROM bots WHERE bot_id = $1", int(self.bot_id))
         lock = enums.BotLock(lock)
         if lock != enums.BotLock.unlocked:
-            return f"This bot cannot be edited as it has been locked with a code of {int(lock)}: ({lock.__doc__}). If this bot is not staff staff locked, join the support server and run +unlock <BOT> to unlock it."
+            return f"This bot cannot be edited as it has been locked with a code of {int(lock)}: ({lock.__doc__}). If this bot is not staff locked, join the support server and run /unlock <BOT> to unlock it."
 
         check = await is_bot_admin(int(self.bot_id), int(self.user_id)) # Check for owner
         if not check:
