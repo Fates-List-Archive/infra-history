@@ -7,7 +7,7 @@ from typing import Optional, Union
 import asyncio
 import io
 import uuid
-from config import ilovepings_role, addbotping_role, newsping_role, role_channel, main_botdev_role, main_certdev_role, bronze_user_role
+from config import ilovepings_role, addbotping_role, newsping_role, role_channel, main_botdev_role, main_certdev_role, bronze_user_role, giveaway_role
 
 class RoleMenu(discord.ui.View):
     def __init__(self, bot, public, roles):
@@ -32,7 +32,13 @@ class RoleMenu(discord.ui.View):
             value="addbotping", 
             description="Choose this role if you want to be pinged for any new bot added. Required by all bot reviewers", 
             emoji="🤙"
-        )        
+        )
+        self.select_menu.add_option(
+            label="Giveaway/Events Ping",
+            value="giveaway",
+            description="Get notified when Fates List does **giveaways and events**!",
+            emoji="🎉"
+        )
         self.add_item(self.select_menu)
         
         
@@ -137,7 +143,7 @@ class Roles(commands.Cog):
         except Exception as exc:
             print(exc, "...retrying")
             return await self._rolemenu(channel, public)
-        roles = {"ilovepings": ilovepings_role, "addbotping": addbotping_role, "newsping": newsping_role}
+        roles = {"ilovepings": ilovepings_role, "addbotping": addbotping_role, "newsping": newsping_role, "giveaway": giveaway_role}
         view = RoleMenu(bot=self.bot, public=public, roles=roles)
         embed = Embed(title="Fates List Roles", description="Hey there 👋! Please grab your roles here. Use +roles for Bot/Certified Developer roles!")
         msg = await channel.send(embed=embed, view=view)

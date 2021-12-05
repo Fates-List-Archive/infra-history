@@ -121,8 +121,6 @@ async def render_bot(request: Request, bt: BackgroundTasks, bot_id: int, api: bo
     owners_html = gen_owner_html(owners_lst)
     if bot["features"] is not None:
         bot["features"] = "<br/>".join([f"<a class='long-desc-link' href='/feature/{feature}'>{features[feature]['name']}</a>" for feature in bot["features"]])
-    else:
-        bot["features"] = ""
 
     bot_extra = {
         "owners_html": owners_html, 

@@ -19,6 +19,7 @@ ilovepings_role = 848602909687676998
 main_botdev_role = bot_dev_role
 reports_channel = 874246366958870528
 staff_ping_role = 874247676391194724
+giveaway_role = 904288064426348586
 support_channel = 838648883675922462
 main_certdev_role = certified_dev_role
 staff_apps_channel = 874246379713728543
