@@ -10,15 +10,15 @@
         <h3 class="text-center" style="color: rgba(255,255,255,0.87);font-weight: bold;">{{bot.username}}</h3>
 	{% if bot.state == enums.BotState.denied %}
         	<div class="alert alert-danger" style="text-align: center; justify-content: center; color: white !important;" role="alert">
-        		<strong>This bot has been DENIED from this bot list for violating our rules or being a low-quality bot. Please do not invite it.</strong>
+        		<strong>This bot has been reviewed and denied by our staff team because it didn' meet our standards. Please do not invite it.</strong>
 		</div>
 	{% elif bot.state == enums.BotState.banned %}
 		<div class="alert alert-danger" style="text-align: center; justify-content: center; color: white !important;" role="alert">
-			<strong>This bot has been BANNED from this bot list for violating our rules or being a low-quality bot. Please do not invite it.</strong>
+			<strong>This bot has been banned from FatesList for violating our rules. Please do not invite it.</strong>
 		</div>
 	{% elif bot.queue_state == enums.BotState.pending %}
         	<div class="alert alert-danger" style="text-align: center; justify-content: center; color: white !important;" role="alert">
-        		<strong>This bot has not yet been verified/approved on this bot list and it may violate our rules or be a low-quality bot. Please do not invite it yet</strong>
+        		<strong>This bot hasn't been reviewed by our staff team yet and may violate our rules or be a low-quality bot. Please do not invite it yet</strong>
 		</div>
 	{% endif %}
 	<h3 style="margin 0 auto; color: white;font-weight: bold; font-size: 20px;">Please vote for {{bot.username}} now!</h3>
