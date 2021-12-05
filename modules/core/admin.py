@@ -127,7 +127,10 @@ class BotActions():
         if check is not None:
             return check # Base check erroring means return base check without continuing as string return means error
 
-        if (await self.db.fetchrow("SELECT bot_id FROM bots WHERE bot_id = $1", self.bot_id)) is not None:
+        state = await self.db.fetchval("SELECT state FROM bots WHERE bot_id = $1", self.bot_id)
+        if state is not None:
+            if state in (enums.BotState.denied, enums.BotState.banned):
+                return f"This bot has been banned or denied from Fates List.<br/><br/>If you own this bot and wish to appeal this, click <a href='/bot/{self.bot_id}/settings#actions-button-fl'>here</a>"
             return "This bot already exists on Fates List" # Dont add bots which already exist
 
     async def add_bot(self):

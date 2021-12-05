@@ -32,9 +32,11 @@ function submitBot() {
 	if(context.mode == "edit") {
 	    json.bot_id = context.bot_id
 	    method = "PATCH"
+	    mod = "editted successfully!"
 	}
 	else {
 	    method = "PUT"
+	    mod = "added to our queue"
 	}
 	context.form_values.select_multiple.forEach(function (key) {
 		json[key] = document.querySelector(`#${key}`).values
@@ -49,19 +51,11 @@ function submitBot() {
 		userAuth: true,
 		json: json,
 		statusCode: {
-			202: function() {
-				modalShow("Success", "Your bot (and its changes) has been added to the RabbitMQ queue. Your page should auto refresh to it in a few minutes")
-				setTimeout(setInterval(function(){
-				request({
-					url: `/api/bots/${json.bot_id}`,
-					method: "HEAD",
-					statusCode: {
-						200: function(){
-							window.location.replace(`/bot/${json.bot_id}`)
-						}
-					}
-				})
-				}, 2000), 1000);
+			200: function() {
+				modalShow("Success", "Your bot has been " + mod + ". You will be redirected to it in a few moments")
+				setTimeout(function(){
+					window.location.replace(`/bot/${json.bot_id}`)
+				}, 1000);
 			}
 		}
 	})

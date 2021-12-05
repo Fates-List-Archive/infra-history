@@ -28,7 +28,7 @@ CREATE TABLE bots (
     api_token text unique not null,
     website text,
     discord text,
-    state integer DEFAULT 1,
+    state integer not null DEFAULT 1,
     banner_card text,
     banner_page text,
     keep_banner_decor boolean default true,

@@ -69,7 +69,6 @@ async def get_cache_user(request: Request, user_id: int):
 async def add_bot(request: Request, user_id: int, bot_id: int, bot: BotMeta, worker_session = Depends(worker_session)):
     """
     Adds a bot to fates list
-    Due to backward compatibility, this will return a 202 and not a 200 on success
     """
     bot_dict = bot.dict()
     bot_dict["bot_id"] = bot_id
@@ -77,7 +76,7 @@ async def add_bot(request: Request, user_id: int, bot_id: int, bot: BotMeta, wor
     bot_adder = BotActions(worker_session.postgres, bot_dict)
     rc = await bot_adder.add_bot()
     if rc is None:
-        return api_success(f"{site_url}/bot/{bot_id}", status_code = 202)
+        return api_success()
     return api_error(rc)
 
 @router.patch(
@@ -95,7 +94,6 @@ async def add_bot(request: Request, user_id: int, bot_id: int, bot: BotMeta, wor
 async def edit_bot(request: Request, user_id: int, bot_id: int, bot: BotMeta):
     """
     Edits a bot, the owner here must be the owner editing the bot.
-    Due to backward compatibility, this will return a 202 and not a 200 on success
     """
     bot_dict = bot.dict()
     bot_dict["bot_id"] = bot_id
@@ -103,7 +101,7 @@ async def edit_bot(request: Request, user_id: int, bot_id: int, bot: BotMeta):
     bot_editor = BotActions(db, bot_dict)
     rc = await bot_editor.edit_bot()
     if rc is None:
-        return api_success(status_code = 202)
+        return api_success()
     return api_error(rc)
 
 @router.delete(

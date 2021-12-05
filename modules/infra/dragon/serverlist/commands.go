@@ -267,7 +267,19 @@ func CmdInit() map[string]types.SlashCommand {
 				return ""
 			}
 
-			// Hand,e invite channel
+			if field == "long_description_type" {
+				if value == "0" || value == "html" {
+					value = "0"
+				} else if value == "1" || value == "markdown_pymarkdown" {
+					value = "1"
+				} else if value == "2" || value == "markdown_marked" || value == "markdown" {
+					value = "2"
+				} else {
+					return "Long Description Type must be one of (html, markdown_pymarkdown, markdown_marked, markdown)"
+				}
+			}
+
+			// Handle invite channel
 			if field == "invite_channel" && value != "" {
 				value = numericRegex.ReplaceAllString(value, "")
 				_, err := context.Discord.State.Channel(value)
