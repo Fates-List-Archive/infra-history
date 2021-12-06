@@ -8,10 +8,11 @@ import uuid
 
 import websockets
 
-from modules.models import enums
-
 sys.path.append(".")
 sys.path.append("../../../")
+sys.path.append("/home/meow/FatesList")
+
+from modules.models import enums
 
 URL = "wss://fateslist.xyz/api/dragon/ws/"
 

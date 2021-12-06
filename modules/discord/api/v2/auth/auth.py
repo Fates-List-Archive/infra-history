@@ -101,7 +101,7 @@ async def login_user(request: Request, data: Login, worker_session = Depends(wor
 
     request.session["scopes"] = orjson.dumps(data.scopes).decode("utf-8")
     request.session["access_token"] = orjson.dumps(access_token.dict()).decode("utf-8")
-    request.session["user_id"] = int(userjson["id"])
+    request.session["user_id"] = str(userjson["id"])
     request.session["username"], request.session["avatar"] = userjson["username"], avatar
     request.session["user_token"], request.session["user_css"] = token, css
     request.session["js_allowed"], request.session["site_lang"] = js_allowed, site_lang
