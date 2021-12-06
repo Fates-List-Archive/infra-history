@@ -66,7 +66,7 @@ class WebhookType(IntEnum):
     _init_ = 'value __doc__'
     vote = 0, "Vote Webhook"
     discord = 1, "Discord Integration"
-    fc = 2, "Fates Client"
+    fc = 2, "Fates Client (deprecated)"
 
 class Status(IntEnum):
     """Status object (See https://docs.fateslist.xyz/basics/basic-structures#status for more information)"""
