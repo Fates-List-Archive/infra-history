@@ -144,7 +144,7 @@ function testHook(url, type) {
   }
 
 function hideSaveOnAboutTab(id, evt, data) {
-	if(id == "about" || id == "actions") {
+	if(id == "about" || id == "actions" || id == "analytics") {
 		document.querySelector("#save-changes").style.display = "none"
 	}
 	else {
@@ -152,6 +152,19 @@ function hideSaveOnAboutTab(id, evt, data) {
 	}
 }
 
+var ws = null
+function listenAnalytics() {
+	if(ws) {
+		ws.websocket.close()
+	}
+	document.querySelector("#output-analytics").textContent = ""
+	ws = new FatesWS(context.bot_id, context.bot_token, true, false, true)
+	ws.hooks.event = function(cls, data) {
+		if(data.chan == "global") return; // Global channel is not yet implemented
+		document.querySelector("#output-analytics").textContent += "\n\n" + JSON.stringify(data.dat)
+	}
+	ws.start()
+}
 
 function submitAppeal() {
 	modalShow("Sending appeal...", "Please wait while Fates List sends your appeal real quick!")

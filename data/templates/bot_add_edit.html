@@ -101,6 +101,7 @@
 				{% if context.mode == "edit" %}
 					{{ tab("about", default=True) }}
 					{{ tab("actions") }}
+					{{ tab("analytics") }}
 				{% endif %}
 				{{ tab("basic-settings", name="Basics", default=True if context.mode == "add" else False) }}
 				{{ tab("webhook", name="Webhooks") }}
@@ -172,6 +173,13 @@
 				<h5 class="white section">Delete Bot</h5>
 				<p class="white info-content"><span class="red">Warning:</span> This <em>cannot</em> be undone and you <em>will</em> lose any perks your bot may have such as certification and any votes your bot may have. Think twice before proceeding as not even staff can revert bot deletions, even if accidental...</p>
 				<button class="btn btn-danger" onclick="deleteBot()">Delete Bot</button>
+			</section>
+			<section id="analytics-tab" class="tabcontent">
+				<h5 class="white">Bot Analytics (Beta)</h5>
+				<button class="section btn btn-outline-light" onclick="listenAnalytics()">Listen</button>
+				<div id="output-analytics" class="white" style="border: 1px solid; min-height: 400px; max-height: 400px; overflow: scroll; text-align: left; padding: 3px; white-space: pre-line;">
+					Events will be seen here once you start listening!
+				</div>
 			</section>
 			{% endif %}
 			<section id="basic-settings-tab" class="tabcontent">
@@ -380,7 +388,10 @@
 			select_multiple: {{form_values_select_multiple|tojson}}
 		}
 	</script>
-	<script src="/static/assets/prod/bot_add_edit.min.js?v=39"></script>
+	<script src="/static/assets/prod/bot_add_edit.min.js?v=45"></script>
+	{% if context.mode == "edit" %}
+		<script src="/static/assets/prod/ws.min.js?v=1"></script>
+	{% endif %}
 	<script src="/static/assets/prod/tabs.min.js?v=4" defer></script>
 	<script src="https://cdn.jsdelivr.net/npm/select-pure@latest/dist/index.js"></script>
 {% endblock %}
