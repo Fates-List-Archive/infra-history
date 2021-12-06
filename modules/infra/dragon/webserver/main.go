@@ -181,7 +181,11 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			ok, webhookType, secret, webhookURL := common.GetWebhook(ctx, "bots", vote.BotID, db)
 
 			if ok {
-				go common.WebhookReq(ctx, db, eventId, webhookURL, secret, voteStr, 0)
+				if webhookType == types.DiscordWebhook {
+					go common.SendIntegration(common.DiscordMain, vote.UserID, vote.BotID, webhookURL, int(votes))
+				} else {
+					go common.WebhookReq(ctx, db, eventId, webhookURL, secret, voteStr, 0)
+				}
 				log.Debug("Got webhook type of " + strconv.Itoa(int(webhookType)))
 			}
 

@@ -95,18 +95,22 @@ async def new_review(request: Request, user_id: int, data: BotReviewPartialExt):
     if data.reply:
         await db.execute("UPDATE reviews SET replies = replies || $1 WHERE id = $2", [id], data.id)
         
-    await bot_add_event(
-        data.target_id, 
-        enums.APIEvents.review_add,
+    await add_ws_event(
+        data.target_id,
         {
-            "user": str(user_id), 
-            "reply": data.reply,
-            "id": str(id),
-            "star_rating": data.star_rating,
-            "review": data.review,
-            "root": data.id
+            "m": {
+                "e": enums.APIEvents.review_add,
+            },
+            "ctx": {
+                "user": str(user_id), 
+                "reply": data.reply,
+                "id": str(id),
+                "star_rating": data.star_rating,
+                "review": data.review,
+                "root": data.id
+            },
         },
-        guild=(data.target_type == enums.ReviewType.server)
+        type="server" if data.target_type == enums.ReviewType.server else "bot"
     )
 
     # Recache reviews
@@ -135,7 +139,7 @@ async def edit_review(request: Request, user_id: int, id: uuid.UUID, data: BotRe
         )
 
     check = await db.fetchrow(
-        "SELECT COUNT(1) FROM reviews WHERE id = $1 AND user_id = $2", 
+        "SELECT reply, target_id, target_type FROM reviews WHERE id = $1 AND user_id = $2", 
         id,
         user_id,
     )
@@ -149,6 +153,23 @@ async def edit_review(request: Request, user_id: int, id: uuid.UUID, data: BotRe
         data.review, 
         [time.time()],
         id
+    )
+
+    await add_ws_event(
+        check["target_id"],
+        {
+            "m": {
+                "e": enums.APIEvents.review_edit,
+            },
+            "ctx": {
+                "user": str(user_id),
+                "reply": check["reply"],
+                "id": str(id),
+                "star_rating": data.star_rating,
+                "review": data.review,
+            },
+        },
+        type="server" if check["target_type"] == enums.ReviewType.server else "bot"
     )
 
     # Recache reviews
@@ -172,7 +193,7 @@ async def edit_review(request: Request, user_id: int, id: uuid.UUID, data: BotRe
 )
 async def delete_review(request: Request, user_id: int, id: uuid.UUID):
     check = await db.fetchrow(
-        "SELECT reply, replies FROM reviews WHERE id = $1 AND user_id = $2", 
+        "SELECT reply, replies, target_id, target_type, star_rating FROM reviews WHERE id = $1 AND user_id = $2", 
         id, 
         user_id
     )
@@ -183,7 +204,23 @@ async def delete_review(request: Request, user_id: int, id: uuid.UUID):
     await db.execute("DELETE FROM reviews WHERE id = $1", id)
     for review in check["replies"]:
         await db.execute("DELETE FROM reviews WHERE id = $1", review)
-        
+    
+    await add_ws_event(
+        check["target_id"],
+        {
+            "m": {
+                "e": enums.APIEvents.review_delete,
+            },
+            "ctx": {
+                "user": str(user_id),
+                "reply": check["reply"],
+                "id": str(id),
+                "star_rating": check["star_rating"]
+            },
+        },
+        type="server" if check["target_type"] == enums.ReviewType.server else "bot"
+    )
+
     # Recache reviews
     await parse_reviews(
         request.app.state.worker_session, 
@@ -204,7 +241,7 @@ async def delete_review(request: Request, user_id: int, id: uuid.UUID):
 )
 async def vote_review_api(request: Request, user_id: int, rid: uuid.UUID, vote: BotReviewVote):
     """Creates a vote for a review"""
-    bot_rev = await db.fetchrow("SELECT target_id, target_type, review_upvotes, review_downvotes, star_rating, reply, review_text FROM reviews WHERE id = $1", rid)
+    bot_rev = await db.fetchrow("SELECT target_id, target_type, review_upvotes, review_downvotes, star_rating, reply FROM reviews WHERE id = $1", rid)
     if bot_rev is None:
         return api_error("You are not allowed to up/downvote this review (doesn't actually exist)")
     bot_rev = dict(bot_rev)
@@ -224,8 +261,24 @@ async def vote_review_api(request: Request, user_id: int, rid: uuid.UUID, vote: 
                 break
     bot_rev[main_key].append(user_id)
     await db.execute("UPDATE reviews SET review_upvotes = $1, review_downvotes = $2 WHERE id = $3", bot_rev["review_upvotes"], bot_rev["review_downvotes"], rid)
-    # TODO: fix this if needed
-    await bot_add_event(bot_rev["target_id"], enums.APIEvents.review_vote, {"user": str(user_id), "id": str(rid), "star_rating": bot_rev["star_rating"], "reply": bot_rev["reply"], "review": bot_rev["review_text"], "upvotes": len(bot_rev["review_upvotes"]), "downvotes": len(bot_rev["review_downvotes"]), "upvote": vote.upvote}, guild=(bot_rev["target_type"] == enums.ReviewType.server))
+    await add_ws_event(
+        bot_rev["target_id"], 
+        {
+            "m": {
+                "e": enums.APIEvents.review_vote, 
+            },
+            "ctx": {
+                "user": str(user_id), 
+                "id": str(rid), 
+                "star_rating": bot_rev["star_rating"], 
+                "reply": bot_rev["reply"], 
+                "upvotes": len(bot_rev["review_upvotes"]), 
+                "downvotes": len(bot_rev["review_downvotes"]), 
+                "upvote": vote.upvote
+            },
+        },
+        type="server" if bot_rev["target_type"] == enums.ReviewType.server else "bot"
+    )
     
     # Recache reviews
     await parse_reviews(

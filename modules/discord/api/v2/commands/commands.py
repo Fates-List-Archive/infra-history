@@ -45,7 +45,17 @@ async def add_commands(request: Request, bot_id: int, commands: BotCommands):
         id = uuid.uuid4()
         await db.execute("INSERT INTO bot_commands (id, bot_id, cmd_groups, cmd_type, cmd_name, description, args, examples, premium_only, notes, doc_link, vote_locked) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", id, bot_id, command.cmd_groups, command.cmd_type, command.cmd_name, command.description, command.args, command.examples, command.premium_only, command.notes, command.doc_link, command.vote_locked)
         ids.append(str(id))
-    await bot_add_event(bot_id, enums.APIEvents.command_add, {"user": None, "id": ids})
+    await add_ws_event(
+        bot_id,
+        {
+            "m": {
+                "e": enums.APIEvents.command_add, 
+            },
+            "ctx": {
+                "id": ids
+            }
+        }
+    )
     return api_success(id = ids)
 
 @router.delete(
@@ -69,12 +79,34 @@ async def delete_commands(request: Request, bot_id: int, commands: BotCommandDel
     """
     if commands.nuke:
         await db.execute("DELETE FROM bot_commands WHERE bot_id = $1", bot_id)
-        await bot_add_event(bot_id, enums.APIEvents.command_delete, {"user": None, "ids": [], "names": [], "nuke": True})
+        await add_ws_event(
+            bot_id, 
+            {
+                "m": {
+                    "e": enums.APIEvents.command_delete, 
+                },
+                "ctx": {
+                    "nuke": True
+                }
+            }
+        )
         return api_success()
 
     for id in commands.ids:
         await db.execute("DELETE FROM bot_commands WHERE id = $1 AND bot_id = $2", id, bot_id)
     for name in commands.names:
         await db.execute("DELETE FROM bot_commands WHERE cmd_name = $1 AND bot_id = $2", name, bot_id)
-    await bot_add_event(bot_id, enums.APIEvents.command_delete, {"user": None, "ids": commands.ids, "names": commands.names, "nuke": False})
+    await add_ws_event(
+        bot_id, 
+        {
+            "m": {
+                "e": enums.APIEvents.command_delete, 
+            },
+            "ctx": {
+                "ids": commands.ids,
+                "names": commands.names, 
+                "nuke": False
+            }
+        }
+    )
     return api_success()

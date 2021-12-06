@@ -302,18 +302,6 @@ func setupCommands() {
 		MaxArgs: 3,
 	}
 
-	// BTADD <COMMAND ID> <TASK ID>
-	ipcActions["BTADD"] = types.IPCCommand{
-		Handler: func(cmd []string, context types.IPCContext) string {
-			task_id := cmd[2]
-			context.Redis.RPush(ctx, "bt_ongoing", task_id)
-			go taskHandle(ctx, context.Discord, context.Redis, context.Postgres, task_id)
-			return "0"
-		},
-		MinArgs: 3,
-		MaxArgs: 3,
-	}
-
 	// GETADMINOPS <COMMAND ID>
 	ipcActions["GETADMINOPS"] = types.IPCCommand{
 		Handler: func(cmd []string, context types.IPCContext) string {
@@ -512,17 +500,6 @@ func StartIPC(dbpool *pgxpool.Pool, discord *discordgo.Session, serverlist *disc
 
 			res := val.Handler(op, ipcContext)
 			rdb.Set(ctx, cmd_id, res, commandExpiryTime)
-		}
-	}
-
-	// Get all tasks first
-	done := false
-	for !done {
-		cmd_id := rdb.RPop(ctx, "bt_ongoing").Val()
-		if cmd_id == "" {
-			done = true
-		} else {
-			go taskHandle(ctx, discord, rdb, dbpool, cmd_id)
 		}
 	}
 

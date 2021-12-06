@@ -213,10 +213,11 @@ async def invite_bot(bot_id: int, user_id=None, api=False):
         "SELECT invite, invite_amount FROM bots WHERE bot_id = $1", bot_id)
     if bot is None:
         return None
+    bot = dict(bot)
     if not bot["invite"] or bot["invite"].startswith("P:"):
         perm = (bot["invite"].split(":")[1].split("|")[0]
                 if bot["invite"] and bot["invite"].startswith("P:") else 0)
-        return f"https://discord.com/api/oauth2/authorize?client_id={bot_id}&permissions={perm}&scope=bot%20applications.commands"
+        bot["invite"] = f"https://discord.com/api/oauth2/authorize?client_id={bot_id}&permissions={perm}&scope=bot%20applications.commands"
     if not api:
         await db.execute(
             "UPDATE bots SET invite_amount = $1 WHERE bot_id = $2",

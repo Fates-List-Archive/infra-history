@@ -8,9 +8,7 @@ from .ipc import redis_ipc_new
 
 
 async def add_ws_event(target: int, ws_event: dict, *, id: Optional[uuid.UUID] = None, type: str = "bot") -> None:
-    """A WS Event must have the following format:
-        - {e: Event Name, t: Event Type (Optional), ctx: Context, m: Event Metadata}
-    """
+    """Create websocket event"""
     if not id:
         id = uuid.uuid4()
     id = str(id)
@@ -33,4 +31,3 @@ async def bot_add_event(bot_id: int, event: int, context: dict, t: Optional[int]
 
     event_time = time.time()
     asyncio.create_task(add_ws_event(bot_id, {"ctx": context, "m": {"t": t if t else -1, "ts": event_time, "e": event}}))
-    await redis_ipc_new(redis_db, "BTADD", msg={"op": 0, "ctx": context, "data": orjson.dumps({"id": str(bot_id), "event": event, "bot": (not guild), "ts": float(event_time), "t": t if t else -1, "vote_count": context.get("votes", -1), "user": context.get("user", -1)}).decode("utf-8")})

@@ -351,6 +351,8 @@ func (c *Client) writePump() {
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
+			// Then send an OP code of ping
+			sendWsData(c, "ping", "")
 		}
 	}
 }
