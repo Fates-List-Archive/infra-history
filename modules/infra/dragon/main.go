@@ -16,13 +16,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	siteUrl = "https://fateslist.xyz"
-)
-
-var testsDone int
-var testsSuccess int
-
 func main() {
 	lvl, ok := os.LookupEnv("LOG_LEVEL")
 	if !ok {
