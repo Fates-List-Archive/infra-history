@@ -152,16 +152,31 @@ function hideSaveOnAboutTab(id, evt, data) {
 	}
 }
 
+// Analytics
 var ws = null
+
 function listenAnalytics() {
 	if(ws) {
-		ws.websocket.close()
+		ws.close(1015)
 	}
 	document.querySelector("#output-analytics").textContent = ""
 	ws = new FatesWS(context.bot_id, context.bot_token, true, false, true)
 	ws.hooks.event = function(cls, data) {
 		if(data.chan == "global") return; // Global channel is not yet implemented
-		document.querySelector("#output-analytics").textContent += "\n\n" + JSON.stringify(data.dat)
+
+		let eStr = JSON.stringify(data.dat)
+		console.log(Events, data.dat.m.e)
+		let userStr = data.dat.ctx.user
+		if(userStr == "0" || !userStr) {
+			userStr = "Anonymous/Not logged in"
+		}
+		let tsStr = `timestamp ${data.dat.m.ts}`
+		if(data.dat.m.e == Events.ViewEvent) {
+			eStr = `User (${userStr}) is viewing your bot at ${tsStr}`
+		} else if (data.dat.m.e == Events.InviteEvent) {
+			eStr = `User (${userStr}) is interested in your bot and has clicked the 'Invite' button at ${tsStr}`
+		}
+		document.querySelector("#output-analytics").textContent += "\n\n" + eStr
 	}
 	ws.start()
 }

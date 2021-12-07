@@ -98,7 +98,7 @@ func AddRecacheGuild(context context.Context, postgres *pgxpool.Pool, guild *dis
 	var err error
 	if check.Status != pgtype.Present {
 		apiToken := common.RandString(198)
-		_, err = postgres.Exec(context, "INSERT INTO servers (guild_id, guild_count, api_token, name_cached, avatar_cached, nsfw) VALUES ($1, $2, $3, $4, $5, $6)", guild.ID, memberCount, apiToken, guild.Name, guild.IconURL(), nsfw)
+		_, err = postgres.Exec(context, "INSERT INTO servers (guild_id, guild_count, api_token, name_cached, avatar_cached, nsfw, owner_id) VALUES ($1, $2, $3, $4, $5, $6, $7)", guild.ID, memberCount, apiToken, guild.Name, guild.IconURL(), nsfw, guild.OwnerID)
 		if err != nil {
 			return dbError(err)
 		}

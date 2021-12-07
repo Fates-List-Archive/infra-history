@@ -66,4 +66,21 @@ class FatesWS {
 	event(cls, data) {
 		console.log(data)
 	}
+
+	close(code) {
+		if(!code) {
+			code = 1000
+		}
+		this.websocket.close(code)
+	}
 }
+
+class EventsClass {
+	constructor() {
+		this.VoteEvent = 0
+		this.ViewEvent = 16
+		this.InviteEvent = 17
+	}
+}
+
+var Events = new EventsClass()
