@@ -1,5 +1,12 @@
 package tests
 
+const (
+	siteUrl = "https://fateslist.xyz"
+)
+
+var testsDone int
+var testsSuccess int
+
 func testURLStatus(method string, url string, statusCode ...int) bool {
 	log.Info("Testing " + url + " with method " + method)
 	testsDone += 1
