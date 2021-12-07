@@ -3,6 +3,7 @@ package main
 import (
 	"dragon/common"
 	"dragon/server"
+	"dragon/tests"
 	"io"
 	"math/rand"
 	"net/http"
@@ -29,8 +30,8 @@ func main() {
 
 	if common.CliCmd == "dragon.server" {
 		server.DragonServer()
-		os.Exit(0)
 	} else if common.CliCmd == "dragon.test" {
+		tests.Test()
 	} else {
 		cmdFunc := strings.Replace(common.CliCmd, ".", "_", -1)
 		pyCmd := "from modules.core._manage import " + cmdFunc + "; " + cmdFunc + "()"
@@ -48,4 +49,5 @@ func main() {
 		devserver.Stderr = os.Stderr
 		devserver.Run()
 	}
+	os.Exit(0)
 }
