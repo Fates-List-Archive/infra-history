@@ -1,22 +1,5 @@
 {% extends "base/base.html" %}
 
-{# Set some global variables for the form handling in js to easily serialize it #}
-{% set form_values_text = [] %}
-{% set form_values_select_single = [] %}
-{% set form_values_select_multiple = [] %}
-{% set actions = False %}
-
-
-{% macro tip(text) %}
-	<div class="d-inline-block white alert alert-info tip" role="alert">
-		<span class="iconify" data-icon="foundation:lightbulb" data-inline="false" data-height="1.5em"></span>{{text|safe}}
-	</div>
-{% endmacro %}
-{% macro optional() %}
-	{{ tip("Everything in this section is completely optional") }}
-{% endmacro %}
-
-
 {% macro save() %}
 	<section id="save-changes">
 		<br/>
@@ -25,55 +8,6 @@
 		<p style="margin-bottom: 20px"></p>
 	</section>
 {% endmacro %}
-{% macro textInput(label, id, placeholder, min=None, max=None, required=False, type="text", textarea=False, in_form=True) %}
-	{% set val = bot[id] if context.mode == "edit" and bot.get(id) else '' %}
-	{% if in_form %}
-		{% set _ = form_values_text.append(id) %}
-	{% endif %}
-	<div>
-	<label for="{{id}}">{{label}} {% if required %}<span style="color: red; font-weight: bold" aria-hidden="true">*</span>{% endif %}</label>
-	<{{"textarea" if textarea else "input"}}
-	  class="form-control fform text-input" 
-       	  placeholder="{{placeholder}}" 
-	  type="{{type}}" 
-	  name="{{id}}"
-	  id="{{id}}"
-	  {% if required %}required{% endif %}
-	  {% if min %}minlength="{{min}}"{% endif %}
-	  {% if max %}maxlength="{{max}}"{% endif %} 
-	  {% if not textarea %}value="{{ val }}"{% endif %}>{% if textarea %}{{val}}{% endif %}</{{"textarea" if textarea else "input"}}>
-	 </div>
-{% endmacro %}
-{% macro selectInput(id, label, help_text, choices, multiple=False, required=False, in_form=True) %}
-	{% if in_form %}
-		{% if multiple %}
-			{% set _ = form_values_select_multiple.append(id) %}
-		{% else %}
-			{% set _ = form_values_select_single.append(id) %}
-		{% endif %}
-	{% endif %}
-	<label for="{{id}}">{{label}} {% if required %}<span style="color: red; font-weight: bold" aria-hidden="true">*</span>{% endif %}</label>
-	<div class="fform fform-select">
-		<select-pure class="select-pure-fl" id="{{id}}" name="{{id}}" default-label="{{help_text}}" {% if multiple %}multiple{% endif %} {% if required %} required {% endif %}>
-		<option-pure value="" disabled="" hidden="">{{help_text}}</option-pure>
-		{% for choice in choices %}
-			{% if choice.value in ("true", "false") %}
-				{% set value = (choice.value == "true") %}
-			{% else %}
-				{% set value = choice.value %}
-			{% endif %}
-			<option-pure 
-			  value="{{choice.value}}"
-			  {% if (context.mode == "add" and choice.default) or ((context.mode == "edit" and id in bot.keys()) and ((not multiple and bot[id] == value) or (multiple and value in bot[id]))) %}selected{% endif %}
-			>{{choice.text}}</option-pure>
-		{% endfor %}
-	</select-pure>
-	</div>
-{% endmacro %}
-{% macro tab(id, default=False, name=None) %}
-	<button id="{{id}}-button" class="tablinks" onclick="openf(event, '{{id}}', this, {{1 if default else 0}}, hideSaveOnAboutTab)">{{name if name else id.title() }}</button>
-{% endmacro %}
-
 
 {% block head %}
 	<link rel="stylesheet" href="/static/assets/prod/bot_server.min.css" media="none" onload="if(media!='all')media='all'"/>
