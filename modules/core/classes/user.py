@@ -12,7 +12,7 @@ class User(DiscordUser):
         """Fetch a user object from our cache"""
         return await get_user(self.id)
 
-    async def profile(self):
+    async def profile(self, bot_logs: bool = True):
         """Gets a users profile"""
         user = await self.db.fetchrow(
             "SELECT badges, state, description, css, js_allowed FROM users WHERE user_id = $1", 
@@ -28,8 +28,11 @@ class User(DiscordUser):
         
         user = dict(user)
 
-        user["bot_logs"] = await self.db.fetch("SELECT bot_id, action, action_time FROM user_bot_logs WHERE user_id = $1", self.id)
-    
+        if bot_logs:
+            user["bot_logs"] = await self.db.fetch("SELECT bot_id, action, action_time FROM user_bot_logs WHERE user_id = $1", self.id)
+        else:
+            bot_logs = []
+
         # TODO: This whole section
         _bots = await self.db.fetch(
             """SELECT bots.description, bots.prefix, bots.banner_card AS banner, bots.state, bots.votes, 

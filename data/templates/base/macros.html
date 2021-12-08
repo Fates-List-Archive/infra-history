@@ -114,3 +114,6 @@
 {% macro tab(id, default=False, name=None) %}
 	<button id="{{id}}-button" class="tablinks" onclick="openf(event, '{{id}}', this, {{1 if default else 0}}, hideSaveOnAboutTab)">{{name if name else id.title() }}</button>
 {% endmacro %}
+
+{% block html %}
+{% endblock %}

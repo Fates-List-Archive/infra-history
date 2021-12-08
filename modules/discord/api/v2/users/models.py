@@ -12,7 +12,6 @@ class UpdateUserPreferences(BaseModel):
     """Setting field to null and/or omitting it means no change to said field"""
 
     js_allowed: bool | None = None
-    reset_token: bool | None = None
     description: str | None = None
     css: str | None = None
 

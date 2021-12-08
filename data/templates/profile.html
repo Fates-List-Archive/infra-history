@@ -20,13 +20,6 @@
         <h3 class="text-center" style="color: rgba(255,255,255,0.87);font-weight: bold;">{{user.user.username}}</h3>
 	<span style="font-size: 20px" class="white">
 		<span id="bio_text-0" style="opacity: 0.7">{{user.profile.description}}</span>
-		{% if personal %}
-		<a role="button" aria-label="Edit Profile" href="javascript:void" class="long-desc-link" style="color: white !important; opacity: 0.7; font-size: 14px" onclick="pbioEditPane(this, 0)">Edit</a>
-		<form id="bio-0" style="display: none; width: 100% !important" onsubmit="updateBio()">
-			<input type="text" class="fform form-control" style="width: 30em !important" id="bio-form-0" value="{{user.profile.description}}" placeholder="Enter your bio here" minlength="13" required>
-			<button type="submit" class="btn btn-outline-light">Edit</button>
-		</form>
-                {% endif %}
 	</span>
 	<section style="margin-top: 7px; padding: 3px;" id="badges">
 		<div>
@@ -40,47 +33,11 @@
     <p class="white">Denied Bots: {{staff_action_get(enums.UserBotAction.deny).__len__()}}</p>
     <p class="white">Certified Bots: {{staff_action_get(enums.UserBotAction.certify).__len__()}}</p>
     {% if personal %}
-    <hr style="font-size: 20px;border-top-width: 1px;border-top-color: #eee;width: 90%;">
-    <div class="d-flex pane">
-	<span class="iconify" data-icon="fa-solid:lock" data-inline="false" data-height="3em" style="color: white"></span>
-    	<h4 class="white" style="color: rgba(255,255,255,0.87);margin-left: 15px;">Profile Settings</h4>
-    </div>
-    <section id="js">
-    <div class="d-flex pane" style="margin-top: 10px;">
-    	<h5 class="white">JavaScript</h5>
-    </div>
-    <div class="d-flex pane">
-    <aside class="white" style="text-align: left; opacity: 0.8">JavaScript in bots is a huge power and responsibility Fates List gives to bot owners to make their bot pages more interactive. Some (rare) bot owners however, despite all our testing and reporting abuse JavaScript and iframes to deliver potentially malicious content. You can disable or enable javascript and iframes in bot pages here! Note that this does not apply to markdown content which is anyways secure but this may be changed in the future...</aside>
-    </div>
-    <div class="d-flex pane">
-	    <span style="font-size: 18px; margin-top: 5px" class="white padspan">JavaScript Enabled: {{context.js_allowed}} <span style="font-size: 11px"></span></span><br/>
-    </div>
-    <div class="d-flex pane">
-	    <button class="btn btn-outline-light" onclick="toggleJS()">{% if context.js_allowed %}Disable{% else %}Enable{% endif %}</a></span></p>
-    </div>
-    <br/>
-    </div>
-    </section>
-    <section id="apitok">
-    <div class="d-flex pane">
-	    <h5 class="white">User Token</h5>
-    </div>
-    <div class="d-flex pane">
+    <a href="/profile/{{context.user_id}}/edit" class="btn btn-outline-light">Edit Profile</a>
+    {% endif %}
+    <!-- <div class="d-flex pane">
 	    <aside class="white" style="text-align: left; opacity: 0.8">Your User Token allows you to interact with our user APIs to do things like changing your description every set amount of time, setting your javascript state using a command and much more. However, with great power comes great responsibility. Do not share this user token with anyone, ever. Doing so will allow said users to add bots using the API as you (will be fixed soon with oauth enforcement)</aside>
-    </div>
-    <div class="d-flex pane">
-	    <span style="font-size: 18px; margin-top: 5px" class="white padspan">Click the Show button to see your user token</span><br>
-    </div>
-    <div class="d-flex pane">
-        <button class="btn btn-outline-light" style="margin-bottom: 20px; margin-right: 4px;" onclick="showToken()" id="sat">Show</button>
-	<button onclick='regenUserToken()' class="btn btn-outline-light">Regenerate</button>
-    </div>
-    <div class="d-flex pane">
-    <code id="user_tok" class="white" style="background: black"></code>
-    </div>
-    </section>
-    {%endif%}
-
+    </div> -->
     <hr style="font-size: 20px;border-top-width: 1px;border-top-color: #eee;width: 90%;">
     <div class="d-flex" style="margin-left: 5%;"><span class="iconify" data-icon="fa-solid:robot" data-inline="false" data-height="3em" style="color: white"></span>
 	    <h4 style="color: rgba(255,255,255,0.87);margin-left: 15px;">{% if not personal %}{{user.user.username}}'s Bots{%else%}Your Bots{%endif%}</h4>

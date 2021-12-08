@@ -25,6 +25,16 @@ async def fetch_user(request: Request, user_id: int, worker_session = Depends(wo
     return user
 
 @router.patch(
+    "/{user_id}/token",
+    dependencies = [
+        Depends(user_auth_check)
+    ]
+)
+async def regenerate_user_token(request: Request, user_id: int):
+    await db.execute("UPDATE users SET api_token = $1 WHERE user_id = $2", get_token(132), user_id)
+    return api_success()
+
+@router.patch(
     "/{user_id}/preferences",
     dependencies = [
         Depends(user_auth_check)
@@ -35,8 +45,6 @@ async def update_user_preferences(request: Request, user_id: int, data: UpdateUs
     if data.js_allowed is not None:
         await db.execute("UPDATE users SET js_allowed = $1 WHERE user_id = $2", data.js_allowed, user_id)
         request.session["js_allowed"] = data.js_allowed
-    if data.reset_token:
-        await db.execute("UPDATE users SET api_token = $1 WHERE user_id = $2", get_token(132), user_id)
     if data.description is not None:
         await db.execute("UPDATE users SET description = $1 WHERE user_id = $2", data.description, user_id)
     if data.css is not None:
