@@ -16,6 +16,17 @@ type StaffRole struct {
 	FriendlyName string  `json:"fname"`
 }
 
+type UserBotAuditLog int
+
+const (
+	UserBotApprove UserBotAuditLog = 0
+	UserBotDeny    UserBotAuditLog = 1
+	UserBotCertify UserBotAuditLog = 2
+	UserBotBan     UserBotAuditLog = 3
+	UserBotClaim   UserBotAuditLog = 4
+	UserBotUnclaim UserBotAuditLog = 5
+)
+
 type StaffRoles map[string]StaffRole
 
 type IPCContext struct {

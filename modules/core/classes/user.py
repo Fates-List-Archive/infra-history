@@ -15,7 +15,7 @@ class User(DiscordUser):
     async def profile(self):
         """Gets a users profile"""
         user = await self.db.fetchrow(
-            "SELECT bot_logs, badges, state, description, css, js_allowed FROM users WHERE user_id = $1", 
+            "SELECT badges, state, description, css, js_allowed FROM users WHERE user_id = $1", 
             self.id
         )
         
@@ -28,7 +28,7 @@ class User(DiscordUser):
         
         user = dict(user)
 
-        user["bot_logs"] = orjson.loads(user["bot_logs"])
+        user["bot_logs"] = await self.db.fetch("SELECT bot_id, action, action_time FROM user_bot_logs WHERE user_id = $1", self.id)
     
         # TODO: This whole section
         _bots = await self.db.fetch(

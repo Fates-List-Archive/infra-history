@@ -101,6 +101,15 @@ class BotState(IntEnum):
     private_viewable = 8, "Private, but viewable with link (server only)"
     private_staff_only = 9, "Private, only staff may join (server only)"
 
+class UserBotAction(IntEnum):
+    _init_ = "value __doc__"
+    approve = 0, "Approve"
+    deny = 1, "Deny"
+    certify = 2, "Certify"
+    ban = 3, "Ban"
+    claim = 4, "Claim"
+    unclaim = 5, "Unclaim"
+
 class LongDescType(IntEnum):
     _init_ = 'value __doc__'
     html = 0, "HTML/Raw Description"

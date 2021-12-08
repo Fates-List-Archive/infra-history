@@ -56,7 +56,8 @@ async def get_user_profile(request, user_id: int, preview: bool, worker_session)
             "request": request, 
             "user": user, 
             "personal": (personal or admin) and not preview, 
-            "admin": admin
+            "admin": admin,
+            "staff_action_get": lambda action: [obj for obj in user["profile"]["bot_logs"] if obj["action"] == action]
         },
         context = context
     )

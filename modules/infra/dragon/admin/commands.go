@@ -22,32 +22,10 @@ var (
 	commandNameCache = make(map[string]string)
 )
 
-func UpdateBotLogs(ctx context.Context, postgres *pgxpool.Pool, userId string, botId string, state string) {
-	var check pgtype.JSONB
-	err := postgres.QueryRow(ctx, "SELECT bot_logs[$1] FROM users WHERE user_id = $2", state, userId).Scan(&check)
+func UpdateBotLogs(ctx context.Context, postgres *pgxpool.Pool, userId string, botId string, action types.UserBotAuditLog) {
+	_, err := postgres.Exec(ctx, "INSERT INTO user_bot_logs (user_id, bot_id, action) VALUES ($1, $2, $3)", userId, botId, action)
 	if err != nil {
 		log.Error(err)
-	}
-
-	baseBot := map[string]interface{}{
-		"id": botId,
-		"ts": float64(time.Now().Unix()) + 0.001, // Make sure its a float by adding 0.001
-	}
-
-	baseBotArr := []map[string]interface{}{baseBot}
-
-	// Check if it exists and is {} or if it does not exist
-	if check.Status != pgtype.Present || len(check.Bytes) < 3 {
-		log.Warn("User " + userId + " does not have a bot log for state " + state)
-		_, err = postgres.Exec(ctx, "UPDATE users SET bot_logs = bot_logs || $1 WHERE user_id = $2", map[string]interface{}{state: baseBotArr}, userId)
-		if err != nil {
-			log.Error(err)
-		}
-	} else {
-		_, err = postgres.Exec(ctx, "UPDATE users SET bot_logs[$1] = bot_logs[$1] || $2 WHERE user_id = $3", state, baseBotArr, userId)
-		if err != nil {
-			log.Error(err)
-		}
 	}
 }
 
@@ -260,7 +238,7 @@ func CmdInit() map[string]types.SlashCommand {
 
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1 WHERE bot_id = $2", types.BotStateUnderReview.Int(), context.Bot.ID)
 
-			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.BotStateUnderReview.ValStr())
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.UserBotApprove)
 
 			if err != nil {
 				log.Error(err)
@@ -301,7 +279,7 @@ func CmdInit() map[string]types.SlashCommand {
 
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1 WHERE bot_id = $2", types.BotStatePending.Int(), context.Bot.ID)
 
-			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.BotStatePending.ValStr())
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.UserBotUnclaim)
 
 			if err != nil {
 				log.Error(err)
@@ -351,7 +329,7 @@ func CmdInit() map[string]types.SlashCommand {
 			}
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", types.BotStateBanned.Int(), context.User.ID, context.Bot.ID)
 
-			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.BotStateBanned.ValStr())
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.UserBotBan)
 
 			if err != nil {
 				log.Error(err)
@@ -451,7 +429,7 @@ func CmdInit() map[string]types.SlashCommand {
 
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1 WHERE bot_id = $3", types.BotStateCertified.Int(), context.Bot.ID)
 
-			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.BotStateCertified.ValStr())
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.UserBotCertify)
 
 			if err != nil {
 				log.Error(err)
@@ -624,7 +602,7 @@ func CmdInit() map[string]types.SlashCommand {
 
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1, verifier = $2, guild_count = $3 WHERE bot_id = $4", types.BotStateApproved.Int(), context.User.ID, guild_count, context.Bot.ID)
 
-			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.BotStateApproved.ValStr())
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.UserBotApprove)
 
 			if err != nil {
 				log.Error(err)
@@ -717,7 +695,7 @@ func CmdInit() map[string]types.SlashCommand {
 
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", types.BotStateDenied.Int(), context.User.ID, context.Bot.ID)
 
-			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.BotStateDenied.ValStr())
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.UserBotDeny)
 
 			if err != nil {
 				log.Error(err)

@@ -148,8 +148,14 @@ CREATE TABLE users (
     css text default '',
     state integer default 0, -- 0 = No Ban, 1 = Global Ban
     coins INTEGER DEFAULT 0,
-    js_allowed BOOLEAN DEFAULT false,
-    bot_logs jsonb not null default '{}'::jsonb
+    js_allowed BOOLEAN DEFAULT false
+);
+
+CREATE TABLE user_bot_logs (
+    user_id BIGINT NOT NULL,
+    bot_id BIGINT NOT NULL,
+    action_time timestamptz NOT NULL DEFAULT NOW(),
+    action integer not null -- 0 = approve
 );
 
 CREATE TABLE user_reminders (

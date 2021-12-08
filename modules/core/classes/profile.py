@@ -32,4 +32,4 @@ class Profile(BaseModel):
     certified_bots: list[ProfileBot]
     profile: ProfileData
     user: enums.BaseUser
-    bot_logs: dict    
+    bot_logs: list[dict]   
