@@ -4,6 +4,7 @@ from .badge import Badge
 from modules.core.cache import get_user
 from modules.core.helpers import redis_ipc_new
 from modules.models import enums   
+import orjson
 
 class User(DiscordUser):
     """A user on Fates List"""
@@ -14,7 +15,7 @@ class User(DiscordUser):
     async def profile(self):
         """Gets a users profile"""
         user = await self.db.fetchrow(
-            "SELECT badges, state, description, css, js_allowed FROM users WHERE user_id = $1", 
+            "SELECT bot_logs, badges, state, description, css, js_allowed FROM users WHERE user_id = $1", 
             self.id
         )
         
@@ -26,6 +27,8 @@ class User(DiscordUser):
             return None
         
         user = dict(user)
+
+        user["bot_logs"] = orjson.loads(user["bot_logs"])
     
         # TODO: This whole section
         _bots = await self.db.fetch(

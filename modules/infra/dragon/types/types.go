@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/Fates-List/discordgo"
 	"github.com/go-redis/redis/v8"
@@ -205,6 +206,7 @@ var (
 
 type BotStateInterface interface {
 	Int() int
+	ValStr() string
 	Str() string
 }
 
@@ -215,6 +217,10 @@ type BotState struct {
 
 func (s BotState) Int() int {
 	return s.Value
+}
+
+func (s BotState) ValStr() string {
+	return strconv.Itoa(s.Value)
 }
 
 func (s BotState) Str() string {

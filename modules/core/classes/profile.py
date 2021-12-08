@@ -32,5 +32,4 @@ class Profile(BaseModel):
     certified_bots: list[ProfileBot]
     profile: ProfileData
     user: enums.BaseUser
-    dup: bool
-    
+    bot_logs: dict    

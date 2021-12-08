@@ -1,5 +1,13 @@
 package tests
 
+import (
+	"net/http"
+	"strconv"
+	"time"
+
+	log "github.com/sirupsen/logrus"
+)
+
 const (
 	siteUrl = "https://fateslist.xyz"
 )

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"dragon/common"
 	"dragon/types"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/jackc/pgtype"
+	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,6 +21,35 @@ var (
 	commands         = make(map[string]types.AdminOp)
 	commandNameCache = make(map[string]string)
 )
+
+func UpdateBotLogs(ctx context.Context, postgres *pgxpool.Pool, userId string, botId string, state string) {
+	var check pgtype.JSONB
+	err := postgres.QueryRow(ctx, "SELECT bot_logs[$1] FROM users WHERE user_id = $2", state, userId).Scan(&check)
+	if err != nil {
+		log.Error(err)
+	}
+
+	baseBot := map[string]interface{}{
+		"id": botId,
+		"ts": float64(time.Now().Unix()) + 0.001, // Make sure its a float by adding 0.001
+	}
+
+	baseBotArr := []map[string]interface{}{baseBot}
+
+	// Check if it exists and is {} or if it does not exist
+	if check.Status != pgtype.Present || len(check.Bytes) < 3 {
+		log.Warn("User " + userId + " does not have a bot log for state " + state)
+		_, err = postgres.Exec(ctx, "UPDATE users SET bot_logs = bot_logs || $1 WHERE user_id = $2", map[string]interface{}{state: baseBotArr}, userId)
+		if err != nil {
+			log.Error(err)
+		}
+	} else {
+		_, err = postgres.Exec(ctx, "UPDATE users SET bot_logs[$1] = bot_logs[$1] || $2 WHERE user_id = $3", state, baseBotArr, userId)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+}
 
 // Admin OP Getter
 func CmdInit() map[string]types.SlashCommand {
@@ -228,6 +259,9 @@ func CmdInit() map[string]types.SlashCommand {
 			}
 
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1 WHERE bot_id = $2", types.BotStateUnderReview.Int(), context.Bot.ID)
+
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.BotStateUnderReview.ValStr())
+
 			if err != nil {
 				log.Error(err)
 			}
@@ -266,6 +300,9 @@ func CmdInit() map[string]types.SlashCommand {
 			}
 
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1 WHERE bot_id = $2", types.BotStatePending.Int(), context.Bot.ID)
+
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.BotStatePending.ValStr())
+
 			if err != nil {
 				log.Error(err)
 			}
@@ -313,6 +350,8 @@ func CmdInit() map[string]types.SlashCommand {
 				log.Warn(err)
 			}
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", types.BotStateBanned.Int(), context.User.ID, context.Bot.ID)
+
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.BotStateBanned.ValStr())
 
 			if err != nil {
 				log.Error(err)
@@ -411,6 +450,8 @@ func CmdInit() map[string]types.SlashCommand {
 			}
 
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1 WHERE bot_id = $3", types.BotStateCertified.Int(), context.Bot.ID)
+
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.BotStateCertified.ValStr())
 
 			if err != nil {
 				log.Error(err)
@@ -583,6 +624,8 @@ func CmdInit() map[string]types.SlashCommand {
 
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1, verifier = $2, guild_count = $3 WHERE bot_id = $4", types.BotStateApproved.Int(), context.User.ID, guild_count, context.Bot.ID)
 
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.BotStateApproved.ValStr())
+
 			if err != nil {
 				log.Error(err)
 				return "Got an error when trying to update the database. Please report this: " + err.Error()
@@ -673,6 +716,8 @@ func CmdInit() map[string]types.SlashCommand {
 			}
 
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", types.BotStateDenied.Int(), context.User.ID, context.Bot.ID)
+
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.BotStateDenied.ValStr())
 
 			if err != nil {
 				log.Error(err)
