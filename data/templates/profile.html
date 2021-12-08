@@ -36,6 +36,9 @@
 		</div>
 	</section>
     </div>
+    <p class="white">Approved Bots: {{user.profile.bot_logs[enums.BotState.approved.value.__str__()].__len__()}}</p>
+    <p class="white">Denied Bots: {{user.profile.bot_logs[enums.BotState.denied.value.__str__()].__len__()}}</p>
+    <p class="white">Certified Bots: {{user.profile.bot_logs[enums.BotState.certified.value.__str__()].__len__()}}</p>
     {% if personal %}
     <hr style="font-size: 20px;border-top-width: 1px;border-top-color: #eee;width: 90%;">
     <div class="d-flex pane">
