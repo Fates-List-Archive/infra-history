@@ -53,10 +53,6 @@
     {% if personal %}
         <aside class="white" style="margin-left: 10px; opacity: 0.8; margin-bottom: 11px;">Note that the above list of bots includes your bots in the queue, denied bots (resubmit your bot once its fixed!) and banned bots (make a support ticket to learn why and how to fix it). These bots are hidden to only you and staff until it is approved or unbanned or requeued and approved</aside>
     {% endif %}
-    <script>
-	    var context = {{context|tojson}}
-	</script>
-    <script src="/static/assets/prod/profile.min.js?v=2"></script>
 {% endblock %}
 {% block footer %}
     
