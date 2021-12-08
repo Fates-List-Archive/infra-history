@@ -2,7 +2,7 @@ function submitProfile() {
     context.error = null
     modalShow("Saving", "Please wait for a few moments while we save your profile")
     try {
-	json = {}
+	json = {user_id: context.bot.user.id}
 	context.form_values.text.forEach(function (key) {
 	    el = document.querySelector(`#${key}`)
 	    json[key] = el.value
@@ -56,7 +56,7 @@ function submitProfile() {
 function showToken(but) {
 	token = document.querySelector("#api-token")
 	if(!token.getAttribute("show")) {
-		token.innerHTML = context.user_token
+		token.innerHTML = context.real_user_token
 		but.innerHTML = "Hide"
 		token.setAttribute("show", "true")
 	}

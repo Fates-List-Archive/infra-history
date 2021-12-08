@@ -9,8 +9,9 @@ from ..base_models import APIResponse, BaseUser
 
 
 class UpdateUserPreferences(BaseModel):
-    """Setting field to null and/or omitting it means no change to said field"""
+    """Setting field to null and/or omitting it means no change to said field. Set user_id here to change a user you are not if you are staff"""
 
+    user_id: int | None = None
     js_allowed: bool | None = None
     description: str | None = None
     css: str | None = None

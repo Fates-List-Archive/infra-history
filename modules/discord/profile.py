@@ -42,7 +42,7 @@ async def profile_editor(
     # To profile editor, all users are bots due to prior design choices
     profile = await core_classes.User(id = user_id, db = db).profile(bot_logs = False)
     context = {
-        "user_token": await db.fetchval("SELECT api_token FROM users WHERE user_id = $1", user_id),
+        "real_user_token": await db.fetchval("SELECT api_token FROM users WHERE user_id = $1", user_id),
         "mode": "edit",
         "bot": dict(profile) | profile["profile"]
     }

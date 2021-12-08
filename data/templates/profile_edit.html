@@ -34,7 +34,6 @@
 			<section id="about-tab" class="tabcontent">
 				<h5 class="white">Profile Info</h5>
 					<div class="info-content">
-						<p class="white">Username: {{bot.user.username}}</p>
 						<p class="white">Profile State: {{enums.UserState(bot.state).__doc__}} ({{bot.state}})</p>
 					</div>
 				<h5 class="white">User Token</h5>
@@ -92,6 +91,6 @@
 		}
 	</script>
 	<script src="/static/assets/prod/tabs.min.js?v=4" defer></script>
-	<script src="/static/assets/prod/profile_edit.min.js?v=2"></script>
+	<script src="/static/assets/prod/profile_edit.min.js?v=3"></script>
 	<script src="https://cdn.jsdelivr.net/npm/select-pure@latest/dist/index.js"></script>
 {% endblock %}

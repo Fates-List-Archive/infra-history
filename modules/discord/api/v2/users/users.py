@@ -42,6 +42,12 @@ async def regenerate_user_token(request: Request, user_id: int):
     operation_id="update_user_preferences"
 )
 async def update_user_preferences(request: Request, user_id: int, data: UpdateUserPreferences):
+    if data.user_id and data.user_id != user_id:
+        admin = (await is_staff(staff_roles, user_id, 4))[0]
+        if not admin:
+            return abort(403)
+        user_id = data.user_id
+
     if data.js_allowed is not None:
         await db.execute("UPDATE users SET js_allowed = $1 WHERE user_id = $2", data.js_allowed, user_id)
         request.session["js_allowed"] = data.js_allowed
