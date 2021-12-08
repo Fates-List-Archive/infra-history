@@ -50,5 +50,18 @@
 	{% endfor %}
 {% endmacro %}
 
-{% block html %}
-{% endblock %}
+{# Set some global variables for the form handling in js to easily serialize it #}
+{% set form_values_text = [] %}
+{% set form_values_select_single = [] %}
+{% set form_values_select_multiple = [] %}
+{% set actions = False %}
+
+
+{% macro tip(text) %}
+	<div class="d-inline-block white alert alert-info tip" role="alert">
+		<span class="iconify" data-icon="foundation:lightbulb" data-inline="false" data-height="1.5em"></span>{{text|safe}}
+	</div>
+{% endmacro %}
+{% macro optional() %}
+	{{ tip("Everything in this section is completely optional") }}
+{% endmacro %}
