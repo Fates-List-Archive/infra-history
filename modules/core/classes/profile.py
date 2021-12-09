@@ -20,7 +20,8 @@ class ProfileData(BaseModel):
     """Misc data about a user"""
     badges: list[Badge]
     description: str | None = "This user prefers to be a enigma"
-    css: str | None = None
+    user_css: str | None = ""
+    profile_css: str | None = ""
     js_allowed: bool
     bot_developer: bool
     certified_developer: bool

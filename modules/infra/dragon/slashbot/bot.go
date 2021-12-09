@@ -88,6 +88,10 @@ func SlashHandler(
 
 	if appCmdData.Name == "mock" {
 		// Special command to mock all other commands
+		if i.Interaction.GuildID != common.StaffServer {
+			return
+		}
+
 		_, isStaff, _ := common.GetPerms(common.DiscordMain, ctx, i.Interaction.Member.User.ID, 4)
 		if !isStaff {
 			SendIResponse(discord, i.Interaction, "You are not a Fates List Admin. If you think this is a mistake, please report this on FL Kremlin!", true)
@@ -147,7 +151,7 @@ func SlashHandler(
 
 	res := cmd.Handler(discord, db, rdb, i.Interaction, appCmdData, cmd.Index)
 
-	if res != "" {
+	if res != "" && !strings.HasPrefix(res, "nop") {
 		SendIResponse(discord, i.Interaction, res, true)
 	}
 	if iResponseMap[i.Interaction.Token] != nil {
@@ -196,23 +200,23 @@ func CheckServerPerms(discord *discordgo.Session, i *discordgo.Interaction, perm
 }
 
 func SendIResponse(discord *discordgo.Session, i *discordgo.Interaction, content string, clean bool, largeContent ...string) {
-	sendIResponseComplex(discord, i, content, clean, 0, largeContent, 0)
+	sendIResponseComplex(discord, i, content, clean, 0, largeContent, nil, 0)
 }
 
 func SendIResponseEphemeral(discord *discordgo.Session, i *discordgo.Interaction, content string, clean bool, largeContent ...string) {
-	sendIResponseComplex(discord, i, content, clean, 1<<6, largeContent, 0)
+	sendIResponseComplex(discord, i, content, clean, 1<<6, largeContent, nil, 0)
 }
 
-func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, content string, clean bool, flags uint64, largeContent []string, tries int) {
+func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, content string, clean bool, flags uint64, largeContent []string, embeds []*discordgo.MessageEmbed, tries int) {
 	// Sends a response to a interaction using iResponseMap as followup if needed. If clean is set, iResponseMap is cleaned out
 	if len(content) > 2000 {
 		log.Info("Sending large content of length: " + strconv.Itoa(len(content)))
 		var offset int = 0
 		pos := [2]int{0, 2000}
 		countedChars := 0
-		sendIResponseComplex(discord, i, "defer", clean, flags, []string{}, 0)
+		sendIResponseComplex(discord, i, "defer", clean, flags, []string{}, embeds, 0)
 		for countedChars < len(content) {
-			sendIResponseComplex(discord, i, content[pos[0]:pos[1]], clean, flags, []string{}, 0)
+			sendIResponseComplex(discord, i, content[pos[0]:pos[1]], clean, flags, []string{}, embeds, 0)
 
 			// Switch {0, 2000} to {2000, XYZ}
 			offset = int(math.Min(2000, float64(len(content)-pos[0]))) // Find new offset to use
@@ -243,6 +247,7 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 			Content: content,
 			Flags:   flags,
 			Files:   files,
+			Embeds:  embeds,
 		})
 		if err != nil {
 			log.Error(err.Error())
@@ -256,6 +261,7 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 					Content: content,
 					Flags:   flags,
 					Files:   files,
+					Embeds:  embeds,
 				},
 			})
 		} else {
@@ -273,7 +279,7 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 			})
 			if err != nil {
 				log.Error(err)
-				sendIResponseComplex(discord, i, "Something happened!\nError: "+err.Error(), false, flags, []string{}, 0)
+				sendIResponseComplex(discord, i, "Something happened!\nError: "+err.Error(), false, flags, []string{}, nil, 0)
 			}
 		}
 	}

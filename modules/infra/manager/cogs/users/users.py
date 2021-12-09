@@ -106,9 +106,9 @@ class Users(commands.Cog):
             value=f"{_profile['profile']['state']} ({UserState(_profile['profile']['state']).__doc__})",
         )
         embed.add_field(
-            name="CSS",
-            value=_profile["profile"]["css"]
-            if _profile["profile"]["css"] else "No custom user CSS set",
+            name="User CSS",
+            value=_profile["profile"]["user_css"]
+            if _profile["profile"]["user_css"] else "No custom user CSS set",
         )
 
         await inter.send(embed=embed)

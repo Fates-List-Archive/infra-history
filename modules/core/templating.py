@@ -16,8 +16,8 @@ class templates():
         db = worker_session.postgres
         status = arg_dict.get("status_code")
         if "user_id" in request.session.keys():
-            user_data = await db.fetchrow("SELECT state, css FROM users WHERE user_id = $1", int(request.session["user_id"]))
-            state, arg_dict["user_css"] = user_data["state"], user_data["css"]
+            user_data = await db.fetchrow("SELECT state, user_css FROM users WHERE user_id = $1", int(request.session["user_id"]))
+            state, arg_dict["user_css"] = user_data["state"], user_data["user_css"]
             if (state == enums.UserState.global_ban) and not_error:
                 ban_type = enums.UserState(state).__doc__
                 return await templates.e(request, f"You have been {ban_type} banned from Fates List<br/>", status_code = 403)

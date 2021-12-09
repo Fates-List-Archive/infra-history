@@ -62,7 +62,7 @@
 <meta property="twitter:image" content="{{data.user.avatar}}">
 {% endif %}
 <link rel="canonical" href="https://fateslist.xyz{{path}}"/>
-<style>{{user_css or ""}}</style>
+<style>{{user_css|safe}}</style>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lozad/dist/lozad.min.js"></script>
     {% block head %}
       

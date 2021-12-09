@@ -145,7 +145,8 @@ CREATE TABLE users (
     description text DEFAULT 'This user prefers to be an enigma',
     badges text[],
     username text,
-    css text default '',
+    user_css text not null default '',
+    profile_css text not null default '';
     state integer default 0, -- 0 = No Ban, 1 = Global Ban
     coins INTEGER DEFAULT 0,
     js_allowed BOOLEAN DEFAULT false

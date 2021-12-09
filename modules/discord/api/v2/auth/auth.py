@@ -46,7 +46,7 @@ async def login_user(request: Request, data: Login, worker_session = Depends(wor
         )
     
     user_info = await db.fetchrow(
-        "SELECT state, api_token, css, js_allowed, username, site_lang FROM users WHERE user_id = $1", 
+        "SELECT state, api_token, user_css AS css, js_allowed, username, site_lang FROM users WHERE user_id = $1", 
         int(userjson["id"])
     )
     

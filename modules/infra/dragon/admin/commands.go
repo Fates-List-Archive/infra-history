@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"dragon/common"
+	"dragon/slashbot"
 	"dragon/types"
 	"strconv"
 	"time"
@@ -32,6 +33,63 @@ func UpdateBotLogs(ctx context.Context, postgres *pgxpool.Pool, userId string, b
 // Admin OP Getter
 func CmdInit() map[string]types.SlashCommand {
 	// Mock is only here for registration, actual code is on slashbot
+	commands["QUEUE"] = types.AdminOp{
+		InternalName: "queue",
+		Cooldown:     types.CooldownNone,
+		Description:  "Lists the Fates List bot queue",
+		Event:        types.EventNone,
+		MinimumPerm:  1,
+		SlashRaw:     true,
+		Server:       common.TestServer,
+		SlashOptions: []*discordgo.ApplicationCommandOption{},
+		Handler: func(context types.AdminContext) string {
+			bots, err := context.Postgres.Query(context.Context, "SELECT bot_id::text, prefix, description FROM bots WHERE state = $1", types.BotStatePending.Int())
+			if err != nil {
+				return err.Error()
+			}
+			defer bots.Close()
+
+			currBot := 1
+
+			var output string
+
+			for bots.Next() {
+				var botId pgtype.Text
+				var prefix pgtype.Text
+				var description pgtype.Text
+				err := bots.Scan(&botId, &prefix, &description)
+				if err != nil {
+					return err.Error() + " in iteration " + strconv.Itoa(currBot)
+				}
+				if prefix.Status != pgtype.Present {
+					prefix = pgtype.Text{String: "This bot uses slash commands", Status: pgtype.Present}
+				} else if prefix.String == "" {
+					prefix.String = "This bot uses slash commands"
+				}
+
+				botUser, err := context.Discord.User(botId.String)
+
+				if err != nil {
+					botUser = &discordgo.User{Username: "Unknown", Discriminator: "0000"}
+				}
+
+				output += "**" + strconv.Itoa(currBot) + ".** " + botUser.Username + "#" + botUser.Discriminator + "\n**Prefix:** " + prefix.String + "\n**Description:** " + description.String + "\n**Invite:** " + "<https://fateslist.xyz/bot/" + botId.String + "/invite>" + "\n\n"
+				if currBot%3 == 0 {
+					slashbot.SendIResponse(context.Discord, context.Interaction, output, false)
+					output = ""
+				}
+				currBot += 1
+			}
+
+			if output != "" {
+				slashbot.SendIResponse(context.Discord, context.Interaction, output, false)
+			}
+			slashbot.SendIResponse(context.Discord, context.Interaction, "nop", true)
+
+			return "nop"
+		},
+	}
+
 	commands["MOCK"] = types.AdminOp{
 		InternalName: "mock",
 		Cooldown:     types.CooldownNone,

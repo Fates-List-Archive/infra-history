@@ -53,8 +53,10 @@ async def update_user_preferences(request: Request, user_id: int, data: UpdateUs
         request.session["js_allowed"] = data.js_allowed
     if data.description is not None:
         await db.execute("UPDATE users SET description = $1 WHERE user_id = $2", data.description, user_id)
-    if data.css is not None:
-        await db.execute("UPDATE users SET css = $1 WHERE user_id = $2", data.css, user_id)
+    if data.user_css is not None:
+        await db.execute("UPDATE users SET user_css = $1 WHERE user_id = $2", data.user_css, user_id)
+    if data.profile_css is not None:
+        await db.execute("UPDATE users SET profile_css = $1 WHERE user_id = $2", data.profile_css, user_id)
     return api_success()
 
 

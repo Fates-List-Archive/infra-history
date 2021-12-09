@@ -92,6 +92,7 @@ func adminSlashHandler(
 	return silverpelt(
 		ctx,
 		discord,
+		i,
 		rdb,
 		db,
 		i.Member.User.ID,

@@ -20,6 +20,7 @@ import (
 func silverpelt(
 	ctx context.Context,
 	discord *discordgo.Session,
+	interaction *discordgo.Interaction,
 	rdb *redis.Client,
 	db *pgxpool.Pool,
 	user_id string,
@@ -105,6 +106,7 @@ func silverpelt(
 		context := types.AdminContext{
 			Context:      ctx,
 			Discord:      discord,
+			Interaction:  interaction,
 			Postgres:     db,
 			Redis:        rdb,
 			User:         member.User,

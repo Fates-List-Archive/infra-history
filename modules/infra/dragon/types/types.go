@@ -132,6 +132,7 @@ type AdminRedisContext struct {
 type AdminContext struct {
 	Context      context.Context
 	Discord      *discordgo.Session
+	Interaction  *discordgo.Interaction
 	Postgres     *pgxpool.Pool
 	Redis        *redis.Client
 	User         *discordgo.User

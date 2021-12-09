@@ -30,6 +30,7 @@
 			<div class="tab">
 				{{ tab("about", default=True) }}
 				{{ tab("basic-settings", name="Basics")}}
+				{{ tab("css", name="CSS") }}
 			</div>
 			<section id="about-tab" class="tabcontent">
 				<h5 class="white">Profile Info</h5>
@@ -69,11 +70,18 @@
 						}
 					)
 				) }}
-
+			</section>	
+			<section id="css-tab" class="tabcontent">
 				{{ textInput(
-					"Custom CSS",
-					"css",
-					"Warning: Fates List is not responsible for any issues due to your custom CSS",
+					"User CSS",
+					"user_css",
+					"Warning: Fates List is not responsible for any issues due to your custom user CSS. To use javascript in custom css, put your JS in a </style><script>YOUR JS HERE</script><style> tag",
+					textarea=True
+				) }}
+				{{ textInput(
+					"Profile CSS",
+					"profile_css",
+					"Enter any profile CSS you want here. For security purposes, this does not allow Javascript whatsoever!",
 					textarea=True
 				) }}
 			</section>

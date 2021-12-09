@@ -12,7 +12,7 @@
 {% endif %}
 .buttons-all {background-color: black !important;}
 .codehilite {background-color: white;}
-{{ireplacem(((".alert", ""), ("<style", ""), ("</style", "")), data.css)}}
+{{ireplacem(((".alert", ""), ("javascript:", ""), ("data:", ""), ("\n", "")), data.css)}}
 </style>
 {% endblock %}
 {% block content %}

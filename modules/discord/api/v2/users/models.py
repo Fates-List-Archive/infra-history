@@ -14,8 +14,8 @@ class UpdateUserPreferences(BaseModel):
     user_id: int | None = None
     js_allowed: bool | None = None
     description: str | None = None
-    css: str | None = None
-
+    profile_css: str | None = None
+    user_css: str | None = None
 
 class BotMeta(BaseModel):
     """
