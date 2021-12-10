@@ -14,6 +14,10 @@ Then run ``dragon --cmd db.setup`` after activating the created venv to setup th
 
 To create the slash commands: ``dragon --register-only``
 
+**Automatic**
+Run ``data/start_tmux.sh`` to automate site startup and setup tmux for you!
+
+**Manual**
 To start the dragon (must be started before the main site): ``dragon --cmd dragon.server``
 
 To start the main site (must be started after dragon): ``dragon --cmd site.run``

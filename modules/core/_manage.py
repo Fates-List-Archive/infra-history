@@ -253,6 +253,7 @@ def site_enum2html():
 
 def site_reload():
     """Get the PID of the running site and reloads the site"""
+    import time
     try:
         with open("data/pids/gunicorn.pid") as guni_pid:
             pid = guni_pid.read().replace(" ", "").replace("\n", "")
@@ -262,7 +263,19 @@ def site_reload():
                     "Invalid/corrupt PID file found (site/gunicorn.pid)")
 
             pid = int(pid)
-            os.kill(pid, signal.SIGHUP)
+            if not os.environ.get("KILL"):
+                os.kill(pid, signal.SIGHUP)
+            else:
+                try:
+                    os.kill(pid, signal.SIGINT)
+                except Exception as exc:
+                    print(exc)
+                print("Waiting for site to die...")
+                time.sleep(3)
+                # Use kill to force kill any rogue workers
+                os.system('killall -9 "gunicorn: master" >/dev/null 2>&1')
+                os.system('killall -9 "gunicorn: worker" >/dev/null 2>&1')
+                time.sleep(3)
 
     except FileNotFoundError:
         return error("No PID file found. Is the site running?")

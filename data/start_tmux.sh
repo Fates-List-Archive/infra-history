@@ -1,4 +1,5 @@
 HISTCONTROL="ignorespace${HISTCONTROL:+:$HISTCONTROL}"
+KILL=1 dragon --cmd site.reload 
 tmux kill-server
 tmux new-session -d -s dragon 
 tmux send-keys -t dragon ' cd ~/FatesList/modules/infra/dragon && ./dragon --cmd dragon.server; exec $SHELL' Enter
