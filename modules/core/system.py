@@ -331,7 +331,7 @@ async def finish_init(app, session_id, workers, dbs):
         dat = await session.redis.get(key)
         if not dat:
             dat = get_token(196)
-            await session.redis.set(key, dat, ex=60*60*3, nx=True)
+            await session.redis.set(key, dat, ex=60*60*24, nx=True)
             signal.raise_signal(signal.SIGINT)
             os._exit(0)
 
