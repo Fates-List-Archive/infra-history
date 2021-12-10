@@ -36,6 +36,7 @@ var (
 	CommitHash       string
 	BuildTime        string
 	Debug            bool
+	RegisterCommands bool
 )
 
 func init() {
@@ -46,12 +47,15 @@ func init() {
 	flag.StringVar(&RootPath, "root", "/home/meow/FatesList", "Fates List source directory")
 	flag.StringVar(&PythonPath, "python-path", "/home/meow/flvenv-py11/bin/python", "Path to python interpreter")
 	flag.BoolVar(&Debug, "debug", false, "Debug mode")
+	flag.BoolVar(&RegisterCommands, "register-only", false, "Only register commands and exit! Overrides --cmd")
 	flag.Parse()
 
-	if CliCmd == "" {
+	if CliCmd == "" && !RegisterCommands {
 		fmt.Println("Version:", Version, "\nCommit Hash:", CommitHash, "\nBuild Timestamp:", BuildTime, "\nBuilt with:", runtime.Version())
 		flag.Usage()
 		os.Exit(3)
+	} else if RegisterCommands {
+		CliCmd = "dragon.server"
 	}
 
 	err := os.Chdir(RootPath)

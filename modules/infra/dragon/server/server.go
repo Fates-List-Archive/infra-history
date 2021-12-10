@@ -139,12 +139,15 @@ func DragonServer() {
 		syscall.SIGQUIT)
 
 	// Start IPC code
-	go ipc.StartIPC(db, discord, discordServerBot, rdb)
-	go webserver.StartWebserver(db, rdb)
-
+	if !common.RegisterCommands {
+		go ipc.StartIPC(db, discord, discordServerBot, rdb)
+		go webserver.StartWebserver(db, rdb)
+	}
 	s := <-sigs
 	log.Info("Going to exit gracefully due to signal", s, "\n")
-	ipc.SignalHandle(s, rdb)
+	if !common.RegisterCommands {
+		ipc.SignalHandle(s, rdb)
+	}
 
 	// Close all connections
 	db.Close()

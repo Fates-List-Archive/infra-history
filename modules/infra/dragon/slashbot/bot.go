@@ -44,19 +44,26 @@ func SetupSlash(discord *discordgo.Session, cmdInit types.SlashFunction) {
 			Description: v.Description,
 			Options:     v.Options,
 		}
-		log.Info("Adding slash command: ", cmdName+" with server of "+v.Server)
+
+		if common.RegisterCommands {
+			log.Info("Adding slash command: ", cmdName+" with server of "+v.Server)
+		} else {
+			log.Info("Loading slash command " + cmdName + " with server of " + v.Server)
+		}
 
 		if v.Server == "" {
 			cmds = append(cmds, &cmd)
 		} else {
 			go func() {
-				_, err := discord.ApplicationCommandCreate(discord.State.User.ID, v.Server, &cmd)
-				if v.Server == common.StaffServer {
-					go discord.ApplicationCommandCreate(discord.State.User.ID, common.StaffServer, &cmd) // Just to force create
-				}
-				if err != nil {
-					panic(err.Error())
-					return
+				if common.RegisterCommands {
+					_, err := discord.ApplicationCommandCreate(discord.State.User.ID, v.Server, &cmd)
+					if v.Server == common.StaffServer {
+						go discord.ApplicationCommandCreate(discord.State.User.ID, common.StaffServer, &cmd) // Just to force create
+					}
+					if err != nil {
+						panic(err.Error())
+						return
+					}
 				}
 			}()
 		}
@@ -64,11 +71,13 @@ func SetupSlash(discord *discordgo.Session, cmdInit types.SlashFunction) {
 	}
 
 	log.Info("Loading commands on Discord for ", discord.State.User.Username)
-	_, err := discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, "", cmds)
-	if err != nil {
-		log.Fatal("Cannot create commands due to error: ", err)
+	if common.RegisterCommands {
+		_, err := discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, "", cmds)
+		if err != nil {
+			log.Fatal("Cannot create commands due to error: ", err)
+		}
+		go discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, common.StaffServer, cmds)
 	}
-	go discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, common.StaffServer, cmds)
 	log.Info("All slash commands for server list loaded!")
 }
 
