@@ -136,6 +136,7 @@ type AdminContext struct {
 	Postgres     *pgxpool.Pool
 	Redis        *redis.Client
 	User         *discordgo.User
+	StaffPerm    float32
 	Bot          *discordgo.User
 	BotState     BotState
 	Reason       string

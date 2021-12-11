@@ -6,11 +6,13 @@ import (
 	"dragon/types"
 	"errors"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Fates-List/discordgo"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
@@ -79,6 +81,12 @@ func SetupSlash(discord *discordgo.Session, cmdInit types.SlashFunction) {
 		go discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, common.StaffServer, cmds)
 	}
 	log.Info("All slash commands for server list loaded!")
+
+	if common.RegisterCommands {
+		apps, _ := discord.ApplicationCommands(discord.State.User.ID, common.StaffServer)
+		log.Info(spew.Sdump(apps))
+		time.AfterFunc(3*time.Second, func() { os.Exit(0) })
+	}
 }
 
 func SlashHandler(

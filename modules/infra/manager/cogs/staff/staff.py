@@ -10,7 +10,6 @@ from discord.ext import commands
 from loguru import logger
 
 from config import (
-    ag_role,
     log_channel,
     main,
     main_bots_role,
@@ -24,10 +23,6 @@ from config import (
 # For now
 disnake = discord
 dislash = commands
-
-class Method(enum.Enum):
-    GET = "GET"
-
 
 class Staff(commands.Cog):
     """Commands to handle the staff server"""
@@ -48,65 +43,6 @@ class Staff(commands.Cog):
             "UPDATE users SET state = $1 WHERE user_id = $2", state.value,
             user.id)
         return await inter.send(f"Set state of {user} successfully to {state}")
-
-    @commands.slash_command(
-        name="getaccess",
-        description="Get access to the staff server",
-        guild_ids=[staff],
-    )
-    async def getaccess(self, inter):
-        staff = await is_staff(inter, inter.author.id, 2)
-        if not staff[0]:
-            try:
-                msg = "You are not a Fates List Staff Member. You will hence be kicked from the staff server!"
-                await inter.send(msg)
-                await asyncio.sleep(3)
-                await inter.author.kick()
-            except:
-                await inter.send(
-                    "I've failed to kick this member. Staff, please kick this member now!"
-                )
-            return
-        await inter.author.add_roles(
-            inter.guild.get_role(ag_role),
-            inter.guild.get_role(int(staff[2].staff_id)))
-        return await inter.send("Welcome home, master!")
-
-    @commands.slash_command(
-        name="dapireq",
-        description="Make a request to the discord API",
-        guild_ids=[staff],
-    )
-    async def dapireq(self, inter, method: Method, route: str):
-        route = discord.http.Route(
-            method=method.value,
-            path=route.replace("https://discord.com/api/",
-                               "").replace("v8/", "/",
-                                           1).replace("v9/", "/", 1),
-        )
-        try:
-            res = await self.bot.http.request(route)
-        except Exception as exc:
-            return await inter.send(str(exc))
-        return await inter.send(str(res))
-
-    @commands.slash_command(name="botop",
-                            description="Bot Admin Operations",
-                            guild_ids=[staff])
-    async def botop(self, inter):
-        ...
-
-    @botop.sub_command(
-        name="get",
-        description="Get operation",
-    )
-    async def get(
-        self,
-        inter,
-    ):
-        return await inter.send(
-            "Please see https://docs.fateslist.xyz/structures/enums.autogen/#botadminop for the list of bot admin operations"
-        )
 
     @dislash.slash_command(
         name="allowbot",
@@ -131,50 +67,6 @@ class Staff(commands.Cog):
             await inter.send("Unwhitelisted bot again")
         except Exception:
             pass
-
-    @dislash.slash_command(
-        name="addstaff",
-        description="Add a staff member to the team.",
-        guild_ids=[staff],
-    )
-    async def addstaff(self, inter, user: disnake.User):
-        staff_check = await is_staff(inter, inter.author.id, 5)
-        if not staff_check[0]:
-            return await inter.send("Only staff can use this command")
-
-        main_guild = self.bot.get_guild(main)
-        msg = f"""
-**You have been accepted onto our staff team!**
-
-In order to begin testing bots and be a part of the Fates List Staff Team, you must join the below servers:
- 
- 
-**Staff server:** <https://fateslist.xyz/server/{staff}/invite>
-
-**Testing server:** <https://fateslist.xyz/server/{testing}/invite>
-
-
-After joining the staff server, you must run /getaccess to get your roles.
- 
- 
-Finally, type /queue on our testing server to start testing bots. Feel free to ask any staff for help if you need it!
-        """
-        main_member = main_guild.get_member(user.id)
-        if not main_member:
-            return await inter.send("Could not find member on main server!")
-
-        try:
-            await user.send(msg)
-        except Exception:
-            return await inter.send(
-                "Could not send DM to user. Ask them to temporarily allow DMs in order to add them as staff"
-            )
-
-        await main_member.add_roles(
-            main_guild.get_role(int(staff_roles["community_staff"]["id"])),
-            main_guild.get_role(int(staff_roles["bot_reviewer"]["id"])),
-        )
-        return await inter.send("Successfully added staff")
 
     @commands.Cog.listener()
     async def on_message(self, message):

@@ -8,6 +8,7 @@ import (
 	"dragon/types"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Fates-List/discordgo"
@@ -109,6 +110,7 @@ func silverpelt(
 			Interaction:  interaction,
 			Postgres:     db,
 			Redis:        rdb,
+			StaffPerm:    perm,
 			User:         member.User,
 			Bot:          bot,
 			BotState:     state_data,
@@ -124,7 +126,7 @@ func silverpelt(
 
 		op_err := admin_op.Handler(context)
 
-		if op_err == "" && admin_op.Event != types.EventNone {
+		if (op_err == "" || strings.HasPrefix(op_err, "OK.")) && admin_op.Event != types.EventNone {
 			eventId := common.CreateUUID()
 			event := types.Event{
 				Context: types.SimpleContext{
@@ -157,10 +159,12 @@ func silverpelt(
 			}
 		}
 
-		if op_err != "" {
-			op_err += "\nCurrent State: " + state_data.Str() + "\nBot owner: " + strconv.FormatInt(owner.Int, 10)
-		} else {
-			op_err = "OK."
+		if !admin_op.SlashRaw {
+			if op_err != "" {
+				op_err += "\nCurrent State: " + state_data.Str() + "\nBot owner: " + strconv.FormatInt(owner.Int, 10)
+			} else {
+				op_err = "OK."
+			}
 		}
 
 		return op_err

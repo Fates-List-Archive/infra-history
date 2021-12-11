@@ -30,6 +30,7 @@ var (
 	CertifiedBotRole   string
 	CertifiedDevRole   string
 	BotDevRole         string
+	AccessGrantedRole  string
 	CliCmd             string
 	RootPath           string
 	PythonPath         string
@@ -101,6 +102,7 @@ func init() {
 	CertifiedBotRole = string(roles.Get("certified_bots_role").GetStringBytes())
 	CertifiedDevRole = string(roles.Get("certified_dev_role").GetStringBytes())
 	BotDevRole = string(roles.Get("bot_dev_role").GetStringBytes())
+	AccessGrantedRole = string(roles.Get("staff_server_access_granted_role").GetStringBytes())
 
 	permInit()
 
