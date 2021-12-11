@@ -11,6 +11,7 @@ import (
 	"github.com/Fates-List/discordgo"
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v4/pgxpool"
+	log "github.com/sirupsen/logrus"
 )
 
 // Prepend is complement to builtin append.
@@ -26,21 +27,38 @@ func slashIr() map[string]types.SlashCommand {
 		Description: "Bot (either ID or mention)",
 		Required:    true,
 	}
+	botIdOptionAc := discordgo.ApplicationCommandOption{
+		Type:         discordgo.ApplicationCommandOptionString,
+		Name:         "bot",
+		Description:  "Select the bot from the list",
+		Required:     true,
+		Autocomplete: true,
+	}
+
 	var commandsToRet map[string]types.SlashCommand = make(map[string]types.SlashCommand)
 	for cmdName, v := range commands {
 		if !v.SlashRaw {
-			v.SlashOptions = Prepend(v.SlashOptions, &botIdOption)
+			var add discordgo.ApplicationCommandOption
+			if v.Autocompleter != nil {
+				// Assume bot id option is being autocompleted
+				log.Info("Got autocompleter")
+				add = botIdOptionAc
+			} else {
+				add = botIdOption
+			}
+			v.SlashOptions = Prepend(v.SlashOptions, &add)
 		}
 
 		commandsToRet[cmdName] = types.SlashCommand{
-			Index:       cmdName,
-			Name:        v.InternalName,
-			Description: v.Description,
-			Cooldown:    v.Cooldown,
-			Options:     v.SlashOptions,
-			Server:      v.Server,
-			Handler: func(discord *discordgo.Session, postgres *pgxpool.Pool, redis *redis.Client, interaction *discordgo.Interaction, appCmdData discordgo.ApplicationCommandInteractionData, index string) string {
-				return adminSlashHandler(context.Background(), discord, redis, postgres, interaction, commands[index], appCmdData)
+			Index:         cmdName,
+			Name:          v.InternalName,
+			Description:   v.Description,
+			Cooldown:      v.Cooldown,
+			Options:       v.SlashOptions,
+			Server:        v.Server,
+			Autocompleter: v.Autocompleter,
+			Handler: func(handler types.HandlerData) string {
+				return adminSlashHandler(handler.Context, handler.Discord, handler.Redis, handler.Postgres, handler.Interaction, commands[handler.Index], handler.AppCmdData)
 			},
 		}
 	}
@@ -77,7 +95,11 @@ func adminSlashHandler(
 	// Get needed interaction options using loop
 	for _, v := range appCmdData.Options {
 		if v.Name == "bot" {
-			botId = v.UserValue(discord).ID
+			if v.Type == discordgo.ApplicationCommandOptionString {
+				botId = v.StringValue()
+			} else {
+				botId = v.UserValue(discord).ID
+			}
 		} else if v.Name == "reason" {
 			reason = common.RenderPossibleLink(v.StringValue())
 		} else if v.Name == slashContext {

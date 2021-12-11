@@ -157,21 +157,33 @@ type AdminCommand struct {
 	Command discordgo.ApplicationCommand
 }
 
+type HandlerData struct {
+	Context     context.Context
+	Discord     *discordgo.Session
+	Postgres    *pgxpool.Pool
+	Redis       *redis.Client
+	Interaction *discordgo.Interaction
+	AppCmdData  discordgo.ApplicationCommandInteractionData
+	Index       string
+}
+
 type AdminFunction func(context AdminContext) string
 type ServerListFunction func(context ServerListContext) string
 type SlashFunction func() map[string]SlashCommand
-type SlashHandler func(discord *discordgo.Session, postgres *pgxpool.Pool, redis *redis.Client, interaction *discordgo.Interaction, appCmdData discordgo.ApplicationCommandInteractionData, index string) string
+type SlashHandler func(handler HandlerData) string
+type Autocompleter func(handler HandlerData) []*discordgo.ApplicationCommandOptionChoice
 
 // Intermediate slash command representation
 type SlashCommand struct {
-	Index       string
-	Name        string
-	Description string
-	Server      string
-	Cooldown    CooldownBucket
-	Handler     SlashHandler
-	Options     []*discordgo.ApplicationCommandOption
-	Disabled    bool
+	Index         string
+	Name          string
+	Description   string
+	Server        string
+	Cooldown      CooldownBucket
+	Handler       SlashHandler
+	Options       []*discordgo.ApplicationCommandOption
+	Autocompleter Autocompleter
+	Disabled      bool
 }
 
 type AdminOp struct {
@@ -181,6 +193,7 @@ type AdminOp struct {
 	MinimumPerm       int                                   `json:"min_perm"`
 	ReasonNeeded      bool                                  `json:"reason_needed"`
 	Event             APIEvent                              `json:"event"`
+	Autocompleter     Autocompleter                         `json:"-"` // Autocompleter
 	Handler           AdminFunction                         `json:"-"`
 	Server            string                                `json:"server"`        // Slash command server
 	SlashOptions      []*discordgo.ApplicationCommandOption `json:"slash_options"` // Slash command options

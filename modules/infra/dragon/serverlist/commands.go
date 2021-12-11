@@ -16,7 +16,6 @@ import (
 
 	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
@@ -217,7 +216,7 @@ func CmdInit() map[string]types.SlashCommand {
 			valueVal := slashbot.GetArg(context.Discord, context.Interaction, "value", true)
 			value, ok := valueVal.(string)
 			if !ok || value == "" || value == "none" {
-				if field == "recache" || field == "invite_url" || field == "invite_channel" {
+				if field == "recache" || field == "invite_url" || field == "invite_channel" || field == "banner_card" || field == "banner_page" || field == "webhook" || field == "website" {
 					value = ""
 				} else {
 					return "A value must be provided for this field"
@@ -301,24 +300,26 @@ func CmdInit() map[string]types.SlashCommand {
 
 			// Handle website
 			if field == "website" || field == "banner_card" || field == "banner_page" || field == "webhook" {
-				if !strings.HasPrefix(value, "https://") {
-					return "That is not a valid URL!"
-				} else if strings.Contains(value, " ") {
-					return "This field may not have spaces in the URL!"
-				}
-				if field == "banner_page" || field == "banner_card" {
-					client := http.Client{Timeout: 5 * time.Second}
-					var resp *http.Response
-					var err error
-					resp, err = client.Head(value)
-					if err != nil || resp.StatusCode > 400 {
-						resp, err = client.Get(value)
-						if err != nil || resp.StatusCode > 400 {
-							return "Could not resolve banner URL. Are you sure the URL works?"
-						}
+				if value != "" {
+					if !strings.HasPrefix(value, "https://") {
+						return "That is not a valid URL!"
+					} else if strings.Contains(value, " ") {
+						return "This field may not have spaces in the URL!"
 					}
-					if !strings.HasPrefix(resp.Header.Get("Content-Type"), "image/") {
-						return "This URL does not point to a valid image. Make sure the URL is valid and that there are no typos?"
+					if field == "banner_page" || field == "banner_card" {
+						client := http.Client{Timeout: 5 * time.Second}
+						var resp *http.Response
+						var err error
+						resp, err = client.Head(value)
+						if err != nil || resp.StatusCode > 400 {
+							resp, err = client.Get(value)
+							if err != nil || resp.StatusCode > 400 {
+								return "Could not resolve banner URL. Are you sure the URL works?"
+							}
+						}
+						if !strings.HasPrefix(resp.Header.Get("Content-Type"), "image/") {
+							return "This URL does not point to a valid image. Make sure the URL is valid and that there are no typos?"
+						}
 					}
 				}
 			}
@@ -725,6 +726,10 @@ func CmdInit() map[string]types.SlashCommand {
 						Name:  "Transfer Tag Ownership",
 						Value: "transfer",
 					},
+					{
+						Name:  "Set Tag Decoration",
+						Value: "iconify_data",
+					},
 				},
 				Required: true,
 			},
@@ -738,6 +743,11 @@ func CmdInit() map[string]types.SlashCommand {
 				Type:        discordgo.ApplicationCommandOptionString,
 				Name:        "transfer-server",
 				Description: "The server ID to transfer a tag to. Only applies to transfers. Defaults to our staff server.",
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "iconify-data",
+				Description: "The 'iconify-data' you wish to set as decoration for your tag (https://iconify.design)",
 			},
 		},
 		Handler: func(context types.ServerListContext) string {
@@ -843,7 +853,9 @@ func CmdInit() map[string]types.SlashCommand {
 
 				transferServerVal := slashbot.GetArg(context.Discord, context.Interaction, "transfer-server", false)
 				transferServer, ok := transferServerVal.(string)
-				if !ok {
+				if !ok || transferServer == "" {
+					return "You must specify a transfer server or say 'none' to transfer to staff server by default"
+				} else if transferServer == "none" {
 					transferServer = common.StaffServer
 				}
 
@@ -870,6 +882,37 @@ func CmdInit() map[string]types.SlashCommand {
 					return dbError(err)
 				}
 				return "Transferred ownership of " + tagNameInternal + " to " + transferServer + ". Please contact support if this was a mistake or if you wish to revert the transfer!"
+			} else if action == "iconify_data" {
+				var check pgtype.Text
+				context.Postgres.QueryRow(context.Context, "SELECT owner_guild::text FROM server_tags WHERE id = $1", tagNameInternal).Scan(&check)
+				if check.Status != pgtype.Present {
+					return "This tag does not exist!"
+				} else if check.String != context.Interaction.GuildID && context.Interaction.GuildID != common.StaffServer {
+					return "You can't set the decoration for a tag you do not own!"
+				}
+
+				iconifyDataVal := slashbot.GetArg(context.Discord, context.Interaction, "iconify-data", false)
+				iconifyData, ok := iconifyDataVal.(string)
+
+				if !ok || iconifyData == "" {
+					return "You must provide a value for the iconify-data option to decorate your tag. Set this to 'none' to disable decorations for your tag"
+				} else if iconifyData == "none" {
+					iconifyData = "fluent:animal-cat-28-regular"
+				}
+
+				illegalIconifyDataChars := []string{"<", ">", ";", "'", `"`, "&"}
+
+				for _, v := range illegalIconifyDataChars {
+					if strings.Contains(iconifyData, v) {
+						return v + " is not a valid character. If your tags decoration does reauire this character or if this is an error, please contact Fates List Support!"
+					}
+				}
+
+				_, err := context.Postgres.Exec(context.Context, "UPDATE server_tags SET iconify_data = $1 WHERE id = $2", iconifyData, tagNameInternal)
+				if err != nil {
+					return dbError(err)
+				}
+				return "Successfully changed the decoration for this tag to: " + iconifyData
 			}
 
 			return "Work in progress. Coming really soon though!"
@@ -1022,9 +1065,9 @@ func CmdInit() map[string]types.SlashCommand {
 			Options:     v.SlashOptions,
 			Cooldown:    v.Cooldown,
 			Server:      v.Server,
-			Handler: func(discord *discordgo.Session, postgres *pgxpool.Pool, redis *redis.Client, interaction *discordgo.Interaction, appCmdData discordgo.ApplicationCommandInteractionData, index string) string {
+			Handler: func(handler types.HandlerData) string {
 				var ok bool
-				v, ok := commands[index]
+				v, ok := commands[handler.Index]
 
 				if v.AliasTo != "" {
 					v, ok = commands[v.AliasTo]
@@ -1034,16 +1077,16 @@ func CmdInit() map[string]types.SlashCommand {
 					return "Command not found..."
 				}
 
-				check := slashbot.CheckServerPerms(discord, interaction, v.Perm)
+				check := slashbot.CheckServerPerms(handler.Discord, handler.Interaction, v.Perm)
 				if !check {
 					return ""
 				}
 				return v.Handler(types.ServerListContext{
-					Context:     context.Background(),
-					Discord:     discord,
-					Postgres:    postgres,
-					Redis:       redis,
-					Interaction: interaction,
+					Context:     handler.Context,
+					Discord:     handler.Discord,
+					Postgres:    handler.Postgres,
+					Redis:       handler.Redis,
+					Interaction: handler.Interaction,
 				})
 			},
 		}

@@ -94,10 +94,12 @@ func DragonServer() {
 
 	// Slash command handling
 	iHandle := func(s *discordgo.Session, i *discordgo.InteractionCreate, bot int) {
-		log.WithFields(log.Fields{
-			"i":   spew.Sdump(i.Interaction),
-			"bot": bot,
-		}).Info("Going to handle interaction")
+		if i.Interaction.Type == discordgo.InteractionApplicationCommand {
+			log.WithFields(log.Fields{
+				"i":   spew.Sdump(i.Interaction),
+				"bot": bot,
+			}).Info("Going to handle interaction")
+		}
 		slashbot.SlashHandler(
 			ctx,
 			s,

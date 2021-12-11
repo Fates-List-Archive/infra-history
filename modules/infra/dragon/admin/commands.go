@@ -21,6 +21,7 @@ const bad = 0xe74c3c
 var (
 	commands         = make(map[string]types.AdminOp)
 	commandNameCache = make(map[string]string)
+	claimCache       = make(map[string][]*discordgo.ApplicationCommandOptionChoice)
 )
 
 func UpdateBotLogs(ctx context.Context, postgres *pgxpool.Pool, userId string, botId string, action types.UserBotAuditLog) {
@@ -418,6 +419,39 @@ func CmdInit() map[string]types.SlashCommand {
 		Event:        types.EventBotClaim,
 		SlashOptions: []*discordgo.ApplicationCommandOption{},
 		Server:       common.TestServer,
+		Autocompleter: func(context types.HandlerData) (ac []*discordgo.ApplicationCommandOptionChoice) {
+			dataVal := slashbot.GetArg(context.Discord, context.Interaction, "bot", false)
+			data, ok := dataVal.(string)
+			if !ok {
+				return
+			}
+
+			if v, ok := claimCache[data]; ok {
+				return v
+			}
+
+			bots, err := context.Postgres.Query(context.Context, "SELECT bot_id::text, username_cached FROM bots WHERE state = $1 AND (bot_id::text ILIKE $2 OR username_cached ILIKE $2) ORDER BY created_at DESC LIMIT 25", types.BotStatePending.Int(), "%"+data+"%")
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			defer bots.Close()
+
+			for bots.Next() {
+				var botId pgtype.Text
+				var usernameCached pgtype.Text
+				bots.Scan(&botId, &usernameCached)
+				ac = append(ac, &discordgo.ApplicationCommandOptionChoice{Name: usernameCached.String, Value: botId.String})
+			}
+
+			claimCache[data] = ac
+
+			time.AfterFunc(2*time.Minute, func() {
+				delete(claimCache, data)
+			})
+
+			return
+		},
 		Handler: func(context types.AdminContext) string {
 			if context.BotState != types.BotStatePending {
 				return "This bot cannot be claimed as it is not currently pending review or it is already under review"

@@ -59,6 +59,8 @@ func SetupSlash(discord *discordgo.Session, cmdInit types.SlashFunction) {
 			go func() {
 				if common.RegisterCommands {
 					_, err := discord.ApplicationCommandCreate(discord.State.User.ID, v.Server, &cmd)
+					time.Sleep(1 * time.Second)
+					log.Info(v.Autocompleter)
 					if v.Server == common.StaffServer {
 						go discord.ApplicationCommandCreate(discord.State.User.ID, common.StaffServer, &cmd) // Just to force create
 					}
@@ -145,31 +147,61 @@ func SlashHandler(
 		return
 	}
 
-	// Handle cooldown
-	if cmd.Cooldown != types.CooldownNone {
-		key := "cooldown-" + cmd.Cooldown.InternalName + "-" + i.Interaction.Member.User.ID
-		cooldown, err := rdb.TTL(ctx, key).Result() // Format: cooldown-BUCKET-MOD
-		if err == nil && cooldown.Seconds() > 0 {
-			SendIResponse(discord, i.Interaction, "Please wait "+cooldown.String()+" before retrying this command!", true)
+	handlerData := types.HandlerData{
+		Context:     context.Background(),
+		Discord:     discord,
+		Postgres:    db,
+		Redis:       rdb,
+		Interaction: i.Interaction,
+		AppCmdData:  appCmdData,
+		Index:       cmd.Index,
+	}
+
+	switch i.Interaction.Type {
+	case discordgo.InteractionApplicationCommand:
+		// Deferring only works for application commands
+		timeout := time.AfterFunc(time.Second*2, func() {
+			SendIResponse(discord, i.Interaction, "defer", false)
+		})
+
+		defer timeout.Stop()
+
+		// Handle cooldown
+		if cmd.Cooldown != types.CooldownNone {
+			key := "cooldown-" + cmd.Cooldown.InternalName + "-" + i.Interaction.Member.User.ID
+			cooldown, err := rdb.TTL(ctx, key).Result() // Format: cooldown-BUCKET-MOD
+			if err == nil && cooldown.Seconds() > 0 {
+				SendIResponse(discord, i.Interaction, "Please wait "+cooldown.String()+" before retrying this command!", true)
+				return
+			}
+			rdb.Set(ctx, key, "0", time.Duration(cmd.Cooldown.Time)*time.Second)
+		}
+
+		if cmd.Handler == nil {
+			SendIResponse(discord, i.Interaction, "Command not found?", false)
 			return
 		}
-		rdb.Set(ctx, key, "0", time.Duration(cmd.Cooldown.Time)*time.Second)
-	}
+		res := cmd.Handler(handlerData)
 
-	timeout := time.AfterFunc(time.Second*2, func() {
-		SendIResponse(discord, i.Interaction, "defer", false)
-	})
-	defer timeout.Stop()
-
-	if cmd.Handler == nil {
-		SendIResponse(discord, i.Interaction, "Command not found?", false)
-		return
-	}
-
-	res := cmd.Handler(discord, db, rdb, i.Interaction, appCmdData, cmd.Index)
-
-	if res != "" && !strings.HasPrefix(res, "nop") {
-		SendIResponse(discord, i.Interaction, res, true)
+		if res != "" && !strings.HasPrefix(res, "nop") {
+			SendIResponse(discord, i.Interaction, res, true)
+		}
+	case discordgo.InteractionApplicationCommandAutocomplete:
+		// Simple autocompletion code
+		if cmd.Autocompleter == nil {
+			SendIResponse(discord, i.Interaction, "nop", true)
+			return
+		}
+		choices := cmd.Autocompleter(handlerData)
+		if len(choices) <= 0 {
+			choices = []*discordgo.ApplicationCommandOptionChoice{}
+		}
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+			Data: &discordgo.InteractionResponseData{
+				Choices: choices,
+			},
+		})
 	}
 	if iResponseMap[i.Interaction.Token] != nil {
 		iResponseMap[i.Interaction.Token].Stop()
