@@ -89,11 +89,14 @@ class _TicketCallback(discord.ui.Select):
         await interaction.response.defer()
         err = await redis_ipc_new(self.bot.redis, "SUPPORT", args=[str(interaction.author.id)])
         if err != b"0":
+            if isinstance(err, bytes):
+                err = err.decode("utf-8")
             return await interaction.send(
-                f"Please go to <#{general_support_channel}> and make a thread there!\nCould not create private thread because: {err}",
+                # f"Please go to <#{general_support_channel}> and make a thread there!\n"
+                f"Could not create private thread because: **{err}**",
                 ephemeral=True,
             )
-        return await interaction.send("Created private thread!", ephemeral=True)
+        return await interaction.send("Created a private thread for you. Staff will assist you when they can!", ephemeral=True)
 
     async def ddr(self, interaction):
         view = _DDRView(interaction, bot=self.bot)

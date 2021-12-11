@@ -358,6 +358,7 @@ func setupCommands() {
 				Name:                "Support for " + username + "-" + user.User.Discriminator + " (" + user.User.ID + ")",
 				AutoArchiveDuration: discordgo.ArchiveDuration3Days,
 				Type:                discordgo.ChannelTypeGuildPrivateThread,
+				Invitable:           false,
 			})
 			if err != nil {
 				return err.Error()
