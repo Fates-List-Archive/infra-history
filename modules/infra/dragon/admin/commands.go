@@ -209,6 +209,47 @@ func CmdInit() map[string]types.SlashCommand {
 		},
 	}
 
+	commands["WHITELISTBOT"] = types.AdminOp{
+		InternalName: "whitelistbot",
+		Cooldown:     types.CooldownLock,
+		Description:  "Adds a bot to the Fates List staff server whitelist temporarily so it can be added",
+		MinimumPerm:  4,
+		Event:        types.EventNone,
+		Server:       common.StaffServer,
+		SlashRaw:     true,
+		ReasonNeeded: true,
+		SlashOptions: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionUser,
+				Name:        "bot",
+				Description: "The bot to whitelist",
+				Required:    true,
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "reason",
+				Description: "Why do you wish for this bot to be whitelisted. May be audited in the future!",
+				Required:    true,
+			},
+		},
+		Handler: func(context types.AdminContext) string {
+			userVal := slashbot.GetArg(context.Discord, context.Interaction, "bot", false)
+			user, ok := userVal.(*discordgo.User)
+			if !ok {
+				return "This user could not be found..."
+			} else if !user.Bot {
+				return "You can only whitelist bots! Users arent affected by Silverpelt Bot Defense!"
+			}
+			botWhitelist[user.ID] = true
+			time.AfterFunc(1*time.Minute, func() {
+				log.Info("Removed user " + user.ID + " from whitelist")
+				botWhitelist[user.ID] = false
+			})
+			return "Done"
+		},
+	}
+
+	// Adds a staff to our team!
 	commands["ADDSTAFF"] = types.AdminOp{
 		InternalName: "addstaff",
 		Cooldown:     types.CooldownBan,
@@ -261,7 +302,7 @@ func CmdInit() map[string]types.SlashCommand {
 			userDm, err := context.Discord.UserChannelCreate(user.ID)
 
 			_, err2 := context.Discord.ChannelMessageSendComplex(userDm.ID, &discordgo.MessageSend{
-				Content: "**You have been accepted onto our staff team!**" +
+				Content: "**You have been accepted onto our staff team!**\n" +
 					"In order to begin testing bots and be a part of the Fates List Staff Team, you must join the below servers:\n\n" +
 					"**Staff server:** <https://fateslist.xyz/server/" + common.StaffServer + "/invite>\n" +
 					"**Testing server:** <https://fateslist.xyz/server/" + common.TestServer + "/invite>\n\n" +

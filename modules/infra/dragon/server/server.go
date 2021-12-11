@@ -71,6 +71,24 @@ func DragonServer() {
 		log.Info("Logged in as ", m.User.Username)
 	}
 
+	discord.AddHandler(func(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
+		if !m.Member.User.Bot {
+			return
+		} else if m.Member.GuildID != common.StaffServer {
+			return
+		}
+
+		ts, err := m.Member.JoinedAt.Parse()
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		if ts.UnixMicro()-time.Now().UnixMicro() > 10 {
+			return
+		}
+		admin.SilverpeltStaffServerProtect(s, m.Member.User.ID)
+	})
+
 	discord.AddHandler(onReady)
 	discordServerBot.AddHandler(onReady)
 

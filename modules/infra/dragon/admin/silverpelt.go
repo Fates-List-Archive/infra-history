@@ -18,7 +18,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func silverpelt(
+var botWhitelist map[string]bool = make(map[string]bool)
+
+// Silverpelt staff server protection
+func SilverpeltStaffServerProtect(discord *discordgo.Session, userID string) {
+	check, ok := botWhitelist[userID]
+	if !ok || !check {
+		discord.GuildMemberDeleteWithReason(common.StaffServer, userID, "Unauthorized bot!")
+	}
+}
+
+// Silverpelt command handler
+func SilverpeltCmdHandle(
 	ctx context.Context,
 	discord *discordgo.Session,
 	interaction *discordgo.Interaction,
@@ -50,32 +61,35 @@ func silverpelt(
 
 		var state pgtype.Int4
 		var owner pgtype.Int8
+
 		db.QueryRow(ctx, "SELECT state FROM bots WHERE bot_id = $1", bot_id).Scan(&state)
 
-		if bot_id == "" {
-			state = pgtype.Int4{Status: pgtype.Present}
-		}
-
-		if state.Status != pgtype.Present {
-			return "This bot does not exist!"
-		}
-
-		db.QueryRow(ctx, "SELECT owner FROM bot_owner WHERE bot_id = $1 AND main = true", bot_id).Scan(&owner)
-
-		if owner.Status != pgtype.Present && bot_id != "" {
-			db.Exec(ctx, "DELETE FROM bot_owner WHERE bot_id = $1", bot_id)
-			db.Exec(ctx, "INSERT INTO bot_owner (bot_id, owner, main) VALUES ($1, $2, true)", bot_id, user_id)
-			err := db.QueryRow(ctx, "SELECT owner FROM bot_owner WHERE bot_id = $1 AND main = true", bot_id).Scan(&owner)
-
-			if err != nil {
-				return err.Error()
+		// These checks do not apply for slashRaw
+		if !admin_op.SlashRaw {
+			if bot_id == "" {
+				state = pgtype.Int4{Status: pgtype.Present}
 			}
 
-			return "This bot does not have a main owner. You have temporarily been given main owner as a result"
+			if state.Status != pgtype.Present {
+				return "This bot does not exist!"
+			}
+
+			db.QueryRow(ctx, "SELECT owner FROM bot_owner WHERE bot_id = $1 AND main = true", bot_id).Scan(&owner)
+
+			if owner.Status != pgtype.Present && bot_id != "" {
+				db.Exec(ctx, "DELETE FROM bot_owner WHERE bot_id = $1", bot_id)
+				db.Exec(ctx, "INSERT INTO bot_owner (bot_id, owner, main) VALUES ($1, $2, true)", bot_id, user_id)
+				err := db.QueryRow(ctx, "SELECT owner FROM bot_owner WHERE bot_id = $1 AND main = true", bot_id).Scan(&owner)
+
+				if err != nil {
+					return err.Error()
+				}
+
+				return "This bot does not have a main owner. You have temporarily been given main owner as a result"
+			}
+
+			log.Warn("Bot owner: ", owner.Int)
 		}
-
-		log.Warn("Bot owner: ", owner.Int)
-
 		state_data := types.GetBotState(int(state.Int))
 
 		member, err := discord.State.Member(common.MainServer, user_id)

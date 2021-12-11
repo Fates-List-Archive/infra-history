@@ -89,7 +89,7 @@ func adminSlashHandler(
 		}
 	}
 
-	return silverpelt(
+	return SilverpeltCmdHandle(
 		ctx,
 		discord,
 		i,
