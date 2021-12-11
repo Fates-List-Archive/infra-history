@@ -302,6 +302,79 @@ func setupCommands() {
 		MaxArgs: 3,
 	}
 
+	// SUPPORT <COMMAND ID> <USER ID>
+	ipcActions["SUPPORT"] = types.IPCCommand{
+		Handler: func(cmd []string, context types.IPCContext) string {
+			userId := cmd[2]
+			mainGuild, err := context.Discord.State.Guild(common.MainServer)
+			user, err := context.Discord.State.Member(common.MainServer, userId)
+
+			if err != nil {
+				log.Warn(err)
+				return "User not found"
+			}
+
+			var flag bool = false
+			if err == nil {
+				// Check if threads are supported
+				for _, v := range mainGuild.Features {
+					if v == "PRIVATE_THREADS" {
+						flag = true
+					}
+				}
+			} else {
+				log.Warn(err.Error() + "... Trying to create private thread anyways!")
+				flag = true
+			}
+
+			if !flag {
+				return "Private threads require more boosts! Please consider boosting :heart:"
+			}
+
+			var username string
+			if len(user.User.Username) > 70 {
+				username = user.User.Username[:70]
+			} else {
+				username = user.User.Username
+			}
+
+			threadList, err := context.Discord.ThreadsListActive(common.MainServer)
+			if err != nil {
+				return err.Error()
+			}
+
+			for _, v := range threadList.Threads {
+				if v.ParentID != common.MainSupportChannel {
+					continue
+				} else if strings.HasPrefix(v.Name, "Support for ") && strings.Contains(v.Name, user.User.ID) {
+					if v.ThreadMetadata.Archived || v.ThreadMetadata.Locked {
+						continue
+					}
+					return "You already have an active thread"
+				}
+			}
+
+			thread, err := context.Discord.ThreadStartWithoutMessage(common.MainSupportChannel, &discordgo.ThreadCreateData{
+				Name:                "Support for " + username + "-" + user.User.Discriminator + " (" + user.User.ID + ")",
+				AutoArchiveDuration: discordgo.ArchiveDuration3Days,
+				Type:                discordgo.ChannelTypeGuildPrivateThread,
+			})
+			if err != nil {
+				return err.Error()
+			}
+
+			msg := discordgo.MessageSend{
+				Content: "@everyone <@&836349482340843572>\n\n" + user.User.Mention() + " has started a support thread.\n\n**Please kindly wait for staff to arrive!**",
+			}
+
+			_, err = context.Discord.ChannelMessageSendComplex(thread.ID, &msg)
+
+			return "0"
+		},
+		MinArgs: 3,
+		MaxArgs: 3,
+	}
+
 	// GETADMINOPS <COMMAND ID>
 	ipcActions["GETADMINOPS"] = types.IPCCommand{
 		Handler: func(cmd []string, context types.IPCContext) string {

@@ -19,24 +19,25 @@ var (
 )
 
 var (
-	MainBotToken     string
-	ServerBotToken   string
-	ClientSecret     string
-	MainServer       string
-	TestServer       string
-	StaffServer      string
-	SiteLogs         string
-	CertifiedBotRole string
-	CertifiedDevRole string
-	BotDevRole       string
-	CliCmd           string
-	RootPath         string
-	PythonPath       string
-	Version          string
-	CommitHash       string
-	BuildTime        string
-	Debug            bool
-	RegisterCommands bool
+	MainBotToken       string
+	ServerBotToken     string
+	ClientSecret       string
+	MainServer         string
+	TestServer         string
+	StaffServer        string
+	SiteLogs           string
+	MainSupportChannel string
+	CertifiedBotRole   string
+	CertifiedDevRole   string
+	BotDevRole         string
+	CliCmd             string
+	RootPath           string
+	PythonPath         string
+	Version            string
+	CommitHash         string
+	BuildTime          string
+	Debug              bool
+	RegisterCommands   bool
 )
 
 func init() {
@@ -93,6 +94,7 @@ func init() {
 	var channels = v.GetObject("channels")
 
 	SiteLogs = string(channels.Get("bot_logs").GetStringBytes())
+	MainSupportChannel = string(channels.Get("main_support_channel").GetStringBytes())
 
 	var roles = v.GetObject("roles")
 

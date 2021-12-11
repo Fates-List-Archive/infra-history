@@ -29,7 +29,7 @@ from config import (
     staff_ping_role,
     support_channel,
 )
-
+from modules.core.ipc import redis_ipc_new
 
 class TicketMenu(discord.ui.View):
     def __init__(self, bot, public):
@@ -85,13 +85,15 @@ class _TicketCallback(discord.ui.Select):
                                  )  # Force reset select menu for user
         return await f(interaction)
 
-    @staticmethod
-    async def support(interaction):
+    async def support(self, interaction):
         await interaction.response.defer()
-        return await interaction.followup.send(
-            f"Please go to <#{general_support_channel}> and make a thread there!",
-            ephemeral=True,
-        )
+        err = await redis_ipc_new(self.bot.redis, "SUPPORT", args=[str(interaction.author.id)])
+        if err != b"0":
+            return await interaction.send(
+                f"Please go to <#{general_support_channel}> and make a thread there!\nCould not create private thread because: {err}",
+                ephemeral=True,
+            )
+        return await interaction.send("Created private thread!", ephemeral=True)
 
     async def ddr(self, interaction):
         view = _DDRView(interaction, bot=self.bot)
