@@ -47,6 +47,10 @@ async def update_user_preferences(request: Request, user_id: int, data: UpdateUs
         if not admin:
             return abort(403)
         user_id = data.user_id
+    else:
+        state = await db.fetchval("SELECT state FROM users WHERE user_id = $1", user_id)
+        if state in (enums.UserState.global_ban, enums.UserState.profile_edit_ban):
+            return api_error("You have been banned from using this API endpoint")
 
     if data.js_allowed is not None:
         await db.execute("UPDATE users SET js_allowed = $1 WHERE user_id = $2", data.js_allowed, user_id)

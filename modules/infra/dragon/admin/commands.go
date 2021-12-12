@@ -176,7 +176,15 @@ func CmdInit() map[string]types.SlashCommand {
 			if !ok {
 				return "Invalid state"
 			}
-			log.Info(state)
+			userVal := slashbot.GetArg(context.Discord, context.Interaction, "user", false)
+			user, ok := userVal.(string)
+			if !ok {
+				return "Invalid user provided"
+			}
+			_, err := context.Postgres.Exec(context.Context, "UPDATE users SET state = $1 WHERE user_id = $2", state, user)
+			if err != nil {
+				return err.Error()
+			}
 			return "OK."
 		},
 	}
@@ -848,7 +856,6 @@ func CmdInit() map[string]types.SlashCommand {
 		MinimumPerm:  2,
 		ReasonNeeded: true,
 		Event:        types.EventBotApprove,
-		// DG1: SlashContextField: "guild_count",
 		SlashOptions: []*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionString,
@@ -871,10 +878,9 @@ func CmdInit() map[string]types.SlashCommand {
 			} /* DG1 else if context.ExtraContext == nil {
 				return "Bots approximate guild count must be set when approving"
 			}
-
-			guildCount, err := strconv.Atoi(*context.ExtraContext)
-
-			if err != nil {
+			guildCountVal := slashbot.GetArg(context.Discord, context.Interaction, "guild_count", false)
+			guildCount, ok := guildCount.(int)
+			if !ok {
 				return "Could not parse guild count: " + err.Error()
 			} */
 

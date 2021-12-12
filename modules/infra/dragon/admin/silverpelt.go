@@ -116,18 +116,17 @@ func SilverpeltCmdHandle(
 		}
 
 		context := types.AdminContext{
-			Context:      ctx,
-			Discord:      discord,
-			Interaction:  interaction,
-			Postgres:     db,
-			Redis:        rdb,
-			StaffPerm:    perm,
-			User:         member.User,
-			Bot:          bot,
-			BotState:     state_data,
-			Reason:       admin_redis_context.Reason,
-			ExtraContext: admin_redis_context.ExtraContext,
-			Owner:        strconv.FormatInt(owner.Int, 10),
+			Context:     ctx,
+			Discord:     discord,
+			Interaction: interaction,
+			Postgres:    db,
+			Redis:       rdb,
+			StaffPerm:   perm,
+			User:        member.User,
+			Bot:         bot,
+			BotState:    state_data,
+			Reason:      admin_redis_context.Reason,
+			Owner:       strconv.FormatInt(owner.Int, 10),
 		}
 
 		if context.Reason == "" && !admin_op.SlashRaw {

@@ -125,23 +125,21 @@ type StaffPerms struct {
 }
 
 type AdminRedisContext struct {
-	Reason       string  `json:"reason"`
-	ExtraContext *string `json:"ctx"`
+	Reason string `json:"reason"`
 }
 
 type AdminContext struct {
-	Context      context.Context
-	Discord      *discordgo.Session
-	Interaction  *discordgo.Interaction
-	Postgres     *pgxpool.Pool
-	Redis        *redis.Client
-	User         *discordgo.User
-	StaffPerm    float32
-	Bot          *discordgo.User
-	BotState     BotState
-	Reason       string
-	ExtraContext *string // This is per operation dependant
-	Owner        string
+	Context     context.Context
+	Discord     *discordgo.Session
+	Interaction *discordgo.Interaction
+	Postgres    *pgxpool.Pool
+	Redis       *redis.Client
+	User        *discordgo.User
+	StaffPerm   float32
+	Bot         *discordgo.User
+	BotState    BotState
+	Reason      string
+	Owner       string
 }
 
 type ServerListContext struct {
@@ -187,18 +185,17 @@ type SlashCommand struct {
 }
 
 type AdminOp struct {
-	InternalName      string                                `json:"internal_name"` // Internal name for enums
-	Cooldown          CooldownBucket                        `json:"cooldown"`
-	Description       string                                `json:"description"`
-	MinimumPerm       int                                   `json:"min_perm"`
-	ReasonNeeded      bool                                  `json:"reason_needed"`
-	Event             APIEvent                              `json:"event"`
-	Autocompleter     Autocompleter                         `json:"-"` // Autocompleter
-	Handler           AdminFunction                         `json:"-"`
-	Server            string                                `json:"server"`        // Slash command server
-	SlashOptions      []*discordgo.ApplicationCommandOption `json:"slash_options"` // Slash command options
-	SlashRaw          bool                                  `json:"slash_raw"`     // Whether or not to add the bot option
-	SlashContextField string                                `json:"slash_ctx"`     // The string name for context
+	InternalName  string                                `json:"internal_name"` // Internal name for enums
+	Cooldown      CooldownBucket                        `json:"cooldown"`
+	Description   string                                `json:"description"`
+	MinimumPerm   int                                   `json:"min_perm"`
+	ReasonNeeded  bool                                  `json:"reason_needed"`
+	Event         APIEvent                              `json:"event"`
+	Autocompleter Autocompleter                         `json:"-"` // Autocompleter
+	Handler       AdminFunction                         `json:"-"`
+	Server        string                                `json:"server"`        // Slash command server
+	SlashOptions  []*discordgo.ApplicationCommandOption `json:"slash_options"` // Slash command options
+	SlashRaw      bool                                  `json:"slash_raw"`     // Whether or not to add the bot option
 }
 
 type ServerListCommand struct {

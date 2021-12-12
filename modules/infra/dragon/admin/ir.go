@@ -6,7 +6,6 @@ import (
 	"context"
 	"dragon/common"
 	"dragon/types"
-	"strconv"
 
 	"github.com/Fates-List/discordgo"
 	"github.com/go-redis/redis/v8"
@@ -77,19 +76,9 @@ func adminSlashHandler(
 	var botId string
 	var op string = commandNameCache[appCmdData.Name]
 	var reason string
-	var extraContext string
 
 	if op == "" {
 		return ""
-	}
-
-	// Get required name of context field/the name of the argument that should be treated as context
-	var slashContext string
-
-	if cmd.SlashContextField == "" {
-		slashContext = "context"
-	} else {
-		slashContext = cmd.SlashContextField
 	}
 
 	// Get needed interaction options using loop
@@ -102,12 +91,6 @@ func adminSlashHandler(
 			}
 		} else if v.Name == "reason" {
 			reason = common.RenderPossibleLink(v.StringValue())
-		} else if v.Name == slashContext {
-			if v.Type == discordgo.ApplicationCommandOptionString {
-				extraContext = v.StringValue()
-			} else if v.Type == discordgo.ApplicationCommandOptionInteger {
-				extraContext = strconv.FormatInt(v.IntValue(), 10)
-			}
 		}
 	}
 
@@ -121,8 +104,7 @@ func adminSlashHandler(
 		botId,
 		op,
 		types.AdminRedisContext{
-			Reason:       reason,
-			ExtraContext: &extraContext,
+			Reason: reason,
 		},
 		i.GuildID,
 	)
