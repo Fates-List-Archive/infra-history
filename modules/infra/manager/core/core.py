@@ -9,7 +9,7 @@ import datetime
 import os
 import time
 from config import log_channel, main, staff, testing, manager_key, site_url, ag_role
-from modules.models.enums import BotAdminOp, CooldownBucket, Status, UserState, BotState, BotLock
+from modules.models.enums import Status, UserState, BotState, BotLock
 from modules.core.permissions import StaffMember
 from modules.core.ipc import redis_ipc_new
 from loguru import logger
@@ -94,11 +94,6 @@ async def is_staff(ctx, user_id: int, min_perm: int = 2):
     res = await request("GET", ctx, f"/api/is_staff?user_id={user_id}&min_perm={min_perm}", staff = False)
     res = res[1]
     return res["staff"], res["perm"], StaffMember(**res["sm"])
-
-async def log(ctx, message):
-    owner = ctx.guild.owner if ctx.guild else ctx.author
-    channel = ctx.bot.get_channel(log_channel)
-    await channel.send(message)                 
 
 async def profile(ctx, user):
     """Gets the users profile, sends a message and returns None if not found"""

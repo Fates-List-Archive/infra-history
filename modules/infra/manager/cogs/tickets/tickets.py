@@ -8,13 +8,10 @@ from typing import Optional, Union
 
 import discord
 from core import (
-    BotAdminOp,
     BotListView,
     BotState,
     MenuState,
     MiniContext,
-    is_staff,
-    log,
     request,
 )
 from discord import AllowedMentions, Color, Embed, Member, TextChannel, User
