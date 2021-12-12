@@ -42,10 +42,7 @@ func SilverpeltCmdHandle(
 	originServer string,
 ) string {
 	if admin_op, yes := commands[op]; yes {
-		ok, is_staff, perm := common.GetPerms(discord, ctx, user_id, float32(admin_op.MinimumPerm))
-		if ok != "" {
-			return "Something went wrong!"
-		}
+		_, is_staff, perm := common.GetPerms(discord, user_id, float32(admin_op.MinimumPerm))
 
 		if admin_op.Server != "" && admin_op.Server != originServer && admin_op.InternalName != "mock" {
 			return "Please exit mock mode and try again!"

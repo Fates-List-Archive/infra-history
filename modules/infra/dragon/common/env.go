@@ -19,26 +19,27 @@ var (
 )
 
 var (
-	MainBotToken       string
-	ServerBotToken     string
-	ClientSecret       string
-	MainServer         string
-	TestServer         string
-	StaffServer        string
-	SiteLogs           string
-	MainSupportChannel string
-	CertifiedBotRole   string
-	CertifiedDevRole   string
-	BotDevRole         string
-	AccessGrantedRole  string
-	CliCmd             string
-	RootPath           string
-	PythonPath         string
-	Version            string
-	CommitHash         string
-	BuildTime          string
-	Debug              bool
-	RegisterCommands   bool
+	MainBotToken        string
+	ServerBotToken      string
+	ClientSecret        string
+	MainServer          string
+	TestServer          string
+	StaffServer         string
+	SiteLogs            string
+	MainSupportChannel  string
+	CertifiedBotRole    string
+	CertifiedDevRole    string
+	BotDevRole          string
+	AccessGrantedRole   string
+	TestServerStaffRole string
+	CliCmd              string
+	RootPath            string
+	PythonPath          string
+	Version             string
+	CommitHash          string
+	BuildTime           string
+	Debug               bool
+	RegisterCommands    bool
 )
 
 func init() {
@@ -103,6 +104,7 @@ func init() {
 	CertifiedDevRole = string(roles.Get("certified_dev_role").GetStringBytes())
 	BotDevRole = string(roles.Get("bot_dev_role").GetStringBytes())
 	AccessGrantedRole = string(roles.Get("staff_server_access_granted_role").GetStringBytes())
+	TestServerStaffRole = string(roles.Get("test_server_staff_role").GetStringBytes())
 
 	permInit()
 

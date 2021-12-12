@@ -71,6 +71,14 @@ func SetupSlash(discord *discordgo.Session, cmdInit types.SlashFunction) {
 				}
 			}()
 		}
+		deferFunc := func() {
+			e := recover()
+			if e != nil {
+				log.Error(e)
+				os.Exit(0)
+			}
+		}
+		defer deferFunc()
 		commands[discord.State.User.ID+cmdName] = cmdData
 	}
 
@@ -116,7 +124,7 @@ func SlashHandler(
 			return
 		}
 
-		_, isStaff, _ := common.GetPerms(common.DiscordMain, ctx, i.Interaction.Member.User.ID, 4)
+		_, isStaff, _ := common.GetPerms(common.DiscordMain, i.Interaction.Member.User.ID, 4)
 		if !isStaff {
 			SendIResponse(discord, i.Interaction, "You are not a Fates List Admin. If you think this is a mistake, please report this on FL Kremlin!", true)
 			return
@@ -201,12 +209,15 @@ func SlashHandler(
 		if len(choices) <= 0 {
 			choices = []*discordgo.ApplicationCommandOptionChoice{}
 		}
-		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
 			Data: &discordgo.InteractionResponseData{
 				Choices: choices,
 			},
 		})
+		if err != nil {
+			log.Error(err, spew.Sdump(choices))
+		}
 	}
 	go func() {
 		if iResponseMap[i.Interaction.Token] != nil {
@@ -242,11 +253,7 @@ func CheckServerPerms(discord *discordgo.Session, i *discordgo.Interaction, perm
 	}
 
 	if permNum >= 4 {
-		ok, is_staff, perm := common.GetPerms(discord, context.Background(), i.Member.User.ID, float32(permNum+1))
-		if ok != "" {
-			SendIResponse(discord, i, "Something went wrong while verifying your identity!", true)
-			return false
-		}
+		_, is_staff, perm := common.GetPerms(discord, i.Member.User.ID, float32(permNum+1))
 		if !is_staff {
 			SendIResponse(discord, i, "This operation requires perm: "+strconv.Itoa(int(permNum+1))+" but you only have perm number "+strconv.Itoa(int(perm))+".", true)
 			return false

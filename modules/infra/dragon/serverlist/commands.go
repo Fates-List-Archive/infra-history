@@ -233,7 +233,7 @@ func CmdInit() map[string]types.SlashCommand {
 				} else if value == "public" || value == "0" {
 					value = "0"
 				} else {
-					_, isStaff, _ := common.GetPerms(common.DiscordMain, context.Context, context.Interaction.Member.User.ID, 4)
+					_, isStaff, _ := common.GetPerms(common.DiscordMain, context.Interaction.Member.User.ID, 4)
 					if !isStaff {
 						return "State must be one of (private_viewable, public)"
 					} else {
@@ -254,7 +254,7 @@ func CmdInit() map[string]types.SlashCommand {
 				state := types.GetBotState(int(currState.Int))
 
 				if state != types.BotStateApproved && state != types.BotStatePrivateViewable {
-					_, isStaff, _ := common.GetPerms(common.DiscordMain, context.Context, context.Interaction.Member.User.ID, 4)
+					_, isStaff, _ := common.GetPerms(common.DiscordMain, context.Interaction.Member.User.ID, 4)
 					if !isStaff {
 						return "You may not change the state of this server. Please contact Fates List Staff for more information"
 					}

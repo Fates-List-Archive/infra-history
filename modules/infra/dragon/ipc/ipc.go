@@ -238,13 +238,7 @@ func setupCommands() {
 	// GETPERM <COMMAND ID> <USER ID>
 	ipcActions["GETPERM"] = types.IPCCommand{
 		Handler: func(cmd []string, context types.IPCContext) string {
-			perms := common.StaffRoles["user"]
-			member, err := context.Discord.State.Member(common.MainServer, cmd[2])
-			if err != nil {
-				log.Warn(err)
-			} else {
-				perms = common.GetUserPerms(member.Roles)
-			}
+			perms, _, _ := common.GetPerms(context.Discord, cmd[2], 0)
 			res, err := json.Marshal(perms)
 			if err != nil {
 				log.Warn(err)
@@ -437,7 +431,7 @@ func setupCommands() {
 					// Staff server exception, only need permlevel of 2 for staff server
 					perm = 2
 				}
-				_, isStaff, _ := common.GetPerms(context.Discord, ctx, userId, perm)
+				_, isStaff, _ := common.GetPerms(context.Discord, userId, perm)
 				if !isStaff {
 					return "This server is only open to Fates List Staff Members at this time."
 				}

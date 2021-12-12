@@ -1,7 +1,6 @@
 package common
 
 import (
-	"context"
 	"dragon/types"
 	"encoding/json"
 	"io/ioutil"
@@ -60,7 +59,7 @@ func GetUserPerms(roles []string) types.StaffRole {
 	return maxPerm
 }
 
-func GetPerms(discord *discordgo.Session, ctx context.Context, user_id string, min_perm float32) (ok string, is_staff bool, perm float32) {
+func GetPerms(discord *discordgo.Session, user_id string, min_perm float32) (role types.StaffRole, is_staff bool, perm float32) {
 	perms := StaffRoles["user"]
 	member, err := discord.State.Member(MainServer, user_id)
 	if err != nil {
@@ -68,5 +67,5 @@ func GetPerms(discord *discordgo.Session, ctx context.Context, user_id string, m
 	} else {
 		perms = GetUserPerms(member.Roles)
 	}
-	return "", perms.Perm >= min_perm, perms.Perm
+	return perms, perms.Perm >= min_perm, perms.Perm
 }

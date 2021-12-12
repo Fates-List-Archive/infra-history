@@ -75,7 +75,7 @@ def get_tags(request: Request):
     "/is_staff",
     operation_id="check_staff_member"
 )
-async def check_staff_member(request: Request, user_id: int, min_perm: int):
+async def check_staff_member(request: Request, user_id: int, min_perm: int = 2):
     """Admin route to check if a user is staff or not"""
     staff = await is_staff(staff_roles, user_id, min_perm, json = True)
     return {"staff": staff[0], "perm": staff[1], "sm": staff[2]}

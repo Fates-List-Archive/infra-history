@@ -5,6 +5,9 @@ import (
 	"dragon/common"
 	"dragon/slashbot"
 	"dragon/types"
+	"encoding/json"
+	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -43,14 +46,31 @@ func autocompleter(state int) func(context types.HandlerData) (ac []*discordgo.A
 			var usernameCached pgtype.Text
 			var verifier pgtype.Int8
 			bots.Scan(&botId, &usernameCached, &verifier)
+
+			var username string = usernameCached.String
+			if username == "" {
+				user, err := context.Discord.User(botId.String)
+				if err != nil {
+					username = botId.String
+				} else {
+					_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET username_cached = $1 WHERE bot_id = $2", user.Username, botId.String)
+					if err != nil {
+						log.Error(err)
+					}
+					username = user.Username
+				}
+			}
+
 			var val discordgo.ApplicationCommandOptionChoice = discordgo.ApplicationCommandOptionChoice{
-				Name:  usernameCached.String,
+				Name:  username,
 				Value: botId.String,
 			}
 
 			if verifier.Status == pgtype.Present && verifier.Int > 0 {
 				if state == types.BotStateUnderReview.Int() {
 					val.Name += " (Claimed by " + strconv.FormatInt(verifier.Int, 10) + ")"
+				} else if state == types.BotStateDenied.Int() {
+					val.Name += " (Denied by " + strconv.FormatInt(verifier.Int, 10) + ")"
 				}
 			}
 
@@ -125,6 +145,39 @@ func CmdInit() map[string]types.SlashCommand {
 			slashbot.SendIResponse(context.Discord, context.Interaction, "nop", true)
 
 			return "nop"
+		},
+	}
+
+	commands["USERSTATE"] = types.AdminOp{
+		InternalName: "userstate",
+		Cooldown:     types.CooldownBan,
+		Description:  "Sets a users state",
+		SlashRaw:     true,
+		Event:        types.EventNone,
+		MinimumPerm:  5,
+		SlashOptions: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionInteger,
+				Name:        "state",
+				Description: "The new state to set",
+				Choices:     types.GetStateChoices(types.UserStateUnknown),
+				Required:    true,
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "user",
+				Description: "The user id to set the state of",
+				Required:    true,
+			},
+		},
+		Handler: func(context types.AdminContext) string {
+			stateVal := slashbot.GetArg(context.Discord, context.Interaction, "state", false)
+			state, ok := stateVal.(int64)
+			if !ok {
+				return "Invalid state"
+			}
+			log.Info(state)
+			return "OK."
 		},
 	}
 
@@ -416,7 +469,8 @@ func CmdInit() map[string]types.SlashCommand {
 				Required:    true,
 			},
 		},
-		Server: common.TestServer,
+		Server:        common.TestServer,
+		Autocompleter: autocompleter(types.BotStateDenied.Int()),
 		Handler: func(context types.AdminContext) string {
 			if context.BotState != types.BotStateDenied {
 				return "This bot cannot be requeued as it is not currently denied"
@@ -547,8 +601,13 @@ func CmdInit() map[string]types.SlashCommand {
 				Required:    true,
 			},
 		},
-		Server: common.StaffServer,
+		Server:        common.StaffServer,
+		Autocompleter: autocompleter(types.BotStateApproved.Int()),
 		Handler: func(context types.AdminContext) string {
+			if context.BotState == types.BotStateCertified {
+				return "You can't ban certified botd! Uncertify them first!"
+			}
+
 			embed := discordgo.MessageEmbed{
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Bot Banned",
@@ -603,7 +662,8 @@ func CmdInit() map[string]types.SlashCommand {
 				Required:    true,
 			},
 		},
-		Server: common.StaffServer,
+		Server:        common.StaffServer,
+		Autocompleter: autocompleter(types.BotStateBanned.Int()),
 		Handler: func(context types.AdminContext) string {
 			embed := discordgo.MessageEmbed{
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
@@ -640,14 +700,15 @@ func CmdInit() map[string]types.SlashCommand {
 
 	// Certify
 	commands["CERTIFY"] = types.AdminOp{
-		InternalName: "certify",
-		Cooldown:     types.CooldownNone,
-		Description:  "Certifies a bot",
-		MinimumPerm:  5,
-		ReasonNeeded: false,
-		Event:        types.EventBotCertify,
-		SlashOptions: []*discordgo.ApplicationCommandOption{},
-		Server:       common.StaffServer,
+		InternalName:  "certify",
+		Cooldown:      types.CooldownNone,
+		Description:   "Certifies a bot",
+		MinimumPerm:   5,
+		ReasonNeeded:  false,
+		Event:         types.EventBotCertify,
+		SlashOptions:  []*discordgo.ApplicationCommandOption{},
+		Server:        common.StaffServer,
+		Autocompleter: autocompleter(types.BotStateApproved.Int()),
 		Handler: func(context types.AdminContext) string {
 			var errors string = "OK. "
 			if context.BotState != types.BotStateApproved {
@@ -715,11 +776,7 @@ func CmdInit() map[string]types.SlashCommand {
 					continue
 				}
 			}
-			if errors != "OK. " {
-				return "OK. Bot was certified, but I could not add certified bot role to bot owners because: \n" + errors
-			}
-
-			return ""
+			return errors
 		},
 	}
 
@@ -739,7 +796,8 @@ func CmdInit() map[string]types.SlashCommand {
 				Required:    true,
 			},
 		},
-		Server: common.StaffServer,
+		Server:        common.StaffServer,
+		Autocompleter: autocompleter(types.BotStateCertified.Int()),
 		Handler: func(context types.AdminContext) string {
 			var errors string = "OK. "
 			if context.BotState != types.BotStateCertified {
@@ -784,13 +842,13 @@ func CmdInit() map[string]types.SlashCommand {
 
 	// Approve
 	commands["APPROVE"] = types.AdminOp{
-		InternalName:      "approve",
-		Cooldown:          types.CooldownNone,
-		Description:       "Approves a bot",
-		MinimumPerm:       2,
-		ReasonNeeded:      true,
-		Event:             types.EventBotApprove,
-		SlashContextField: "guild_count",
+		InternalName: "approve",
+		Cooldown:     types.CooldownNone,
+		Description:  "Approves a bot",
+		MinimumPerm:  2,
+		ReasonNeeded: true,
+		Event:        types.EventBotApprove,
+		// DG1: SlashContextField: "guild_count",
 		SlashOptions: []*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionString,
@@ -798,27 +856,52 @@ func CmdInit() map[string]types.SlashCommand {
 				Description: "Feedback about the bot and/or a welcome message",
 				Required:    true,
 			},
-			{
+			/* DG1 {
 				Type:        discordgo.ApplicationCommandOptionInteger,
 				Name:        "guild_count",
 				Description: "Guild count of the bot currently",
 				Required:    true,
-			},
+			}, */
 		},
 		Server:        common.TestServer,
 		Autocompleter: autocompleter(types.BotStateUnderReview.Int()),
 		Handler: func(context types.AdminContext) string {
 			if context.BotState != types.BotStateUnderReview {
 				return "This bot cannot be approved as it is not currently under review. Did you claim it first?"
-			} else if context.ExtraContext == nil {
+			} /* DG1 else if context.ExtraContext == nil {
 				return "Bots approximate guild count must be set when approving"
 			}
 
-			guild_count, err := strconv.Atoi(*context.ExtraContext)
+			guildCount, err := strconv.Atoi(*context.ExtraContext)
 
 			if err != nil {
 				return "Could not parse guild count: " + err.Error()
+			} */
+
+			client := http.Client{Timeout: 15 * time.Second}
+			gcResp, err := client.Get("https://japi.rest/discord/v1/application/" + context.Bot.ID)
+			if err != nil {
+				return err.Error()
 			}
+			if gcResp.StatusCode != 200 {
+				return "japi.rest returned a non-success status code when getting the approximate guild count. Please report this error to skylar#6666 if this happens after retrying!\n\n" + gcResp.Status
+			}
+			defer gcResp.Body.Close()
+
+			body, err := io.ReadAll(gcResp.Body)
+			if err != nil {
+				return err.Error()
+			}
+
+			var appData types.JAPIApp
+
+			err = json.Unmarshal(body, &appData)
+
+			if err != nil {
+				return err.Error()
+			}
+
+			guildCount := appData.Data.Bot.ApproximateGuildCount
 
 			var errors string = "OK. \n**Invite (should work, if not just use the bot pages invite): https://discord.com/api/oauth2/authorize?permissions=0&scope=bot%20applications.commands&client_id=" + context.Bot.ID + "**\n\n"
 
@@ -843,7 +926,7 @@ func CmdInit() map[string]types.SlashCommand {
 				log.Warn(err)
 			}
 
-			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1, verifier = $2, guild_count = $3 WHERE bot_id = $4", types.BotStateApproved.Int(), context.User.ID, guild_count, context.Bot.ID)
+			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1, verifier = $2, guild_count = $3 WHERE bot_id = $4", types.BotStateApproved.Int(), context.User.ID, guildCount, context.Bot.ID)
 
 			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.UserBotApprove)
 
@@ -856,7 +939,7 @@ func CmdInit() map[string]types.SlashCommand {
 			owners, err := context.Postgres.Query(context.Context, "SELECT owner FROM bot_owner WHERE bot_id = $1", context.Bot.ID)
 
 			if err != nil {
-				errors += "Bot was approved, but I could not find bot owners because: " + err.Error() + "\n"
+				errors += "Could not find bot owners because: " + err.Error() + "\n"
 				return "OK. Bot was approved, but I could not add bot dev role to bot owners because: \n" + errors
 			}
 
@@ -885,11 +968,7 @@ func CmdInit() map[string]types.SlashCommand {
 				}
 			}
 
-			if errors != "OK. " {
-				return "OK. Bot was approved, but I could not add bot dev role to bot owners because: \n" + errors
-			}
-
-			return ""
+			return errors
 		},
 	}
 
@@ -909,7 +988,8 @@ func CmdInit() map[string]types.SlashCommand {
 				Required:    true,
 			},
 		},
-		Server: common.TestServer,
+		Server:        common.TestServer,
+		Autocompleter: autocompleter(types.BotStateUnderReview.Int()),
 		Handler: func(context types.AdminContext) string {
 			if context.BotState != types.BotStateUnderReview {
 				return "This bot cannot be denied as it is not currently under review. Did you claim it first?"
@@ -964,7 +1044,8 @@ func CmdInit() map[string]types.SlashCommand {
 				Required:    true,
 			},
 		},
-		Server: common.StaffServer,
+		Server:        common.StaffServer,
+		Autocompleter: autocompleter(types.BotStateApproved.Int()),
 		Handler: func(context types.AdminContext) string {
 			if context.BotState != types.BotStateApproved {
 				return "This bot cannot be unverified as it is not currently approved or is certified."
@@ -1002,14 +1083,15 @@ func CmdInit() map[string]types.SlashCommand {
 	}
 
 	commands["STAFFLOCK"] = types.AdminOp{
-		InternalName: "stafflock",
-		Cooldown:     types.CooldownNone,
-		Description:  "Staff locks a bot",
-		MinimumPerm:  2,
-		ReasonNeeded: false,
-		Event:        types.EventStaffLock,
-		SlashOptions: []*discordgo.ApplicationCommandOption{},
-		Server:       common.StaffServer,
+		InternalName:  "stafflock",
+		Cooldown:      types.CooldownNone,
+		Description:   "Staff locks a bot",
+		MinimumPerm:   2,
+		ReasonNeeded:  false,
+		Event:         types.EventStaffLock,
+		SlashOptions:  []*discordgo.ApplicationCommandOption{},
+		Server:        common.StaffServer,
+		Autocompleter: autocompleter(types.BotStateApproved.Int()),
 		Handler: func(context types.AdminContext) string {
 			countKey := "fl_staff_access-" + context.User.ID + ":count"
 			accessKey := "fl_staff_access-" + context.User.ID + ":" + context.Bot.ID
@@ -1062,7 +1144,8 @@ func CmdInit() map[string]types.SlashCommand {
 				Required:    true,
 			},
 		},
-		Server: common.StaffServer,
+		Server:        common.StaffServer,
+		Autocompleter: autocompleter(types.BotStateApproved.Int()),
 		Handler: func(context types.AdminContext) string {
 			countKey := "fl_staff_access-" + context.User.ID + ":count"
 			accessKey := "fl_staff_access-" + context.User.ID + ":" + context.Bot.ID

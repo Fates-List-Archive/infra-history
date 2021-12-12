@@ -72,12 +72,6 @@ func DragonServer() {
 	}
 
 	discord.AddHandler(func(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
-		if !m.Member.User.Bot {
-			return
-		} else if m.Member.GuildID != common.StaffServer {
-			return
-		}
-
 		ts, err := m.Member.JoinedAt.Parse()
 		if err != nil {
 			log.Error(err)
@@ -86,7 +80,19 @@ func DragonServer() {
 		if ts.UnixMicro()-time.Now().UnixMicro() > 10 {
 			return
 		}
-		admin.SilverpeltStaffServerProtect(s, m.Member.User.ID)
+
+		if m.Member.GuildID == common.TestServer {
+			if !m.Member.User.Bot {
+				_, isStaff, _ := common.GetPerms(s, m.Member.User.ID, 5)
+				if isStaff {
+					s.GuildMemberRoleAdd(m.Member.GuildID, m.Member.User.ID, common.TestServerStaffRole)
+				}
+			}
+		}
+
+		if m.Member.GuildID == common.StaffServer && m.Member.User.Bot {
+			admin.SilverpeltStaffServerProtect(s, m.Member.User.ID)
+		}
 	})
 
 	discord.AddHandler(onReady)

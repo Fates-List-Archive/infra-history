@@ -230,12 +230,43 @@ var (
 	CooldownNone     = CooldownBucket{Name: "No cooldown", InternalName: "", Time: 0.0}
 )
 
-type BotStateInterface interface {
+type StateInterface interface {
 	Int() int
 	ValStr() string
 	Str() string
+	Register()
+	GetRegistered() []StateInterface
 }
 
+var userStateRegister []StateInterface
+var botStateRegister []StateInterface
+
+type UserState struct {
+	Value       int
+	Description string
+}
+
+func (s UserState) Int() int {
+	return s.Value
+}
+
+func (s UserState) ValStr() string {
+	return strconv.Itoa(s.Value)
+}
+
+func (s UserState) Str() string {
+	return s.Description
+}
+
+func (s UserState) Register() {
+	userStateRegister = append(userStateRegister, s)
+}
+
+func (s UserState) GetRegistered() []StateInterface {
+	return userStateRegister
+}
+
+// Implements a StateInterface for bots and servers
 type BotState struct {
 	Value       int
 	Description string
@@ -251,6 +282,21 @@ func (s BotState) ValStr() string {
 
 func (s BotState) Str() string {
 	return s.Description
+}
+
+func (s BotState) Register() {
+	botStateRegister = append(botStateRegister, s)
+}
+
+func (s BotState) GetRegistered() []StateInterface {
+	return botStateRegister
+}
+
+func GetStateChoices(s StateInterface) (ch []*discordgo.ApplicationCommandOptionChoice) {
+	for _, v := range s.GetRegistered() {
+		ch = append(ch, &discordgo.ApplicationCommandOptionChoice{Name: v.Str() + "(" + v.ValStr() + ")", Value: v.Int()})
+	}
+	return
 }
 
 // Bot States
@@ -309,32 +355,51 @@ var BotStateUnknown = BotState{
 	Description: "Unknown State",
 }
 
+var UserStateNormal = UserState{
+	Value:       0,
+	Description: "Normal/No Ban",
+}
+
+var UserStateGlobalBan = UserState{
+	Value:       1,
+	Description: "Global Banned",
+}
+
+var UserStateProfileEditBan = UserState{
+	Value:       2,
+	Description: "Profile Edit Ban",
+}
+
+var UserStateUnknown = UserState{
+	Value:       -1,
+	Description: "Unknown State",
+}
+
+func init() {
+	BotStateApproved.Register()
+	BotStatePending.Register()
+	BotStateDenied.Register()
+	BotStateHidden.Register()
+	BotStateBanned.Register()
+	BotStateUnderReview.Register()
+	BotStateCertified.Register()
+	BotStateArchived.Register()
+	BotStatePrivateViewable.Register()
+	BotStatePrivateStaffOnly.Register()
+
+	UserStateNormal.Register()
+	UserStateGlobalBan.Register()
+	UserStateProfileEditBan.Register()
+}
+
 // State getter
 func GetBotState(state int) BotState {
-	switch state {
-	case 0:
-		return BotStateApproved
-	case 1:
-		return BotStatePending
-	case 2:
-		return BotStateDenied
-	case 3:
-		return BotStateHidden
-	case 4:
-		return BotStateBanned
-	case 5:
-		return BotStateUnderReview
-	case 6:
-		return BotStateCertified
-	case 7:
-		return BotStateArchived
-	case 8:
-		return BotStatePrivateViewable
-	case 9:
-		return BotStatePrivateStaffOnly
-	default:
-		return BotStateUnknown
+	for _, v := range BotStateUnknown.GetRegistered() {
+		if v.Int() == state {
+			return v.(BotState)
+		}
 	}
+	return BotStateUnknown
 }
 
 type Status int
@@ -443,4 +508,17 @@ type UserVote struct {
 	UserID string `form:"user_id" binding:"required"`
 	BotID  string `form:"bot_id" binding:"required"`
 	Test   bool   `form:"test" binding:"-"`
+}
+
+type JAPIApp struct {
+	Cached bool        `json:"cached"`
+	Data   JAPIAppData `json:"data"`
+}
+
+type JAPIAppData struct {
+	Bot JAPIAppBot `json:"bot"`
+}
+
+type JAPIAppBot struct {
+	ApproximateGuildCount int `json:"approximate_guild_count"`
 }
