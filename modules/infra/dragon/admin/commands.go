@@ -25,6 +25,38 @@ var (
 
 func autocompleter(state int) func(context types.HandlerData) (ac []*discordgo.ApplicationCommandOptionChoice) {
 	return func(context types.HandlerData) (ac []*discordgo.ApplicationCommandOptionChoice) {
+		dataVal := slashbot.GetArg(context.Discord, context.Interaction, "bot", false)
+		data, ok := dataVal.(string)
+		if !ok {
+			return
+		}
+
+		bots, err := context.Postgres.Query(context.Context, "SELECT bot_id::text, username_cached, verifier FROM bots WHERE state = $1 AND (bot_id::text ILIKE $2 OR username_cached ILIKE $2) ORDER BY created_at DESC LIMIT 25", state, "%"+data+"%")
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		defer bots.Close()
+
+		for bots.Next() {
+			var botId pgtype.Text
+			var usernameCached pgtype.Text
+			var verifier pgtype.Int8
+			bots.Scan(&botId, &usernameCached, &verifier)
+			var val discordgo.ApplicationCommandOptionChoice = discordgo.ApplicationCommandOptionChoice{
+				Name:  usernameCached.String,
+				Value: botId.String,
+			}
+
+			if verifier.Status == pgtype.Present && verifier.Int > 0 {
+				if state == types.BotStateUnderReview.Int() {
+					val.Name += " (Claimed by " + strconv.FormatInt(verifier.Int, 10) + ")"
+				}
+			}
+
+			ac = append(ac, &val)
+		}
+
 		return
 	}
 }
@@ -416,37 +448,15 @@ func CmdInit() map[string]types.SlashCommand {
 	}
 	// Claim
 	commands["CLAIM"] = types.AdminOp{
-		InternalName: "claim",
-		Cooldown:     types.CooldownNone,
-		Description:  "Claim a bot",
-		MinimumPerm:  2,
-		ReasonNeeded: false,
-		Event:        types.EventBotClaim,
-		SlashOptions: []*discordgo.ApplicationCommandOption{},
-		Server:       common.TestServer,
-		Autocompleter: func(context types.HandlerData) (ac []*discordgo.ApplicationCommandOptionChoice) {
-			dataVal := slashbot.GetArg(context.Discord, context.Interaction, "bot", false)
-			data, ok := dataVal.(string)
-			if !ok {
-				return
-			}
-
-			bots, err := context.Postgres.Query(context.Context, "SELECT bot_id::text, username_cached FROM bots WHERE state = $1 AND (bot_id::text ILIKE $2 OR username_cached ILIKE $2) ORDER BY created_at DESC LIMIT 25", types.BotStatePending.Int(), "%"+data+"%")
-			if err != nil {
-				log.Error(err)
-				return
-			}
-			defer bots.Close()
-
-			for bots.Next() {
-				var botId pgtype.Text
-				var usernameCached pgtype.Text
-				bots.Scan(&botId, &usernameCached)
-				ac = append(ac, &discordgo.ApplicationCommandOptionChoice{Name: usernameCached.String, Value: botId.String})
-			}
-
-			return
-		},
+		InternalName:  "claim",
+		Cooldown:      types.CooldownNone,
+		Description:   "Claim a bot",
+		MinimumPerm:   2,
+		ReasonNeeded:  false,
+		Event:         types.EventBotClaim,
+		SlashOptions:  []*discordgo.ApplicationCommandOption{},
+		Server:        common.TestServer,
+		Autocompleter: autocompleter(types.BotStatePending.Int()),
 		Handler: func(context types.AdminContext) string {
 			if context.BotState != types.BotStatePending {
 				return "This bot cannot be claimed as it is not currently pending review or it is already under review"
@@ -467,7 +477,7 @@ func CmdInit() map[string]types.SlashCommand {
 				log.Warn(err)
 			}
 
-			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1 WHERE bot_id = $2", types.BotStateUnderReview.Int(), context.Bot.ID)
+			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", types.BotStateUnderReview.Int(), context.User.ID, context.Bot.ID)
 
 			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.UserBotApprove)
 
@@ -481,14 +491,15 @@ func CmdInit() map[string]types.SlashCommand {
 
 	// Unclaim
 	commands["UNCLAIM"] = types.AdminOp{
-		InternalName: "unclaim",
-		Cooldown:     types.CooldownNone,
-		Description:  "Unclaim a bot",
-		MinimumPerm:  2,
-		ReasonNeeded: false,
-		Event:        types.EventBotUnclaim,
-		SlashOptions: []*discordgo.ApplicationCommandOption{},
-		Server:       common.TestServer,
+		InternalName:  "unclaim",
+		Cooldown:      types.CooldownNone,
+		Description:   "Unclaim a bot",
+		MinimumPerm:   2,
+		ReasonNeeded:  false,
+		Event:         types.EventBotUnclaim,
+		SlashOptions:  []*discordgo.ApplicationCommandOption{},
+		Server:        common.TestServer,
+		Autocompleter: autocompleter(types.BotStateUnderReview.Int()),
 		Handler: func(context types.AdminContext) string {
 			if context.BotState != types.BotStateUnderReview {
 				return "This bot cannot be unclaimed as it is not currently under review"
@@ -794,7 +805,8 @@ func CmdInit() map[string]types.SlashCommand {
 				Required:    true,
 			},
 		},
-		Server: common.TestServer,
+		Server:        common.TestServer,
+		Autocompleter: autocompleter(types.BotStateUnderReview.Int()),
 		Handler: func(context types.AdminContext) string {
 			if context.BotState != types.BotStateUnderReview {
 				return "This bot cannot be approved as it is not currently under review. Did you claim it first?"
