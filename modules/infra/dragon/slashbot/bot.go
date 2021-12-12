@@ -98,6 +98,11 @@ func SlashHandler(
 	db *pgxpool.Pool,
 	i *discordgo.InteractionCreate,
 ) {
+	if i.Type != discordgo.InteractionApplicationCommand && i.Type != discordgo.InteractionApplicationCommandAutocomplete {
+		// Not yet supported
+		return
+	}
+
 	var appCmdData = i.ApplicationCommandData()
 
 	if i.Interaction.Member == nil {
@@ -105,7 +110,7 @@ func SlashHandler(
 		return
 	}
 
-	if appCmdData.Name == "mock" {
+	if appCmdData.Name == "mock" && i.Type == discordgo.InteractionApplicationCommand {
 		// Special command to mock all other commands
 		if i.Interaction.GuildID != common.StaffServer {
 			return
@@ -157,7 +162,7 @@ func SlashHandler(
 		Index:       cmd.Index,
 	}
 
-	switch i.Interaction.Type {
+	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		// Deferring only works for application commands
 		timeout := time.AfterFunc(time.Second*2, func() {
@@ -203,10 +208,12 @@ func SlashHandler(
 			},
 		})
 	}
-	if iResponseMap[i.Interaction.Token] != nil {
-		iResponseMap[i.Interaction.Token].Stop()
-	}
-	delete(iResponseMap, i.Interaction.Token)
+	go func() {
+		if iResponseMap[i.Interaction.Token] != nil {
+			iResponseMap[i.Interaction.Token].Stop()
+		}
+		delete(iResponseMap, i.Interaction.Token)
+	}() // This tends to be a bit slow
 }
 
 func CheckServerPerms(discord *discordgo.Session, i *discordgo.Interaction, permNum int) bool {

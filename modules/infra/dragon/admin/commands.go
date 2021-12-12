@@ -21,8 +21,13 @@ const bad = 0xe74c3c
 var (
 	commands         = make(map[string]types.AdminOp)
 	commandNameCache = make(map[string]string)
-	claimCache       = make(map[string][]*discordgo.ApplicationCommandOptionChoice)
 )
+
+func autocompleter(state int) func(context types.HandlerData) (ac []*discordgo.ApplicationCommandOptionChoice) {
+	return func(context types.HandlerData) (ac []*discordgo.ApplicationCommandOptionChoice) {
+		return
+	}
+}
 
 func UpdateBotLogs(ctx context.Context, postgres *pgxpool.Pool, userId string, botId string, action types.UserBotAuditLog) {
 	_, err := postgres.Exec(ctx, "INSERT INTO user_bot_logs (user_id, bot_id, action) VALUES ($1, $2, $3)", userId, botId, action)
@@ -426,10 +431,6 @@ func CmdInit() map[string]types.SlashCommand {
 				return
 			}
 
-			if v, ok := claimCache[data]; ok {
-				return v
-			}
-
 			bots, err := context.Postgres.Query(context.Context, "SELECT bot_id::text, username_cached FROM bots WHERE state = $1 AND (bot_id::text ILIKE $2 OR username_cached ILIKE $2) ORDER BY created_at DESC LIMIT 25", types.BotStatePending.Int(), "%"+data+"%")
 			if err != nil {
 				log.Error(err)
@@ -443,12 +444,6 @@ func CmdInit() map[string]types.SlashCommand {
 				bots.Scan(&botId, &usernameCached)
 				ac = append(ac, &discordgo.ApplicationCommandOptionChoice{Name: usernameCached.String, Value: botId.String})
 			}
-
-			claimCache[data] = ac
-
-			time.AfterFunc(2*time.Minute, func() {
-				delete(claimCache, data)
-			})
 
 			return
 		},

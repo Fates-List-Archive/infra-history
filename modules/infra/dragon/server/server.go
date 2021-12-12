@@ -100,7 +100,7 @@ func DragonServer() {
 				"bot": bot,
 			}).Info("Going to handle interaction")
 		}
-		slashbot.SlashHandler(
+		go slashbot.SlashHandler(
 			ctx,
 			s,
 			rdb,
