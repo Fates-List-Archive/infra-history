@@ -24,6 +24,7 @@ async def guild_page(request: Request, guild_id: int, bt: BackgroundTasks, rev_p
     if not data:
         return abort(404)
     data = dict(data)
+    data["resources"] = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", guild_id, enums.ReviewType.server.value)
     if not data["description"]:
         data["description"] = await default_server_desc(data["name_cached"], guild_id)
     data["user"] = {

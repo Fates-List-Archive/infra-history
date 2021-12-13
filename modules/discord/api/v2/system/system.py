@@ -81,17 +81,17 @@ async def check_staff_member(request: Request, user_id: int, min_perm: int = 2):
     return {"staff": staff[0], "perm": staff[1], "sm": staff[2]}
 
 @router.get(
-    "/queue/bots", 
+    "/bots/filter", 
     response_model=BotQueueGet,
-    operation_id="get_bot_queue"
+    operation_id="get_bots_filtered"
 )
-async def get_bot_queue(
+async def get_bots_filtered(
     request: Request, 
     state: enums.BotState = enums.BotState.pending, 
     verifier: int = None, 
     worker_session = Depends(worker_session)
 ):
-    """Admin API to get the bot queue"""
+    """API to get all bots filtered by its state"""
     db = worker_session.postgres
     if verifier:
         bots = await db.fetch("SELECT bot_id, prefix, description FROM bots WHERE state = $1 AND verifier = $2 ORDER BY created_at ASC", state, verifier)
@@ -103,7 +103,7 @@ async def get_bot_queue(
     operation_id="get_staff_roles"
 )
 def get_staff_roles(request: Request):
-    """Return all the staff roles so they can be used by our manager bot"""
+    """Return all staff roles and their role ids if you ever wanted them..."""
     return staff_roles
 
 @router.get(
@@ -111,13 +111,7 @@ def get_staff_roles(request: Request):
     response_model = BotVanity
 )
 async def get_vanity(request: Request, vanity: str):
-    """
-    Gets information about a vanity given a vanity code
-
-    Type can be either 'bot', 'server' or 'profile'
-
-    Redirect is the id it redirects to
-    """
+    """Gets information about a vanity given a vanity code"""
     vb = await vanity_bot(vanity)
     logger.trace(f"Vanity is {vanity} and vb is {vb}")
     if vb is None:

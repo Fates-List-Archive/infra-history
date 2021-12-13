@@ -39,6 +39,8 @@ async def add_resources(request: Request, target_id: int, target_type: enums.Rev
     """
     ids = []
     for resource in res.resources:
+        if not resource.resource_link.startswith("https://"):
+            return api_error("All resource links must start with https://")
         check = await db.fetchval("SELECT COUNT(1) FROM resources WHERE (resource_title = $1 OR resource_link = $2) AND target_id = $3 AND target_type = $4", resource.resource_title, resource.resource_link, target_id, target_type.value)
         if check:
             await db.execute("DELETE FROM resources WHERE (resource_title = $1 OR resource_link = $2) AND target_id = $3 AND target_type = $4", resource.resource_title, resource.resource_link, target_id, target_type.value)

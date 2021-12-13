@@ -24,7 +24,6 @@ class BotRandom(BaseModel):
     username: str
     avatar: str
     guild_count: int
-    invite: str | None = None
     votes: int
     formatted: GCVFormat
 

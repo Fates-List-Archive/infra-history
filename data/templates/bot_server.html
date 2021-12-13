@@ -146,21 +146,14 @@
 		</section>
 	{% endif %}
 	<section id="resources-tab" class="tabcontent tabdesign">
-		{% if type == "bot" %}
-		{% if data.donate and data.donate.replace(" ", "") %}
-			<a rel="noopener" target="_blank" class="long-desc-link" href="{{data.donate}}">Donate to {{ data.user.username }} for special exclusive benefits tailored to you!</a><br/>
+		{% if data.resources %}
+			{% for resource in data.resources%}
+			<a class="long-desc-link" target="_blank" rel="noopener" href="{{resource.resource_link}}">{{resource.resource_title}}</a>
+			<p>{{resource.resource_description}}</p>
+			{% endfor %}
+		{% else %}
+			This {{type}} has no community resources on our records
 		{% endif %}
-		{% if data.github and data.github.replace(" ", "") %}
-			<a rel="noopener" target="_blank" class="long-desc-link" href="{{data.github}}">Github</a><br/>
-		{% endif %}
-		{% if data.privacy_policy and data.privacy_policy.replace(" ", "") %}
-			<a rel="noopener" target="_blank" class="long-desc-link" href="{{data.privacy_policy}}">Privacy Policy</a><br/>
-		{% endif %}
-		{% if data.website and data.website.replace(" ", "") %}
-			<a rel="noopener" target="_blank" class="long-desc-link" href="{{data.website}}">Website</a>
-		{% endif %}
-		{% endif %}
-		<p>Custom community resources are coming soon!</p>
 	</section>
 	<section id="about-tab" class='tabcontent white'>
 		<table style="margin: 0 auto !important;">

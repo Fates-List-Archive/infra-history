@@ -60,10 +60,6 @@ async def nonerouter():
 async def vanity_bot_uri(request: Request, bt: BackgroundTasks, vanity: str, redirect: bool = False):
     return await vanity_redirector(request, vanity, render_bot, {"bt": bt, "api": False}, guild_page)
 
-@router.get("/{vanity}/edit")
-async def vanity_edit(request: Request, vanity: str, bt: BackgroundTasks):
-    return await vanity_redirector(request, vanity, "edit")
-
 @router.get("/{vanity}/vote")
 async def vanity_vote(request: Request, vanity: str):
     return await vanity_redirector(request, vanity, vote_bot_get)
@@ -102,8 +98,6 @@ async def stats_page(request: Request, full: bool = False):
         "under_review": under_review,
         "full": full
     }
-    if str(request.url.path).startswith("/api"): # Check for API
-        return data # Return JSON if so
     return await templates.TemplateResponse("admin.html", {"request": request} | data) # Otherwise, render the template
 
 @router.get("/fates/login")

@@ -60,23 +60,23 @@ async def render_bot(request: Request, bt: BackgroundTasks, bot_id: int, api: bo
     if bot_id >= 9223372036854775807: # Max size of bigint
         return abort(404)
 
-    check = await db.fetchval("SELECT bot_id FROM bots WHERE bot_id = $1", bot_id)
-    if not check:
-        return abort(404)
-
     bot = await db.fetchrow(
-        """SELECT js_allowed, prefix, shard_count, state, description, bot_library AS library, 
+        """SELECT bot_id, js_allowed, prefix, shard_count, state, description, bot_library AS library, 
         website, votes, guild_count, discord AS support, banner_page AS banner, github, features, 
         invite_amount, css, long_description_type, long_description, donate, privacy_policy, 
         nsfw, keep_banner_decor, last_stats_post, created_at FROM bots WHERE bot_id = $1 OR client_id = $1""", 
         bot_id
     )
+    if not bot:
+        return abort(404)
+    bot_id = bot["bot_id"]
+    resources = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", bot_id, enums.ReviewType.bot.value)
     tags = await db.fetch("SELECT tag FROM bot_tags WHERE bot_id = $1", bot_id)
     if not tags:
         return abort(404)
 
 
-    bot = dict(bot) | {"tags": [tag["tag"] for tag in tags]}
+    bot = dict(bot) | {"tags": [tag["tag"] for tag in tags], "resources": resources}
     
     # Ensure bot banner_page is disable if not approved or certified
     if bot["state"] not in (enums.BotState.approved, enums.BotState.certified):

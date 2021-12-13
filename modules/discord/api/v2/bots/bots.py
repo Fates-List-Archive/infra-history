@@ -64,7 +64,7 @@ async def regenerate_bot_token(request: Request, bot_id: int):
     dependencies=[
         Depends(
             Ratelimiter(
-                global_limit = Limit(times=7, seconds=5),
+                global_limit = Limit(times=7, seconds=3),
                 operation_bucket="random_bot"
             )
         )
@@ -95,7 +95,7 @@ async def fetch_random_bot(request: Request, bot_id: int, lang: str = "default")
         )
 
     random_unp = await db.fetchrow(
-        "SELECT description, banner_card, state, votes, guild_count, bot_id, invite FROM bots WHERE state = 0 OR state = 6 ORDER BY RANDOM() LIMIT 1"
+        "SELECT description, banner_card, state, votes, guild_count, bot_id FROM bots WHERE state = 0 OR state = 6 ORDER BY RANDOM() LIMIT 1"
     ) # Unprocessed, use the random function to get a random bot
     bot_obj = await get_bot(random_unp["bot_id"], worker_session = request.app.state.worker_session)
     if bot_obj is None or bot_obj["disc"] == "0000":
