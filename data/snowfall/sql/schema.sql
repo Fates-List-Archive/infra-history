@@ -6,6 +6,7 @@ CREATE TABLE bots (
     id BIGINT NOT NULL, -- Used by piccolo, must be equal to bot_id
     username_cached text DEFAULT '',
     bot_id bigint not null unique,
+    client_id bigint,
     lock integer default 0,
     votes bigint default 0,
     total_votes bigint default 0,

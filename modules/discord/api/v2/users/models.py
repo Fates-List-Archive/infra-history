@@ -24,6 +24,7 @@ class BotMeta(BaseModel):
     - extra_owners must be a list of strings where the strings can be made a integer
     """
 
+    client_id: str | None = None
     prefix: str | None = None
     library: str
     invite: str

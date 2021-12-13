@@ -132,7 +132,9 @@ async def fetch_bot(
     no_cache: Optional[bool] = False
 ):
     """
-    Fetches bot information given a bot ID. If not found, 404 will be returned.
+    Fetches bot information given a bot ID. If not found, 404 will be returned. 
+
+    This endpoint handles both bot IDs and client IDs
     
     Setting compact to true (default) -> description, long_description, long_description_type, keep_banner_decor and css will be null
 
@@ -147,14 +149,15 @@ async def fetch_bot(
         cache = await redis_db.get(f"botcache-{bot_id}")
         if cache:
             return orjson.loads(cache)
-    
 
     api_ret = await db.fetchrow(
-        "SELECT last_stats_post, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw FROM bots WHERE bot_id = $1", 
+        "SELECT bot_id, last_stats_post, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id FROM bots WHERE bot_id = $1 OR client_id = $1", 
         bot_id
     )
     if api_ret is None:
         return abort(404)
+
+    bot_id = api_ret["bot_id"]
 
     api_ret = dict(api_ret)
 
@@ -284,16 +287,76 @@ async def set_bot_stats(request: Request, bot_id: int, api: BotStats):
                     ...
     ```
     """
+    return await _set_bot_stats(request, bot_id, api.dict())
+
+async def _set_bot_stats(request: Request, bot_id: int, api: dict, no_abuse_checks: bool = False):
+    lock = await redis_db.get(f"statslock:{bot_id}")
+    if lock:
+        return api_error("You have been banned from using this API endpoint")
+
     stats_old = await db.fetchrow(
         "SELECT guild_count, shard_count, shards, user_count FROM bots WHERE bot_id = $1",
         bot_id
     )
-    stats_new = api.dict()
+    stats_new = api
     stats = {}
     for stat in stats_new.keys():
         if stats_new[stat] is None:
             stats[stat] = stats_old[stat]
         else:
             stats[stat] = stats_new[stat]
-    await set_stats(bot_id = bot_id, **stats)
+
+    info = await db.fetchrow("SELECT state, client_id FROM bots WHERE bot_id = $1", bot_id)
+    state = info["state"]
+    app_id = bot_id if (not info["client_id"] or info["client_id"] == bot_id) else info["client_id"]
+
+    async def _flag_bot():
+        # Do this later, but return success to evade detection
+        key = f"statscheck:{bot_id}"
+        redis = request.app.state.worker_session.redis
+        check = await redis.incr(key)
+        if int(check) <= 5:
+            await redis.expire(key, 60*60*8)
+            return api_error("You have been caught by our anti-abuse systems. Please try setting your stats using its actual value", ctx="Get your bot certified to avoid anti-abuse. You may only try to post invalid stats 5 times every 8 hours or you will be banned (invalid stats are not set and will only flag you)") 
+        else:
+            await redis.persist(key)
+            await redis.set(f"statslock:{bot_id}", 1)
+            return api_error("You have been banned from using this API due to triggering our anti-abuse systems in a very short timeframe!")
+
+    if stats["guild_count"] > 300000000000 or stats["shard_count"] > 300000000000 or len(stats["shards"]) > (100 + stats["shard_count"]):
+        return await _flag_bot()
+    elif int(stats["user_count"]) > INT64_MAX:
+        return await api_error(f"User count cannot be greater than {INT64_MAX}")
+
+    # Anti abuse checks
+    try:
+        if state != enums.BotState.certified and not no_abuse_checks:
+            async with aiohttp.ClientSession() as sess:
+                async with sess.get(f"https://japi.rest/discord/v1/application/{app_id}", timeout=15) as resp:
+                    if resp.status != 200:
+                        return api_error("Our anti-abuse provider is down right now. Please contact Fates List Support if this happens when you try again!")
+                    app = await resp.json()
+                    try:
+                        approx_guild_count = app["data"]["bot"]["approximate_guild_count"]
+                    except:
+                        return api_error("You need to edit this bot and set a client ID in order to set stats for this bot due to a ID mismatch")
+                    if ((stats["guild_count"] - approx_guild_count > 2000 and approx_guild_count > 100000) or 
+                    (stats["guild_count"] - approx_guild_count > 20 and approx_guild_count < 1000)):
+                        stats["guild_count"] = approx_guild_count
+                        await _set_bot_stats(request, bot_id, stats, no_abuse_checks=True)
+                        return await _flag_bot()
+
+    except Exception as exc:
+        logger.exception("Something happened!")
+        return api_error("Our anti-abuse provider is down right now. Please contact Fates List Support if this happens when you try again!")
+
+    await db.execute(
+        "UPDATE bots SET last_stats_post = NOW(), guild_count = $1, shard_count = $2, user_count = $3, shards = $4 WHERE bot_id = $5",
+        stats["guild_count"],
+        stats["shard_count"],
+        stats["user_count"],
+        stats["shards"],
+        bot_id,
+    )
+
     return api_success()

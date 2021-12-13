@@ -23,6 +23,31 @@ class BotActions():
         if not self.vanity:
             return "You must have a vanity for your bot. This can be your username. You can prefix it with _ (underscore) if you don't want the extra growth from it. For example _mewbot would disable the mewbot vanity"
 
+        check = await self.db.fetchval("SELECT client_id FROM bots WHERE bot_id = $1", self.bot_id)
+        if check and self.client_id != str(check):
+            return "Client ID cannot change once set"
+        if not check:
+            async with aiohttp.ClientSession() as sess:
+                async with sess.get(f"https://japi.rest/discord/v1/application/{self.bot_id}") as resp:
+                    if resp.status != 200:
+                        return "japi.rest seems to be down right now. Please contact Fates List Support if you keep getting this error!"
+                    json = await resp.json()
+                    if json["data"].get("code") and not self.client_id:
+                        return "You need to input a client ID for this bot! You can find this in the Discord Developer Portal"
+                    self.client_id = self.bot_id if not self.client_id else self.client_id
+                if self.client_id and self.client_id != self.bot_id:
+                    async with sess.get(f"https://japi.rest/discord/v1/application/{self.client_id}") as resp:
+                        if resp.status != 200:
+                            return "japi.rest seems to be down right now. Please contact Fates List Support if you keep getting this error!"
+                        json = await resp.json()
+                        if json["data"].get("code"):
+                            return "Invalid client ID inputted"
+                        elif json["data"].get("bot", {}).get("id") != str(self.bot_id):
+                            return "Invalid client ID for this bot! "
+
+        if self.client_id:
+            self.client_id = int(self.client_id)
+
         if self.tags == "":
             return "You must select tags for your bot" #Check tags
 
@@ -153,7 +178,7 @@ class BotActions():
                     css, donate, github,
                     webhook, webhook_type, webhook_secret,
                     privacy_policy, nsfw, keep_banner_decor, 
-                    id) VALUES(
+                    id, client_id) VALUES(
                     $1, $2, $3,
                     $4, $5, $6,
                     $7, $8, $9,
@@ -161,13 +186,13 @@ class BotActions():
                     $13, $14, $15, 
                     $16, $17, $18, 
                     $19, $20, $21, 
-                    $22, $1)""", 
+                    $22, $23, $1)""", 
                     self.bot_id, self.prefix, self.library, 
                     self.invite, self.website, self.banner_card, self.banner_page,
                     self.support, self.long_description, self.description,
                     get_token(132), self.features, self.long_description_type,
                     self.css, self.donate, self.github, self.webhook, self.webhook_type, self.webhook_secret,
-                    self.privacy_policy, self.nsfw, self.keep_banner_decor
+                    self.privacy_policy, self.nsfw, self.keep_banner_decor, self.client_id
                 ) # Add new bot info
     
                 await connection.execute("INSERT INTO vanity (type, vanity_url, redirect) VALUES ($1, $2, $3)", enums.Vanity.bot, self.vanity, self.bot_id) # Add new vanity if not empty string
@@ -204,8 +229,6 @@ class BotActions():
         await redis_ipc_new(redis_db, "SENDMSG", msg=msg, timeout=None)
 
 
-
-
     async def edit_bot(self):
         """Edit a bot"""
         check = await self.edit_check() # Perform edit bot checks
@@ -215,8 +238,8 @@ class BotActions():
         async with self.db.acquire() as connection: # Acquire a connection
             async with connection.transaction() as tr: # Make a transaction to avoid data loss
                 await connection.execute(
-                    "UPDATE bots SET bot_library=$2, webhook=$3, description=$4, long_description=$5, prefix=$6, website=$7, discord=$8, banner_card=$9, invite=$10, github = $11, features = $12, long_description_type = $13, webhook_type = $14, css = $15, donate = $16, privacy_policy = $17, nsfw = $18, webhook_secret = $19, banner_page = $20, keep_banner_decor = $21 WHERE bot_id = $1",  # pylint: disable=line-too-long 
-                    self.bot_id, self.library, self.webhook, self.description, self.long_description, self.prefix, self.website, self.support, self.banner_card, self.invite, self.github, self.features, self.long_description_type, self.webhook_type, self.css, self.donate, self.privacy_policy, self.nsfw, self.webhook_secret, self.banner_page, self.keep_banner_decor  # pyline: disable=line-too-long
+                    "UPDATE bots SET bot_library=$2, webhook=$3, description=$4, long_description=$5, prefix=$6, website=$7, discord=$8, banner_card=$9, invite=$10, github = $11, features = $12, long_description_type = $13, webhook_type = $14, css = $15, donate = $16, privacy_policy = $17, nsfw = $18, webhook_secret = $19, banner_page = $20, keep_banner_decor = $21, client_id = $22 WHERE bot_id = $1",  # pylint: disable=line-too-long 
+                    self.bot_id, self.library, self.webhook, self.description, self.long_description, self.prefix, self.website, self.support, self.banner_card, self.invite, self.github, self.features, self.long_description_type, self.webhook_type, self.css, self.donate, self.privacy_policy, self.nsfw, self.webhook_secret, self.banner_page, self.keep_banner_decor, self.client_id  # pyline: disable=line-too-long
                 ) # Update bot with new info
 
                 await connection.execute("DELETE FROM bot_owner WHERE bot_id = $1 AND main = false", self.bot_id) # Delete all extra owners

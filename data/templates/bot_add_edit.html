@@ -130,6 +130,12 @@
 					<button onclick="autofillBot()" class="btn btn-outline-light">Autofill</button>
 				{% endif %}
 				{{ textInput(
+					"Client ID (only fill this in for old bots)",
+					"client_id",
+					"You can get this from Developer Portal. Only needed for old bots with differing bot and client ID",
+					type="number"
+				) }}
+				{{ textInput(
 					"Extra Owners (comma seperated)", 
 					"extra_owners", 
 					"790722073248661525, 563808552288780322"

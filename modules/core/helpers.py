@@ -179,20 +179,6 @@ async def add_maint(bot_id: int, type: int, reason: str):
     )
 
 
-async def set_stats(*, bot_id: int, guild_count: int, shard_count: int,
-                    user_count: int, shards: int):
-    if int(guild_count) > 300000000000 or int(shard_count) > 300000000000:
-        return
-    await db.execute(
-        "UPDATE bots SET last_stats_post = NOW(), guild_count = $1, shard_count = $2, user_count = $3, shards = $4 WHERE bot_id = $5",
-        guild_count,
-        shard_count,
-        user_count,
-        shards,
-        bot_id,
-    )
-
-
 async def add_promotion(bot_id: int, title: str, info: str, css: str,
                         type: int):
     if css is not None:

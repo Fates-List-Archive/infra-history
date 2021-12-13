@@ -58,8 +58,8 @@ func SilverpeltCmdHandle(
 
 		var state pgtype.Int4
 		var owner pgtype.Int8
-
-		db.QueryRow(ctx, "SELECT state FROM bots WHERE bot_id = $1", bot_id).Scan(&state)
+		var botIdReal pgtype.Text
+		db.QueryRow(ctx, "SELECT state, bot_id::text FROM bots WHERE bot_id = $1 OR client_id = $1", bot_id).Scan(&state, &botIdReal)
 
 		// These checks do not apply for slashRaw
 		if !admin_op.SlashRaw {
@@ -70,6 +70,8 @@ func SilverpeltCmdHandle(
 			if state.Status != pgtype.Present {
 				return "This bot does not exist!"
 			}
+
+			bot_id = botIdReal.String
 
 			db.QueryRow(ctx, "SELECT owner FROM bot_owner WHERE bot_id = $1 AND main = true", bot_id).Scan(&owner)
 

@@ -33,7 +33,7 @@ async def bot_settings(request: Request, bot_id: int):
         return abort(403)
     
     bot = await db.fetchrow(
-        "SELECT bot_id, state, prefix, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1", 
+        "SELECT bot_id, client_id, state, prefix, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1", 
         bot_id
     )
     if not bot:
