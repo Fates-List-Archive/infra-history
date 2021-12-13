@@ -32,12 +32,12 @@
 					{% endif %}
 					<br/><strong>If you are a bot owner, you can resubmit your bot or request a ban appeal (if your bot was banned and not denied) by clicking <a class="long-desc-link" href="/bot/{{id}}/settings#actions-button-fl">here</a></strong><br/></br>
 					<strong>Certain features will be disabled while your bot until you resolve this</strong>
+				</div>
+				{% elif data.state in (enums.BotState.pending, enums.BotState.under_review) %}
+					<div class="alert alert-danger" style="text-align: center; justify-content: center; color: white !important;" role="alert">
+						<strong>This bot has not yet been verified/approved and may violate our rules and/or be low-quality or a "nuke bot". Please do not invite it until we have approved it. Certain features will be disabled until it has been approved</strong>
+					</div>
 				{% endif %}
-				</div>
-			{% elif data.state in (enums.BotState.pending, enums.BotState.under_review) %}
-				<div class="alert alert-danger" style="text-align: center; justify-content: center; color: white !important;" role="alert">
-					<strong>This bot has not yet been verified/approved and may violate our rules and/or be low-quality or a "nuke bot". Please do not invite it until we have approved it. Certain features will be disabled until it has been approved</strong>
-				</div>
 			{% endif %}
 			{% if data.state == enums.BotState.under_review %}
 				<div class="alert alert-info" style="text-align: center; justify-content: center; color: white !important;" role="alert">
@@ -49,7 +49,7 @@
 			<strong>This bot is primarily NSFW (Not Safe For Work), as such lots of functionality will need a NSFW channel. If the bot allows NSFW commands in non-NSFW channels, please report it on our support server</strong>
 		</div>
 	{% endif %}
-	<p class="banner-decor white" style="font-weight: bold; font-size: 18px;" id="{{type}}-description">{{data.description}}</p>
+	<p class="banner-decor white" style="font-weight: bold; font-size: 18px;" id="{{type}}-description">{{data.description|safe}}</p>
 	</div>
 	<div class="d-flex justify-content-center align-items-center flex-wrap" style="width: 80%;margin: 0 auto;max-width: 1000px; margin-bottom: 3px !important;" id="{{type}}-buttons">
 		{% if data.state not in (enums.BotState.pending, enums.BotState.under_review, enums.BotState.denied, enums.BotState.banned) %}

@@ -170,11 +170,14 @@ function listenAnalytics() {
 		if(userStr == "0" || !userStr) {
 			userStr = "Anonymous/Not logged in"
 		}
-		let tsStr = `timestamp ${data.dat.m.ts}`
+		let tsDate = new Date(data.dat.m.ts * 1000);
+		let tsStr = `${tsDate} (timestamp ${data.dat.m.ts})`
 		if(data.dat.m.e == Events.ViewEvent) {
 			eStr = `User (${userStr}) is viewing your bot at ${tsStr}`
 		} else if (data.dat.m.e == Events.InviteEvent) {
 			eStr = `User (${userStr}) is interested in your bot and has clicked the 'Invite' button at ${tsStr}`
+		} else if (data.dat.m.e == Events.VoteEvent) {
+			eStr = `User (${userStr}) has voted for your bot and your bot now has ${data.dat.ctx.votes} votes!`
 		}
 		document.querySelector("#output-analytics").textContent += "\n\n" + eStr
 	}
