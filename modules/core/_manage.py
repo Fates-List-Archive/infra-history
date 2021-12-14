@@ -253,7 +253,6 @@ def site_enum2html():
 
 def site_reload():
     """Get the PID of the running site and reloads the site"""
-    import time
     try:
         with open("data/pids/gunicorn.pid") as guni_pid:
             pid = guni_pid.read().replace(" ", "").replace("\n", "")
