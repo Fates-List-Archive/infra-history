@@ -370,7 +370,7 @@ class _SelectAgeCallback(discord.ui.Select):
 
         self.answers["tz"] = tz.content.upper()
 
-        for q in self.questions.keys():
+        for q in self.questions:
             if q == "tz":
                 continue
 
@@ -390,7 +390,7 @@ class _SelectAgeCallback(discord.ui.Select):
         data = [
             f"Username: {interaction.user}\nUser ID: {interaction.user.id}\nAge Range: {self.values[0]}\nApplication ID: {self.app_id}"
         ]
-        for q in self.questions.keys():
+        for q in self.questions:
             data.append(
                 f"{q}\n\nQuestion: {self.questions[q]}\n\nAnswer: {self.answers[q]}"
             )

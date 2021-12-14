@@ -63,7 +63,7 @@ class BotListView(discord.ui.View):
 async def request(method: str, ctx, url: str, dragon_auth: bool = True, user_token: Optional[str] = None, **kwargs):
     url = f"http://127.0.0.1:9999{url}"
     logger.info(f"Request init to {url}")
-    if "headers" in kwargs.keys():
+    if "headers" in kwargs:
         headers = kwargs["headers"]
     else:
         headers = {}
