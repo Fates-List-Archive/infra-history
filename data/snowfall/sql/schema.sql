@@ -157,7 +157,8 @@ CREATE TABLE user_bot_logs (
     user_id BIGINT NOT NULL,
     bot_id BIGINT NOT NULL,
     action_time timestamptz NOT NULL DEFAULT NOW(),
-    action integer not null -- 0 = approve
+    action integer not null, -- 0 = approve
+    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE user_reminders (
