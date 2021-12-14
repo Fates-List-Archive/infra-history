@@ -28,5 +28,4 @@ async def redis_ipc_new(redis, cmd: str, msg: str = None, timeout: int = 30, arg
 
     if timeout:
         return await wait(cmd_id)
-    else:
-        return None
+    return None

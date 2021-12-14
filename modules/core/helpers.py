@@ -67,7 +67,7 @@ def id_check(check_t: str):
 
     if check_t == "bot":
         return bot
-    elif check_t in ("guild", "server"):
+    if check_t in ("guild", "server"):
         return server
     return user
 
@@ -305,13 +305,15 @@ async def parse_index_query(
 async def do_index_query(
     worker_session,
     add_query: str = "",
-    state: list = [0, 6],
+    state: list = None,
     limit: Optional[int] = 12,
     type: enums.ReviewType = enums.ReviewType.bot,
 ) -> List[asyncpg.Record]:
     """
     Performs a 'index' query which can also be used by other things as well
     """
+    if state is None:
+        state = [0, 6]
     db = worker_session.postgres
 
     if type == enums.ReviewType.bot:

@@ -20,7 +20,7 @@ from fastapi import (Header, HTTPException, Query, Request, Response,
                      UploadFile, WebSocket, WebSocketDisconnect)
 from fastapi.exception_handlers import (http_exception_handler,
                                         request_validation_exception_handler)
-from fastapi.exceptions import (HTTPException, RequestValidationError,
+from fastapi.exceptions import (RequestValidationError,
                                 ValidationError)
 from fastapi.responses import HTMLResponse, ORJSONResponse, RedirectResponse
 from lynxfall.mdextend import *
@@ -32,7 +32,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import ClientDisconnect
 from starlette.routing import Mount
-from starlette.websockets import WebSocket, WebSocketDisconnect
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import modules.models.enums as enums

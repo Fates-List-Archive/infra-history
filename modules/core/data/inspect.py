@@ -1,7 +1,7 @@
 from inspect import *
 
 def formatargspec(args, varargs=None, varkw=None, defaults=None,
-                  kwonlyargs=(), kwonlydefaults={}, annotations={},
+                  kwonlyargs=(), kwonlydefaults=None, annotations=None,
                   formatarg=str,
                   formatvarargs=lambda name: '*' + name,
                   formatvarkw=lambda name: '**' + name,
@@ -17,6 +17,10 @@ def formatargspec(args, varargs=None, varkw=None, defaults=None,
     Deprecated since Python 3.5: use the `signature` function and `Signature`
     objects.
     """
+    if kwonlydefaults is None:
+        kwonlydefaults = {}
+    if annotations is None:
+        annotations = {}
 
     from warnings import warn
 

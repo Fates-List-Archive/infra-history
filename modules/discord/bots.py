@@ -18,8 +18,7 @@ async def add_bot(request: Request):
             "features": [{"text": feature["name"], "value": id} for id, feature in features.items()]
         }
         return await templates.TemplateResponse(fn, {"request": request, "tags_fixed": tags_fixed, "features": features, "bot": {}}, context = context)
-    else:
-        return RedirectResponse("/fates/login?redirect=/bot/admin/add&pretty=to add a bot")
+    return RedirectResponse("/fates/login?redirect=/bot/admin/add&pretty=to add a bot")
 
 @router.get("/{bot_id}/settings")
 async def bot_settings(request: Request, bot_id: int):

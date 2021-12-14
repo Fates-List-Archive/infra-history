@@ -39,7 +39,7 @@ async def is_staff(staff_json: dict, user_id: int, base_perm: int, json: bool = 
     else:
         staff_perm = orjson.loads(staff_perm)
     sm = StaffMember(name = staff_perm["fname"], id = staff_perm["id"], staff_id = staff_perm["staff_id"], perm = staff_perm["perm"]) # Initially
-    rc = True if sm.perm >= base_perm else False
+    rc = sm.perm >= base_perm
     if json:
         return rc, sm.perm, sm.dict()
     return rc, sm.perm, sm

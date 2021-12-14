@@ -20,8 +20,10 @@ class Badge(BaseModel):
     everyone: bool | None = False
     
     @staticmethod
-    async def from_user(id, roles, badges: list[str] | None = [], bot_dev: bool | None = False, cert_dev: bool | None = False):
+    async def from_user(id, roles, badges: list[str] | None = None, bot_dev: bool | None = False, cert_dev: bool | None = False):
         """Make badges from a user given the member, badges and bots"""
+        if badges is None:
+            badges = []
         user_flags = {}
         
         user_flags["cert_dev"] = cert_dev
