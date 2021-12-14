@@ -24,7 +24,7 @@ async def bot_get_events(bot_id: int, filter: list = None, exclude: list = None)
     return {}
 
 async def bot_add_event(bot_id: int, event: int, context: dict, t: Optional[int] = None, *, send_event: bool = True, guild: bool = False):
-    if type(context) == dict:
+    if type(context) is dict:
         pass
     else:
         raise TypeError("Event must be a dict")
