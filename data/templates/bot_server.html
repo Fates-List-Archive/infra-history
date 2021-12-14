@@ -105,7 +105,7 @@
 			  <button id="about-tab-button" class="tablinks" onclick="openf(event, 'about', this, false)">About</button>
 		</div>
 		<section id="long-description-tab" class='tabcontent tabdesign'>
-			<div id="long-description"> {% if data.long_description_type in (enums.LongDescType.html, enums.LongDescType.markdown_pymarkdown) %}{{data.long_description|safe}}{% endif %}</div> <!-- To avoid users seeing broken pages, don't add to site is markdown is used -->
+			<article id="long-description"> {% if data.long_description_type in (enums.LongDescType.html, enums.LongDescType.markdown_pymarkdown) %}{{data.long_description|safe}}{% endif %}</article> <!-- To avoid users seeing broken pages, don't add to site is markdown is used -->
 			{% if data.long_description_type == enums.LongDescType.markdown_marked %}
        				<!-- Handle markdown -->
 				<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>

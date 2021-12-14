@@ -7,8 +7,6 @@ long_desc_replace_tuple = (
     ("<!DOCTYPE", ""),
     ("html>", ""),
     ("<body", ""),
-    ("<div", "<article"),
-    ("</div", "</article"),
     (".click", ""),
     ("bootstrap.min.css", ""),
     ("bootstrap.css", ""),
@@ -16,5 +14,5 @@ long_desc_replace_tuple = (
     ("jquery.js", ""),
     ("fetch(", ""),
     ('window.location', ''), 
-    ('document.ge', '')
+    ('document.ge', ''),
 )

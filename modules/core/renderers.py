@@ -97,7 +97,6 @@ async def render_bot(request: Request, bt: BackgroundTasks, bot_id: int, api: bo
     bot['long_description'] = intl_text(bot['long_description'], request.session.get("site_lang", "default"))
     if bot["long_description_type"] == enums.LongDescType.markdown_pymarkdown: # If we are using markdown
         bot["long_description"] = emd(markdown.markdown(bot['long_description'], extensions = md_extensions))
-    bot["description"] = bleach.clean(emd(markdown.markdown(bot['description'], extensions = md_extensions)))
 
     user_js_allowed = request.session.get("js_allowed", True)
     if not user_js_allowed or not bot["js_allowed"]:
