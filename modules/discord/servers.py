@@ -6,7 +6,6 @@ from modules.core import constants
 import bleach
 import markdown
 from lxml.html.clean import Cleaner
-from modules.models import constants
 
 from ..core import *
 
