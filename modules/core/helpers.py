@@ -67,7 +67,7 @@ def id_check(check_t: str):
 
     if check_t == "bot":
         return bot
-    elif check_t in ("guild", "server"):
+    if check_t in ("guild", "server"):
         return server
     return user
 

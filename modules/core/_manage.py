@@ -36,7 +36,7 @@ def confirm(msg, abort: bool = True):
         check = input(msg + "(Y/N): ")
         if check.lower() in ("y", "yes"):
             return True
-        elif check.lower() in ("n", "no"):
+        if check.lower() in ("n", "no"):
             if abort:
                 sys.exit(1)
             return False
