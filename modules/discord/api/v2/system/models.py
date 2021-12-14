@@ -10,7 +10,7 @@ class BotListStats(BaseModel):
     server_uptime: float
     bot_count: int
     bot_count_total: int
-    workers: list[int] | None = []
+    workers: list[int]
 
 
 class PartialBotQueue(BaseModel):

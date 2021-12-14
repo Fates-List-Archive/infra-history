@@ -51,6 +51,8 @@ async def get_botlist_stats(
     else:
         bot_count = 0
         bot_count_total = 0
+    if not worker_session.workers:
+        os._exit(0) # Force die
     return {
         "uptime": time.time() - worker_session.start_time,
         "server_uptime": get_uptime(),
