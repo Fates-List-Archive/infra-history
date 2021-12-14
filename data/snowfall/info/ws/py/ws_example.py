@@ -27,10 +27,7 @@ else:
     api_token = input("Enter API Token: ")
 
 bot = input("Is this a bot (Y/N): ")
-if bot.lower() in ("y", "yes"):
-    bot = True
-else:
-    bot = False
+bot = bot.lower() in ("y", "yes")
 
 bot = ws.Bot(bot_id, api_token, bot = bot)
 try:
