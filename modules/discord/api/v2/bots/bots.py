@@ -318,14 +318,13 @@ async def _set_bot_stats(request: Request, bot_id: int, api: dict, no_abuse_chec
         if int(check) <= 5:
             await redis.expire(key, 60*60*8)
             return api_error("You have been caught by our anti-abuse systems. Please try setting your stats using its actual value", ctx="Get your bot certified to avoid anti-abuse. You may only try to post invalid stats 5 times every 8 hours or you will be banned (invalid stats are not set and will only flag you)") 
-        else:
-            await redis.persist(key)
-            await redis.set(f"statslock:{bot_id}", 1)
-            return api_error("You have been banned from using this API due to triggering our anti-abuse systems in a very short timeframe!")
+        await redis.persist(key)
+        await redis.set(f"statslock:{bot_id}", 1)
+        return api_error("You have been banned from using this API due to triggering our anti-abuse systems in a very short timeframe!")
 
     if stats["guild_count"] > 300000000000 or stats["shard_count"] > 300000000000 or len(stats["shards"]) > (100 + stats["shard_count"]):
         return await _flag_bot()
-    elif int(stats["user_count"]) > INT64_MAX:
+    if int(stats["user_count"]) > INT64_MAX:
         return await api_error(f"User count cannot be greater than {INT64_MAX}")
 
     # Anti abuse checks

@@ -42,7 +42,7 @@ class BotActions():
                         json = await resp.json()
                         if json["data"].get("code"):
                             return "Invalid client ID inputted"
-                        elif json["data"].get("bot", {}).get("id") != str(self.bot_id):
+                        if json["data"].get("bot", {}).get("id") != str(self.bot_id):
                             return "Invalid client ID for this bot! "
 
         if self.client_id:

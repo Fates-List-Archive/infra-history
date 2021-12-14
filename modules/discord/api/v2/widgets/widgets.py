@@ -79,11 +79,11 @@ async def get_widget(request: Request, bt: BackgroundTasks, target_id: int, targ
 
     if format == enums.WidgetFormat.json:
         return data
-    
-    elif format == enums.WidgetFormat.html:
+
+    if format == enums.WidgetFormat.html:
         return await templates.TemplateResponse("widget.html", {"request": request} | data)
-    
-    elif format in (enums.WidgetFormat.png, enums.WidgetFormat.webp):
+
+    if format in (enums.WidgetFormat.png, enums.WidgetFormat.webp):
         # Check if in cache
         cache = await redis_db.get(f"widget-{target_id}-{target_type}-{format.name}-{textcolor}")
         if cache and not no_cache:
@@ -104,34 +104,33 @@ async def get_widget(request: Request, bt: BackgroundTasks, target_id: int, targ
         server_pil = static["server_pil"]
         avatar_pil = Image.open(io.BytesIO(avatar_img)).resize((100, 100))
         avatar_pil_bg = Image.new('RGBA', avatar_pil.size, (0,0,0))
-            
+        
         #pasting the bot image
         try:
             widget_img.paste(Image.alpha_composite(avatar_pil_bg, avatar_pil),(10,widget_img.size[-1]//5))
         except:
             widget_img.paste(avatar_pil,(10,widget_img.size[-1]//5))
-            
+        
         def remove_transparency(im, bgcolor):
             if im.mode in ('RGBA', 'LA') or (im.mode == 'P' and 'transparency' in im.info):
                 # Need to convert to RGBA if LA format due to a bug in PIL (http://stackoverflow.com/a/1963146)
                 alpha = im.convert('RGBA').split()[-1]
-                
+    
                 # Create a new background image of our matt color.
                 # Must be RGBA because paste requires both images have the same format
                 # (http://stackoverflow.com/a/8720632  and  http://stackoverflow.com/a/9459208)
                 bg = Image.new("RGBA", im.size, bgcolor)
                 bg.paste(im, mask=alpha)
                 return bg
-            else:
-                return im
+            return im
         widget_img.paste(remove_transparency(fates_pil, bgcolor),(10,152))
-        
+    
         #pasting votes logo
         try:
             widget_img.paste(Image.alpha_composite(avatar_pil_bg, votes_pil),(120,115))
         except:
             widget_img.paste(votes_pil,(120,115))
-        
+    
         #pasting servers logo
         try:
             widget_img.paste(Image.alpha_composite(avatar_pil_bg, server_pil),(120,95))
@@ -146,27 +145,24 @@ async def get_widget(request: Request, bt: BackgroundTasks, target_id: int, targ
                 get_font_size(d.textsize(string)[0]),
                 layout_engine=ImageFont.LAYOUT_RAQM
             )
-        
+    
         def get_font_size(width: int):
             if width <= 90:
                 return 18  
-            elif width >= 192:
+            if width >= 192:
                 return 10
-            elif width == 168:
+            if width == 168:
                 return 12
-            else:
-                return 168-width-90
+            return 168-width-90
         
         def the_area(str_width: int, image_width: int):
             if str_width < 191:
                 new_width=abs(int(str_width-image_width))
                 return (new_width//2.5)
-            else:
-                new_width=abs(int(str_width-image_width))
-                return (new_width//4.5)
-                
+            new_width=abs(int(str_width-image_width))
+            return (new_width//4.5)
          
-        #lists name
+            #lists name
         d = ImageDraw.Draw(widget_img)
         d.text(
             (25,150), 
@@ -196,7 +192,7 @@ async def get_widget(request: Request, bt: BackgroundTasks, target_id: int, targ
                 layout_engine=ImageFont.LAYOUT_RAQM
                 )
             )
-        
+    
         #description
         wrapper = textwrap.TextWrapper(width=15)
         text = cd or (bot["description"][:25] if not full_desc else bot["description"])
@@ -207,7 +203,7 @@ async def get_widget(request: Request, bt: BackgroundTasks, target_id: int, targ
             fill=textcolor,
             font=get_font(str("\n".join(word_list)),d)
         )
-        
+    
         #server count
         d.text(
             (140,94), 
@@ -215,7 +211,7 @@ async def get_widget(request: Request, bt: BackgroundTasks, target_id: int, targ
             fill=textcolor,
             font=get_font(human_format(bot["guild_count"]),d)
         )
-        
+    
         #votes
         d.text(
             (140,114),
@@ -223,7 +219,7 @@ async def get_widget(request: Request, bt: BackgroundTasks, target_id: int, targ
             fill=textcolor,
             font=get_font(human_format(bot['votes']),d)
         )
-            
+        
         output = io.BytesIO()
         widget_img.save(output, format=format.name.upper())
         output.seek(0)

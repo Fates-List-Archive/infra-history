@@ -40,8 +40,7 @@ async def render_index(request: Request, api: bool, type: enums.ReviewType = enu
 
     if not api:
         return await templates.TemplateResponse("index.html", {"request": request, "random": random} | context | base_json, context = context)
-    else:
-        return base_json
+    return base_json
 
 #@jit(nopython = True)
 def gen_owner_html(owners_lst: tuple):
@@ -159,8 +158,7 @@ async def render_search(request: Request, q: str, api: bool, target_type: enums.
     if q == "":
         if api:
             return abort(404)
-        else:
-            return RedirectResponse("/")
+        return RedirectResponse("/")
 
     if target_type == enums.SearchType.bot:
         data = await db.fetch(
@@ -203,8 +201,7 @@ async def render_search(request: Request, q: str, api: bool, target_type: enums.
     )
     if not api:
         return await templates.TemplateResponse("search.html", {"request": request, "search_bots": search_bots, "tags_fixed": tags, "query": q, "profile_search": target_type == enums.SearchType.profile, "type": "bot" if target_type == enums.SearchType.bot else "server"})
-    else:
-        return {"search_res": search_bots, "tags_fixed": tags, "query": q, "profile_search": target_type == enums.SearchType.profile}
+    return {"search_res": search_bots, "tags_fixed": tags, "query": q, "profile_search": target_type == enums.SearchType.profile}
 
 async def render_profile_search(request: Request, q: str, api: bool):
     worker_session = request.app.state.worker_session
@@ -213,8 +210,7 @@ async def render_profile_search(request: Request, q: str, api: bool):
     if q == "" or q is None:
         if api:
             return abort(404)
-        else:
-            q = ""
+        q = ""
     if q.replace(" ", "") != "":
         profiles = await db.fetch(
             """SELECT DISTINCT users.user_id, users.description FROM users 
@@ -234,6 +230,5 @@ async def render_profile_search(request: Request, q: str, api: bool):
             profile_obj.append({"banner": None, "description": profile["description"], "user": profile_info})
     if not api:
         return await templates.TemplateResponse("search.html", {"request": request, "tags_fixed": tags_fixed, "profile_search": True, "query": q, "type": "profile", "profiles": profile_obj})
-    else:
-        return {"search_res": profile_obj, "tags_fixed": tags_fixed, "query": q, "profile_search": True}
+    return {"search_res": profile_obj, "tags_fixed": tags_fixed, "query": q, "profile_search": True}
 

@@ -513,7 +513,7 @@ class _CertifySelect(discord.ui.Select):
             return await interaction.followup.send(
                 "**This bot is already certified!**", ephemeral=True)
 
-        elif bot["state"] != BotState.approved:
+        if bot["state"] != BotState.approved:
             state = BotState(bot["state"])
             return await interaction.followup.send(
                 f"**This bot is not eligible for certification as it is currently {state.__doc__} ({state.value})**",

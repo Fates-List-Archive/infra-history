@@ -62,9 +62,9 @@ async def _user_fetch(
     if data is None or data == b'-2':
         return None
 
-    elif data == b'-1':
+    if data == b'-1':
         valid = False
-    
+
     else:
         data = orjson.loads(data)
         valid = True

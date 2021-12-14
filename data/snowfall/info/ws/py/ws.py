@@ -110,6 +110,6 @@ class EventContext:
         """Returns the User ID who voted"""
         if self.data["m"]["e"] == 0 and self.bot:
             return Vote(self.data["ctx"]["user"], self.data["ctx"]["test"])
-        elif self.data["m"]["e"] == 71 and not self.bot:
+        if self.data["m"]["e"] == 71 and not self.bot:
             return Vote(self.data["ctx"]["user"], self.data["ctx"]["test"])
         return None
