@@ -172,15 +172,10 @@ async def blstats(ctx):
                 "server_uptime": 0,
                 "bot_count": "Unknown",
                 "bot_count_total": "Unknown",
-                "error": f"{type(exc).__name__}: {exc}",
+                "error": f"{type(exc).__name__}: {exc} - Servers likely down",
                 "workers": [0],
             },
         ]
-    if not res[1]["workers"]:
-        await ctx.bot.redis.publish("_worker", "RESTART IPC")
-        await asyncio.sleep(5)
-        return await blstats(ctx)
-
     embed = Embed(title="Bot List Stats", description="Fates List Stats")
     uptime_tuple = extract_time(datetime.timedelta(seconds=res[1]["uptime"]))
     # ttvr = Time Till Votes Reset

@@ -5,7 +5,7 @@ import warnings
 from typing import Sequence
 import orjson
 
-async def redis_ipc_new(redis, cmd: str, msg: str = None, timeout: int = 30, args: Sequence[str] = None):
+async def redis_ipc_new(redis, cmd: str, msg: str = None, timeout: int = 30, args: Sequence[str] = None, no_wait: bool = False):
     args = args if args else []
     cmd_id = str(uuid.uuid4())
     if msg:
@@ -25,6 +25,9 @@ async def redis_ipc_new(redis, cmd: str, msg: str = None, timeout: int = 30, arg
             data = await redis.get(id)
             if data:
                 return data
+        if not no_wait:
+            await app.state.wait_for_ipc()
+            return await redis_ipc_new(redis, cmd, msg=msg, timeout=timeout, args=args, no_wait=True)
 
     if timeout:
         return await wait(cmd_id)

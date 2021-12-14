@@ -40,6 +40,7 @@ var (
 	BuildTime           string
 	Debug               bool
 	RegisterCommands    bool
+	IPCOnly             bool
 )
 
 func init() {
@@ -51,13 +52,14 @@ func init() {
 	flag.StringVar(&PythonPath, "python-path", "/home/meow/flvenv-py11/bin/python", "Path to python interpreter")
 	flag.BoolVar(&Debug, "debug", false, "Debug mode")
 	flag.BoolVar(&RegisterCommands, "register-only", false, "Only register commands and exit! Overrides --cmd")
+	flag.BoolVar(&IPCOnly, "ipc-only", false, "Whether or not this dragon server instance should be a ipc only instance")
 	flag.Parse()
 
-	if CliCmd == "" && !RegisterCommands {
+	if CliCmd == "" && !RegisterCommands && !IPCOnly {
 		fmt.Println("Version:", Version, "\nCommit Hash:", CommitHash, "\nBuild Timestamp:", BuildTime, "\nBuilt with:", runtime.Version())
 		flag.Usage()
 		os.Exit(3)
-	} else if RegisterCommands {
+	} else if RegisterCommands || IPCOnly {
 		CliCmd = "dragon.server"
 	}
 

@@ -38,22 +38,21 @@ async def get_botlist_stats(request: Request,
 
     workers - The worker pids
     """
-    up = worker_session.up
     db = worker_session.postgres
-    if up:
-        bot_count_total = await db.fetchval("SELECT COUNT(1) FROM bots")
-        bot_count = await db.fetchval(
-            "SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
-    else:
-        bot_count = 0
-        bot_count_total = 0
+    bot_count_total = await db.fetchval("SELECT COUNT(1) FROM bots")
+    bot_count = await db.fetchval(
+        "SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
     if not worker_session.workers:
-        os._exit(0)  # Force die
+        workers = await redis_ipc_new(worker_session.redis, "WORKERS")
+        if not workers:
+            return abort(503)
+        worker_session.workers = orjson.loads(workers)
+        worker_session.up = True # If workers is actually existant
     return {
         "uptime": time.time() - worker_session.start_time,
         "server_uptime": get_uptime(),
         "pid": os.getpid(),
-        "up": up,
+        "up": worker_session.up,
         "bot_count": bot_count,
         "bot_count_total": bot_count_total,
         "workers": worker_session.workers,

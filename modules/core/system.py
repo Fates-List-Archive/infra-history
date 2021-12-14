@@ -42,6 +42,7 @@ from modules.core.ratelimits import rl_key_func
 from modules.models import enums
 
 sys.pycache_prefix = "data/pycache"
+reboot_error = "<h1>Fates List is currently rebooting. Please click <a href='/maint/page'>here</a> for more information</h1>"
 
 class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-public-methods
     """Request Handler for Fates List"""
@@ -81,10 +82,10 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         request.state.curr_time = str(datetime.datetime.now())
         path = request.scope["path"]
         
-        if not request.app.state.ipc_up:
-            # This middleware does not apply
-            return RedirectResponse("/maint/page")
-
+        if not request.app.state.worker_session.up:
+            # Still accept connections but be warned that connections may stall indefinitely
+            logger.warning("Accepting bad connection without working IPC")
+            #return HTMLResponse(reboot_error + f"<br>Worker UP: {request.app.state.worker_session.up}")
 
         try:
             res = await self._dispatcher(path, request, call_next)
@@ -236,6 +237,7 @@ async def init_fates_worker(app, session_id, workers):
         - Setup the ratelimiter and IPC worker protocols
         - Start repeated task for vote reminder posting
     """
+    builtins.app = app
     # Add request handler
     app.add_middleware(
         FatesListRequestHandler, 
@@ -252,15 +254,15 @@ async def init_fates_worker(app, session_id, workers):
     dbs = await setup_db()
 
     # Wait for redis ipc to come up
-    app.state.ipc_up = False
     app.state.first_run = True
 
-    async def wait_for_ipc(app, session_id, workers, dbs):
-        while True:
-            if not app.state.ipc_up:
-                logger.info("Waiting for IPC")
-            else:
-                logger.info("Doing periodic IPC health check")
+    async def wait_for_ipc(first_run: bool = False):
+        logger.info("Wait for ipc called")
+        ipc_up = False
+        if not first_run:
+            app.state.worker_session.up = False
+
+        while not ipc_up:
             resp = await redis_ipc_new(dbs["redis"], "PING", timeout=5)
             logger.info(resp)
             if not resp:
@@ -281,20 +283,18 @@ async def init_fates_worker(app, session_id, workers):
                     app.state.site_degraded = (respl[2] == "1")
         
             if invalid:  # pylint: disable=no-else-continue
-                app.state.ipc_up = False
-                await asyncio.sleep(3)
                 logger.info(f"Invalid IPC. Got invalid PONG: {resp} (reason: {reason})")
-                app.state.ipc_up = False
                 continue
-            elif app.state.first_run:
-                app.state.first_run = False
-                await finish_init(app, session_id, workers, dbs)
+            
+            if first_run:
+                return await finish_init(app, session_id, workers, dbs)
+            
             else:
-                app.state.ipc_up = True
-                await asyncio.sleep(1)
-            await asyncio.sleep(360)
-    
-    asyncio.create_task(wait_for_ipc(app, session_id, workers, dbs))
+                app.state.worker_session.up = True
+                return
+
+    app.state.wait_for_ipc = wait_for_ipc
+    await app.state.wait_for_ipc(first_run=True)
 
 async def finish_init(app, session_id, workers, dbs):
     """Finish site init"""
@@ -331,7 +331,7 @@ async def finish_init(app, session_id, workers, dbs):
         dat = await session.redis.get(key)
         if not dat:
             dat = get_token(196)
-            await session.redis.set(key, dat, ex=60*60*24, nx=True)
+            await session.redis.set(key, dat, ex=60*60*3*24, nx=True)
             signal.raise_signal(signal.SIGINT)
             os._exit(0)
 
@@ -405,16 +405,10 @@ async def finish_init(app, session_id, workers, dbs):
     asyncio.create_task(catclient(workers, session))
     logger.debug("Started catclient task")
 
-    # We are now up (probably)
-    app.state.worker_session.set_up()
-
     # Boast about oht success!
     logger.success(
         f"Fates List worker (pid: {os.getpid()}) bootstrapped successfully!"
     )
- 
-    # We are ready to handle requests
-    app.state.ipc_up = True
 
         
 async def catclient(workers, session):
@@ -435,9 +429,8 @@ async def catclient(workers, session):
         match msg:
             case ("RESTART", tgt):
                 if tgt == "*" or (tgt.isdigit() and int(tgt) == os.getpid()):
+                    session.up = False
                     logger.info(f"Dying due to sent RESTART call with requestor being {tgt}")
-                    signal.raise_signal(signal.SIGINT)
-                    os._exit(0)
 
             # IPC going up has no session id yet
             case("REGET", reason):
@@ -464,8 +457,9 @@ async def catclient(workers, session):
                     logger.warning(
                         f"Got invalid workers from ipc ({workers})"
                     )
-               
-                asyncio.create_task(vote_reminder(session))
+                           
+                session.up = True # Site is back up when we FUP
+                #asyncio.create_task(vote_reminder(session))
 
             case _:
                 pass  # Ignore the rest for now

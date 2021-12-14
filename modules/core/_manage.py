@@ -148,7 +148,7 @@ def site_run():
         "pidfile": "data/pids/gunicorn.pid",
         "preload_app": True,
         "timeout": 120,
-        "max_requests": 1000,
+        "max_requests": 1000, # Currently there are bugs which prevent us from increasing this
     }
 
     _app = _fappgen(str(session_id), workers, static_assets)

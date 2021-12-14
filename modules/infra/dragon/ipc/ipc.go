@@ -117,6 +117,18 @@ func setupCommands() {
 		MaxArgs: 4,
 	}
 
+	// WORKERS <COMMAND ID>
+	ipcActions["WORKERS"] = types.IPCCommand{
+		Handler: func(cmd []string, context types.IPCContext) string {
+			workers, err := json.Marshal(pids)
+			if err != nil {
+				log.Error(err)
+				return "[]"
+			}
+			return string(workers)
+		},
+	}
+
 	// GETCH <COMMAND ID> <USER ID>
 	ipcActions["GETCH"] = types.IPCCommand{
 		Handler: func(cmd []string, context types.IPCContext) string {

@@ -53,6 +53,9 @@ func DragonServer() {
 
 	// Be prepared to remove this handler if we don't get priv intents
 	memberHandler := func(s *discordgo.Session, m *discordgo.Member) {
+		if common.IPCOnly {
+			return
+		}
 		g, err := discordServerBot.State.Guild(m.GuildID)
 		if err != nil {
 			log.Error(err)
@@ -72,6 +75,9 @@ func DragonServer() {
 	}
 
 	discord.AddHandler(func(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
+		if common.IPCOnly {
+			return
+		}
 		ts, err := m.Member.JoinedAt.Parse()
 		if err != nil {
 			log.Error(err)
@@ -118,6 +124,9 @@ func DragonServer() {
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i, 0) })
 	discordServerBot.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i, 1) })
 	discordServerBot.AddHandler(func(s *discordgo.Session, gc *discordgo.GuildCreate) {
+		if common.IPCOnly {
+			return
+		}
 		log.Info("Adding guild " + gc.Guild.ID + " (" + gc.Guild.Name + ")")
 		err := serverlist.AddRecacheGuild(ctx, db, gc.Guild)
 		if err != "" {
@@ -127,6 +136,9 @@ func DragonServer() {
 		db.Exec(ctx, "UPDATE servers SET state = $1, deleted = false WHERE guild_id = $2 AND deleted = true AND state = $3", types.BotStateApproved.Int(), gc.Guild.ID, types.BotStatePrivateViewable.Int())
 	})
 	discordServerBot.AddHandler(func(s *discordgo.Session, gc *discordgo.GuildDelete) {
+		if common.IPCOnly {
+			return
+		}
 		log.Info("Left guild " + gc.Guild.ID + "(" + gc.Guild.Name + ")")
 		rdb.Set(ctx, "pendingdel-"+gc.Guild.ID, 0, 0)
 
@@ -156,7 +168,9 @@ func DragonServer() {
 	})
 
 	// Delete socket file
-	os.Remove("/home/meow/fatesws.sock")
+	if !common.IPCOnly {
+		os.Remove("/home/meow/fatesws.sock")
+	}
 
 	// Channel for signal handling
 	sigs := make(chan os.Signal, 1)
@@ -167,7 +181,9 @@ func DragonServer() {
 	// Start IPC code
 	if !common.RegisterCommands {
 		go ipc.StartIPC(db, discord, discordServerBot, rdb)
-		go webserver.StartWebserver(db, rdb)
+		if !common.IPCOnly {
+			go webserver.StartWebserver(db, rdb)
+		}
 	}
 	s := <-sigs
 	log.Info("Going to exit gracefully due to signal", s, "\n")

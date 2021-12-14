@@ -12,3 +12,4 @@ Fates List Dragon
 
 Use `dragon --help` for more information on how to use Dragon
 
+Creating a backup dragon ipc instance using --ipc-only is highly recommended when killing dragon for extended time periods
