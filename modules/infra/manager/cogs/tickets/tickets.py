@@ -7,13 +7,7 @@ from http import HTTPStatus
 from typing import Optional, Union
 
 import discord
-from core import (
-    BotListView,
-    BotState,
-    MenuState,
-    MiniContext,
-    request,
-)
+from core import BotListView, BotState, MenuState, MiniContext, request
 from discord import AllowedMentions, Color, Embed, Member, TextChannel, User
 from discord.ext import commands
 
@@ -27,6 +21,7 @@ from config import (
     support_channel,
 )
 from modules.core.ipc import redis_ipc_new
+
 
 class TicketMenu(discord.ui.View):
     def __init__(self, bot, public):
@@ -84,7 +79,9 @@ class _TicketCallback(discord.ui.Select):
 
     async def support(self, interaction):
         await interaction.response.defer()
-        err = await redis_ipc_new(self.bot.redis, "SUPPORT", args=[str(interaction.author.id)])
+        err = await redis_ipc_new(self.bot.redis,
+                                  "SUPPORT",
+                                  args=[str(interaction.author.id)])
         if err != b"0":
             if isinstance(err, bytes):
                 err = err.decode("utf-8")
@@ -93,7 +90,10 @@ class _TicketCallback(discord.ui.Select):
                 f"Could not create private thread because: **{err}**",
                 ephemeral=True,
             )
-        return await interaction.send("Created a private thread for you. Staff will assist you when they can!", ephemeral=True)
+        return await interaction.send(
+            "Created a private thread for you. Staff will assist you when they can!",
+            ephemeral=True,
+        )
 
     async def ddr(self, interaction):
         view = _DDRView(interaction, bot=self.bot)
