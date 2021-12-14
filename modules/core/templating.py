@@ -46,7 +46,7 @@ class templates():
             "user_id": str(arg_dict["user_id"]) if "user_id" in arg_dict.keys() else None,
             "user_token": arg_dict.get("user_token"),
             "site_lang": arg_dict.get("site_lang"),
-            "logged_in": True if "user_id" in arg_dict.keys() else False,
+            "logged_in": "user_id" in arg_dict.keys(),
             "index": "/",
             "type": "bot"
         }
