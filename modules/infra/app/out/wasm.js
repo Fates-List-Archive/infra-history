@@ -30,7 +30,7 @@
         outputBuf += decoder.decode(buf);
         const nl = outputBuf.lastIndexOf("\n");
         if (nl != -1) {
-          console.log(outputBuf.substr(0, nl));
+          
           outputBuf = outputBuf.substr(nl + 1);
         }
         return buf.length;
@@ -179,7 +179,7 @@
       this.env = {};
       this.exit = (code) => {
         if (code !== 0) {
-          console.warn("exit code:", code);
+          
         }
       };
       this._exitPromise = new Promise((resolve) => {
@@ -353,7 +353,7 @@
                   while (this._scheduledTimeouts.has(id)) {
                     // for some reason Go failed to register the timeout event, log and try again
                     // (temporary workaround for https://github.com/golang/go/issues/28975)
-                    console.warn("scheduleTimeoutEvent: missed timeout event");
+                    
                     this._resume();
                   }
                 },
@@ -556,7 +556,7 @@
           },
 
           debug: (value) => {
-            console.log(value);
+            
           },
         },
       };
