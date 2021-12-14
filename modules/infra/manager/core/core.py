@@ -97,7 +97,8 @@ async def request(
         async with f(url,
                      json=kwargs.get("json"),
                      headers=headers,
-                     timeout=kwargs.get("timeout")) as res:
+                     timeout=kwargs.get("timeout"),
+                     max_redirects=30) as res:
             res_json = await res.json()
             logger.info(
                 f"Request\n\nURL - {url}\nResponse - {res.status}\n{pprint.pformat(res_json)}"

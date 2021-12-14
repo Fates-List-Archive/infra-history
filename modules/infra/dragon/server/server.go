@@ -42,14 +42,14 @@ func DragonServer() {
 
 	common.DiscordMain = discord
 
-	discord.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildPresences | discordgo.IntentsGuildMembers | discordgo.IntentsDirectMessages | discordgo.IntentsGuildMessages | discordgo.IntentsGuildMembers
+	discord.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildPresences | discordgo.IntentsGuildMembers | discordgo.IntentsDirectMessages | discordgo.IntentsGuildMessages
 	discordServerBot, err = discordgo.New("Bot " + common.ServerBotToken)
 	if err != nil {
 		panic(err)
 	}
 
 	// For now, if we don't get the guild members intent in the future, this will be replaced with approx guild count
-	discordServerBot.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMembers
+	discordServerBot.Identify.Intents = discordgo.IntentsGuilds
 
 	// Be prepared to remove this handler if we don't get priv intents
 	memberHandler := func(s *discordgo.Session, m *discordgo.Member) {

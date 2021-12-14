@@ -45,6 +45,11 @@ async def index_fend(request: Request):
 async def server_index(request: Request):
     return await render_index(request = request, api = False, type=enums.ReviewType.server)
 
+@router.get("/servers/{guild_id}/{path:path}")
+@router.get("/servers/{guild_id}")
+def server_redirector(guild_id: int, path: Optional[str] = None):
+    return RedirectResponse(f"/server/{guild_id}/{path or ''}")
+
 @router.get("/etest/{code}")
 async def test_error(code: int):
     if code == 500:

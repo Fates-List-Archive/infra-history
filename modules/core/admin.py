@@ -64,6 +64,9 @@ class BotActions():
         if len(self.description) > 110:
             return "Your short description must be shorter than 110 characters" # Short Description Check
 
+        if "*" in self.description or "_" in self.description or ">" in self.description or "`" in self.description:
+            return "Your short description may not have *, >, ` or _"
+
         if len(self.long_description) < 300:
             return "Your long description must be at least 300 characters long"
 

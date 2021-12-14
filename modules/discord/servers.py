@@ -21,6 +21,7 @@ router = APIRouter(
 async def guild_page(request: Request, guild_id: int, bt: BackgroundTasks, rev_page: int = 1, api: bool = False):
     data = await db.fetchrow("SELECT banner_page AS banner, keep_banner_decor, guild_count, nsfw, state, invite_amount, avatar_cached, name_cached, votes, css, description, long_description, long_description_type, website, tags AS _tags, js_allowed FROM servers WHERE guild_id = $1", guild_id)
     if not data:
+        logger.info("Something happened!")
         return abort(404)
     data = dict(data)
     data["resources"] = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", guild_id, enums.ReviewType.server.value)
@@ -91,7 +92,7 @@ async def guild_invite(request: Request, guild_id: int):
         user_id = int(request.session.get("user_id"))
     invite = await redis_ipc_new(redis_db, "GUILDINVITE", args=[str(guild_id), str(user_id)])
     if invite is None:
-        return abort(404)
+        return await guild_invite(request, guild_id)
     invite = invite.decode("utf-8")
     if invite.startswith("https://"):
         return RedirectResponse(invite)

@@ -133,7 +133,7 @@ func CmdInit() map[string]types.SlashCommand {
 					botUser = &discordgo.User{Username: "Unknown", Discriminator: "0000"}
 				}
 
-				output += "**" + strconv.Itoa(currBot) + ".** " + botUser.Username + "#" + botUser.Discriminator + "\n**Prefix:** " + prefix.String + "\n**Description:** " + description.String + "\n**Invite:** " + "<https://fateslist.xyz/bot/" + botId.String + "/invite>\n" + "**Owner:** " + botOwner.String + "\n\n"
+				output += "**" + strconv.Itoa(currBot) + ".** " + botUser.Username + "#" + botUser.Discriminator + "\n**Prefix:** " + prefix.String + "\n**Description:** " + description.String + "\n**Invite:** " + "<https://fateslist.xyz/bot/" + botId.String + "/invite>\n" + "**Main Owner:** " + botOwner.String + "\n\n"
 				if currBot%perMessageQueueCount == 0 {
 					slashbot.SendIResponse(context.Discord, context.Interaction, output, false)
 					output = ""
