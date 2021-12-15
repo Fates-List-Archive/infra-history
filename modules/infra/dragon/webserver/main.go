@@ -130,14 +130,21 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 
 		if check.Milliseconds() == 0 || vote.Test {
 			var votesDb pgtype.Int8
+			var system pgtype.Bool
 
-			err := db.QueryRow(ctx, "SELECT votes FROM bots WHERE bot_id = $1", vote.BotID).Scan(&votesDb)
+			err := db.QueryRow(ctx, "SELECT system, votes FROM bots WHERE bot_id = $1", vote.BotID).Scan(&system, &votesDb)
 
 			if err == pgx.ErrNoRows {
 				c.JSON(404, apiReturn(false, "No bot found?", nil))
 				return
 			} else if err != nil {
 				c.JSON(400, apiReturn(false, err.Error(), nil))
+				return
+			}
+
+			if system.Bool {
+				c.JSON(400, apiReturn(false, "You can't vote for system bots!", nil))
+				return
 			}
 
 			if !vote.Test {
@@ -178,20 +185,22 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 
 			go common.AddWsEvent(ctx, redis, "bot-"+vote.BotID, eventId, voteEvent)
 
-			ok, webhookType, secret, webhookURL := common.GetWebhook(ctx, "bots", vote.BotID, db)
+			go func() {
+				ok, webhookType, secret, webhookURL := common.GetWebhook(ctx, "bots", vote.BotID, db)
 
-			if ok {
-				if webhookType == types.DiscordWebhook {
-					go common.SendIntegration(common.DiscordMain, vote.UserID, vote.BotID, webhookURL, int(votes))
-				} else {
-					go common.WebhookReq(ctx, db, eventId, webhookURL, secret, voteStr, 0)
+				if ok {
+					if webhookType == types.DiscordWebhook {
+						go common.SendIntegration(common.DiscordMain, vote.UserID, vote.BotID, webhookURL, int(votes))
+					} else {
+						go common.WebhookReq(ctx, db, eventId, webhookURL, secret, voteStr, 0)
+					}
+					log.Debug("Got webhook type of " + strconv.Itoa(int(webhookType)))
 				}
-				log.Debug("Got webhook type of " + strconv.Itoa(int(webhookType)))
-			}
 
-			if !vote.Test {
-				redis.Set(ctx, key, 0, 8*time.Hour)
-			}
+				if !vote.Test {
+					redis.Set(ctx, key, 0, 8*time.Hour)
+				}
+			}()
 
 			c.JSON(200, apiReturn(true, "You have successfully voted for this bot :)", nil))
 		} else {

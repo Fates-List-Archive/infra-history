@@ -229,7 +229,7 @@ async def invite_bot(bot_id: int, user_id=None, api=False):
 async def vanity_bot(vanity: str) -> Optional[list]:
     """Checks and returns the vanity of the bot, otherwise returns None"""
 
-    if vanity in reserved_vanity:  # Check if vanity is reserved and if so, return None
+    if vanity in reserved_vanity or vanity.startswith("_"):  # Check if vanity is reserved and if so, return None
         return None
 
     cache = await redis_db.get(vanity + "-v1")
