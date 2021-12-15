@@ -211,10 +211,10 @@
 					),
 					required=True
 				) }}
-				{% if staff.perm > 4 %}
+				{% if staff.perm > 4 or bot.system_bot %}
 					{{ selectInput(
 						"system_bot",
-						"System Bot (use no if unsure, head admin+ only)",
+						"System Bot (set this to no to claim your bot, only staff can set this to yes)",
 						"System Bot Status",
 						(
 							{

@@ -19,8 +19,10 @@ class BotActions():
         """Perform basic checks for adding/editting bots. A check returning None means success, otherwise error should be returned to client"""
         if self.system_bot:
             if not (await is_staff(None, self.user_id, 5))[0]:
+                if mode == "edit":
+                    return "It seem's like you wish to claim this bot. In order to do so, hou must set 'System Bot' to 'No'/false"
                 return "Only staff (Head Admin+) may add system bots"
-
+            
         if self.prefix and len(self.prefix) > 9:
             return "Prefix must be less than 9 characters long"
 
@@ -258,8 +260,8 @@ class BotActions():
         async with self.db.acquire() as connection: # Acquire a connection
             async with connection.transaction() as tr: # Make a transaction to avoid data loss
                 await connection.execute(
-                    "UPDATE bots SET bot_library=$2, webhook=$3, description=$4, long_description=$5, prefix=$6, website=$7, discord=$8, banner_card=$9, invite=$10, github = $11, features = $12, long_description_type = $13, webhook_type = $14, css = $15, donate = $16, privacy_policy = $17, nsfw = $18, webhook_secret = $19, banner_page = $20, keep_banner_decor = $21, client_id = $22 WHERE bot_id = $1",  # pylint: disable=line-too-long 
-                    self.bot_id, self.library, self.webhook, self.description, self.long_description, self.prefix, self.website, self.support, self.banner_card, self.invite, self.github, self.features, self.long_description_type, self.webhook_type, self.css, self.donate, self.privacy_policy, self.nsfw, self.webhook_secret, self.banner_page, self.keep_banner_decor, self.client_id  # pyline: disable=line-too-long
+                    "UPDATE bots SET bot_library=$2, webhook=$3, description=$4, long_description=$5, prefix=$6, website=$7, discord=$8, banner_card=$9, invite=$10, github = $11, features = $12, long_description_type = $13, webhook_type = $14, css = $15, donate = $16, privacy_policy = $17, nsfw = $18, webhook_secret = $19, banner_page = $20, keep_banner_decor = $21, client_id = $22, system = $23 WHERE bot_id = $1",  # pylint: disable=line-too-long 
+                    self.bot_id, self.library, self.webhook, self.description, self.long_description, self.prefix, self.website, self.support, self.banner_card, self.invite, self.github, self.features, self.long_description_type, self.webhook_type, self.css, self.donate, self.privacy_policy, self.nsfw, self.webhook_secret, self.banner_page, self.keep_banner_decor, self.client_id, self.system_bot  # pyline: disable=line-too-long
                 ) # Update bot with new info
 
                 await connection.execute("DELETE FROM bot_owner WHERE bot_id = $1 AND main = false", self.bot_id) # Delete all extra owners

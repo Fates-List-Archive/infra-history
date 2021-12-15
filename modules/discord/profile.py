@@ -59,7 +59,7 @@ async def get_user_profile(request, user_id: int, preview: bool, worker_session)
     user = await core_classes.User(
         id = user_id, 
         db = db, 
-    ).profile()
+    ).profile(system_bots = personal)
 
     if not user:
         return await templates.e(request, "Profile Not Found", 404)

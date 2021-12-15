@@ -18,8 +18,8 @@ router = APIRouter(
     "/{user_id}",
     operation_id="fetch_user"
 )
-async def fetch_user(request: Request, user_id: int, worker_session = Depends(worker_session)):
-    user = await _User(id = user_id, db = worker_session.postgres).profile()
+async def fetch_user(request: Request, user_id: int, bot_logs: bool = False, system_bots: bool = False, worker_session = Depends(worker_session)):
+    user = await _User(id = user_id, db = worker_session.postgres).profile(bot_logs=bot_logs, system_bots=system_bots)
     if not user:
         return abort(404)
     return user

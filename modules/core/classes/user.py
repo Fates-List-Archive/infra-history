@@ -12,7 +12,7 @@ class User(DiscordUser):
         """Fetch a user object from our cache"""
         return await get_user(self.id)
 
-    async def profile(self, bot_logs: bool = True):
+    async def profile(self, bot_logs: bool = True, system_bots: bool = False):
         """Gets a users profile"""
         user = await self.db.fetchrow(
             "SELECT badges, state, description, user_css, profile_css, js_allowed FROM users WHERE user_id = $1", 
@@ -33,12 +33,17 @@ class User(DiscordUser):
         else:
             bot_logs = []
 
+        if not system_bots:
+            cond = "AND bots.system = false"
+        else:
+            cond = ""
+
         # TODO: This whole section
         _bots = await self.db.fetch(
-            """SELECT bots.description, bots.prefix, bots.banner_card AS banner, bots.state, bots.votes, 
+            f"""SELECT bots.description, bots.prefix, bots.banner_card AS banner, bots.state, bots.votes, 
             bots.guild_count, bots.bot_id, bots.nsfw FROM bots 
             INNER JOIN bot_owner ON bot_owner.bot_id = bots.bot_id 
-            WHERE bot_owner.owner = $1 AND bots.system = false""",
+            WHERE bot_owner.owner = $1 {cond}""",
             self.id
         )
         
