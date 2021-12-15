@@ -70,6 +70,7 @@ class Bot(BaseModel):
     banner_page: str | None = None
     keep_banner_decor: bool | None = None
     client_id: str | None = None
+    system: bool | None = False
 
 class BotStats(BaseModel):
     guild_count: int

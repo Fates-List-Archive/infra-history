@@ -41,7 +41,8 @@ CREATE TABLE bots (
     privacy_policy text,
     nsfw boolean DEFAULT false,
     verifier bigint,
-    js_allowed BOOLEAN DEFAULT TRUE
+    js_allowed BOOLEAN DEFAULT TRUE,
+    system boolean default false
 );
 
 CREATE TABLE resources (
@@ -248,7 +249,8 @@ CREATE TABLE servers (
     guild_count bigint default 0,
     tags text[] default '{}',
     deleted boolean default false,
-    js_allowed boolean default true
+    js_allowed boolean default true,
+    system boolean default false
 );
 
 -- In server tags, owner_guild is the first guild a tag was given to

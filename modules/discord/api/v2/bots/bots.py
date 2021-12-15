@@ -95,7 +95,7 @@ async def fetch_random_bot(request: Request, bot_id: int, lang: str = "default")
         )
 
     random_unp = await db.fetchrow(
-        "SELECT description, banner_card, state, votes, guild_count, bot_id FROM bots WHERE state = 0 OR state = 6 ORDER BY RANDOM() LIMIT 1"
+        "SELECT description, banner_card, state, votes, guild_count, bot_id FROM bots WHERE (system = false AND state = 0 OR state = 6) ORDER BY RANDOM() LIMIT 1"
     ) # Unprocessed, use the random function to get a random bot
     bot_obj = await get_bot(random_unp["bot_id"], worker_session = request.app.state.worker_session)
     if bot_obj is None or bot_obj["disc"] == "0000":
@@ -151,7 +151,7 @@ async def fetch_bot(
             return orjson.loads(cache)
 
     api_ret = await db.fetchrow(
-        "SELECT bot_id, last_stats_post, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id FROM bots WHERE bot_id = $1 OR client_id = $1", 
+        "SELECT bot_id, last_stats_post, system, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id FROM bots WHERE bot_id = $1 OR client_id = $1", 
         bot_id
     )
     if api_ret is None:
@@ -308,6 +308,8 @@ async def _set_bot_stats(request: Request, bot_id: int, api: dict, no_abuse_chec
 
     info = await db.fetchrow("SELECT state, client_id FROM bots WHERE bot_id = $1", bot_id)
     state = info["state"]
+    if state not in (enums.BotState.approved, enums.BotState.certified):
+        return api_error("This endpoint can only be used by approved and certified bots!")
     app_id = bot_id if (not info["client_id"] or info["client_id"] == bot_id) else info["client_id"]
 
     async def _flag_bot():

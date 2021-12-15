@@ -23,12 +23,13 @@ async def redis_ipc_new(redis, cmd: str, msg: str = None, timeout: int = 30, arg
         while time.time() - start_time < timeout:
             await asyncio.sleep(0)
             data = await redis.get(id)
-            if data:
+            if data is not None:
                 try:
                     app.state.worker_session.up = True # If we have data, then IPC is up
                 except AttributeError:
                     pass
                 return data
+
         if not no_wait:
             await app.state.wait_for_ipc()
             return await redis_ipc_new(redis, cmd, msg=msg, timeout=timeout, args=args, no_wait=True)

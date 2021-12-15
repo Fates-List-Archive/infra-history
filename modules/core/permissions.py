@@ -2,9 +2,8 @@
 Permission Related Code
 """
 
-from .helpers import *
 from .imports import *
-
+from .ipc import *
 
 class StaffMember(BaseModel):
     """Represents a staff member in Fates List""" 
@@ -28,7 +27,7 @@ async def is_bot_admin(bot_id: int, user_id: int):
         return False
     return True
 
-async def is_staff(staff_json: dict, user_id: int, base_perm: int, json: bool = False, *, redis=None) -> Union[bool, int, StaffMember]:
+async def is_staff(staff_json: dict | None, user_id: int, base_perm: int, json: bool = False, *, redis=None) -> Union[bool, int, StaffMember]:
     redis = redis if redis else redis_db
     if user_id < 0: 
         staff_perm = None

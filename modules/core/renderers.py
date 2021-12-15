@@ -18,7 +18,7 @@ cleaner = Cleaner()
 async def render_index(request: Request, api: bool, type: enums.ReviewType = enums.ReviewType.bot):
     worker_session = request.app.state.worker_session
     top_voted = await do_index_query(worker_session, add_query = "ORDER BY votes DESC", state = [0], type=type)
-    new_bots = await do_index_query(worker_session, add_query = "ORDER BY created_at DESC", state = [0], type=type)
+    new_bots = await do_index_query(worker_session, add_query = "AND system = false ORDER BY created_at DESC", state = [0], type=type)
     certified_bots = await do_index_query(worker_session, add_query = "ORDER BY votes DESC", state = [6], type=type)
 
     if type == enums.ReviewType.bot:
@@ -63,7 +63,7 @@ async def render_bot(request: Request, bt: BackgroundTasks, bot_id: int, api: bo
         """SELECT bot_id, js_allowed, prefix, shard_count, state, description, bot_library AS library, 
         website, votes, guild_count, discord AS support, banner_page AS banner, github, features, 
         invite_amount, css, long_description_type, long_description, donate, privacy_policy, 
-        nsfw, keep_banner_decor, last_stats_post, created_at FROM bots WHERE bot_id = $1 OR client_id = $1""", 
+        nsfw, keep_banner_decor, system, last_stats_post, created_at FROM bots WHERE bot_id = $1 OR client_id = $1""", 
         bot_id
     )
     if not bot:
@@ -83,10 +83,13 @@ async def render_bot(request: Request, bt: BackgroundTasks, bot_id: int, api: bo
         bot["js_allowed"] = False
 
     # Get all bot owners
-    owners = await db.fetch(
-        "SELECT DISTINCT ON (owner) owner, main FROM bot_owner WHERE bot_id = $1 ORDER BY owner, main DESC", 
-        bot_id
-    )
+    if bot["system"]:
+        owners = await db.fetch("SELECT DISTINCT ON (owner) owner, main FROM bot_owner WHERE bot_id = $1 AND main = true", bot_id)
+    else:
+        owners = await db.fetch(
+            "SELECT DISTINCT ON (owner) owner, main FROM bot_owner WHERE bot_id = $1 ORDER BY owner, main DESC", 
+            bot_id
+        )
     _owners = []
     for owner in owners:
         if owner["main"]: _owners.insert(0, owner)

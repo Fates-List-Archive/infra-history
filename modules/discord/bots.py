@@ -17,7 +17,7 @@ async def add_bot(request: Request):
             "tags": [{"text": tag["name"], "value": tag["id"]} for tag in tags_fixed],
             "features": [{"text": feature["name"], "value": id} for id, feature in features.items()]
         }
-        return await templates.TemplateResponse(fn, {"request": request, "tags_fixed": tags_fixed, "features": features, "bot": {}}, context = context)
+        return await templates.TemplateResponse(fn, {"request": request, "tags_fixed": tags_fixed, "features": features, "bot": {}}, context = context, compact=False)
     return RedirectResponse("/fates/login?redirect=/bot/admin/add&pretty=to add a bot")
 
 @router.get("/{bot_id}/settings")
@@ -32,7 +32,7 @@ async def bot_settings(request: Request, bot_id: int):
         return await templates.e(request, "You are not allowed to edit this bot!", status_code=403)
     
     bot = await db.fetchrow(
-        "SELECT bot_id, client_id, state, prefix, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1", 
+        "SELECT bot_id, client_id, state, prefix, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, system AS system_bot, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1", 
         bot_id
     )
     if not bot:
@@ -75,7 +75,7 @@ async def bot_settings(request: Request, bot_id: int):
     
     fn = "bot_add_edit.html"
 
-    return await templates.TemplateResponse(fn, {"request": request, "tags_fixed": tags_fixed, "bot": bot, "vanity": vanity, "features": features}, context = context)
+    return await templates.TemplateResponse(fn, {"request": request, "tags_fixed": tags_fixed, "bot": bot, "vanity": vanity, "features": features}, context = context, compact=False)
 
 @router.get("/")
 async def bot_rdir(request: Request):

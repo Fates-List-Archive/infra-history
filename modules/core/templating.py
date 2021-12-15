@@ -5,12 +5,13 @@ Fates List Templating System
 import markdown
 
 from .imports import *
+from .permissions import is_staff
 
 
 # Template class renderer
 class templates():
     @staticmethod
-    async def TemplateResponse(f, arg_dict: dict, *, context: dict = {}, not_error: bool = True):
+    async def TemplateResponse(f, arg_dict: dict, *, context: dict = {}, not_error: bool = True, compact: bool = True):
         request = arg_dict["request"]
         worker_session = request.app.state.worker_session
         db = worker_session.postgres
@@ -21,7 +22,8 @@ class templates():
             if (state == enums.UserState.global_ban) and not_error:
                 ban_type = enums.UserState(state).__doc__
                 return await templates.e(request, f"You have been {ban_type} banned from Fates List<br/>", status_code = 403)
-            arg_dict["staff"] = request.session.get("staff")
+            if not compact:
+                arg_dict["staff"] = (await is_staff(None, int(request.session["user_id"]), 2))[2]
             arg_dict["avatar"] = request.session.get("avatar")
             arg_dict["username"] = request.session.get("username")
             arg_dict["user_id"] = int(request.session.get("user_id"))

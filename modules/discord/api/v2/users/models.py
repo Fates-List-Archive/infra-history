@@ -48,6 +48,7 @@ class BotMeta(BaseModel):
     vanity: str
     features: list[str] | None = []
     tags: list[str]
+    system_bot: bool | None = False
 
     @validator("extra_owners")
     def extra_owner_converter(cls, v, values, **kwargs):

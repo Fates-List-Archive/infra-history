@@ -15,8 +15,12 @@ class BotActions():
         self.__dict__.update(bot) # Add all kwargs to class
         logger.debug("Request Acknowledged")
 
-    async def base_check(self) -> Optional[str]:
+    async def base_check(self, mode: str) -> Optional[str]:
         """Perform basic checks for adding/editting bots. A check returning None means success, otherwise error should be returned to client"""
+        if self.system_bot:
+            if not (await is_staff(None, self.user_id, 5))[0]:
+                return "Only staff (Head Admin+) may add system bots"
+
         if self.prefix and len(self.prefix) > 9:
             return "Prefix must be less than 9 characters long"
 
@@ -26,23 +30,24 @@ class BotActions():
         check = await self.db.fetchval("SELECT client_id FROM bots WHERE bot_id = $1", self.bot_id)
         if check and self.client_id != str(check):
             return "Client ID cannot change once set"
-        if not check:
+        self.japi_json = {}
+        if not check or mode == "add":
             async with aiohttp.ClientSession() as sess:
                 async with sess.get(f"https://japi.rest/discord/v1/application/{self.bot_id}") as resp:
                     if resp.status != 200:
                         return "japi.rest seems to be down right now. Please contact Fates List Support if you keep getting this error!"
-                    json = await resp.json()
-                    if json["data"].get("code") and not self.client_id:
+                    self.japi_json = await resp.json()
+                    if self.japi_json["data"].get("code") and not self.client_id:
                         return "You need to input a client ID for this bot! You can find this in the Discord Developer Portal"
                     self.client_id = self.bot_id if not self.client_id else self.client_id
                 if self.client_id and self.client_id != self.bot_id:
                     async with sess.get(f"https://japi.rest/discord/v1/application/{self.client_id}") as resp:
                         if resp.status != 200:
                             return "japi.rest seems to be down right now. Please contact Fates List Support if you keep getting this error!"
-                        json = await resp.json()
-                        if json["data"].get("code"):
+                        self.japi_json = await resp.json()
+                        if self.japi_json["data"].get("code"):
                             return "Invalid client ID inputted"
-                        if json["data"].get("bot", {}).get("id") != str(self.bot_id):
+                        if self.japi_json["data"].get("bot", {}).get("id") != str(self.bot_id):
                             return "Invalid client ID for this bot! "
 
         if self.client_id:
@@ -59,15 +64,16 @@ class BotActions():
                 except ValueError:
                     return "Invalid Bot Invite: Your permission number must be a integer", 4 # Invalid Invite
             elif not self.invite.startswith("https://discord.com") or "oauth" not in self.invite:
-                return "Invalid Bot Invite: Your bot invite must be in the format of https://discord.com/api/oauth2... or https://discord.com/oauth2..." # Invalid Invite
+                if not self.system_bot and bot.state != enums.BotState.certified:
+                    return "Invalid Bot Invite: Your bot invite must be in the format of https://discord.com/api/oauth2... or https://discord.com/oauth2..." # Invalid Invite
 
-        if len(self.description) > 110:
+        if len(self.description) > 110 and not self.system_bot:
             return "Your short description must be shorter than 110 characters" # Short Description Check
 
         if "*" in self.description or "_" in self.description or ">" in self.description or "`" in self.description:
             return "Your short description may not have *, >, ` or _"
 
-        if len(self.long_description) < 300:
+        if len(self.long_description) < 300 and not self.system_bot:
             return "Your long description must be at least 300 characters long"
 
         bot_obj = await get_bot(self.bot_id) # Check if bot exists
@@ -131,8 +137,8 @@ class BotActions():
             return "Your webhook secret must be at least 8 characters long"
 
     async def edit_check(self):
-        """Perform extended checks for editting bots"""
-        check = await self.base_check() # Initial base checks
+        """Perform extended checks for editing bots"""
+        check = await self.base_check("edit") # Initial base checks
         if check is not None:
             return check
         
@@ -151,7 +157,7 @@ class BotActions():
 
     async def add_check(self):
         """Perform extended checks for adding bots"""
-        check = await self.base_check() # Initial base checks
+        check = await self.base_check("add") # Initial base checks
         if check is not None:
             return check # Base check erroring means return base check without continuing as string return means error
 
@@ -167,6 +173,8 @@ class BotActions():
         if check:
             return check # Returning a string and not None means error to be returned to consumer
 
+        approx_guild_count = self.japi_json["data"]["bot"]["approximate_guild_count"]
+
         async with self.db.acquire() as connection: # Acquire a connection
             async with connection.transaction() as tr: # Make a transaction to avoid data loss
                 await connection.execute("DELETE FROM bots WHERE bot_id = $1", self.bot_id)
@@ -181,7 +189,7 @@ class BotActions():
                     css, donate, github,
                     webhook, webhook_type, webhook_secret,
                     privacy_policy, nsfw, keep_banner_decor, 
-                    id, client_id) VALUES(
+                    client_id, guild_count, system, id) VALUES(
                     $1, $2, $3,
                     $4, $5, $6,
                     $7, $8, $9,
@@ -189,18 +197,24 @@ class BotActions():
                     $13, $14, $15, 
                     $16, $17, $18, 
                     $19, $20, $21, 
-                    $22, $23, $1)""", 
+                    $22, $23, $24, $25, $1)""", 
                     self.bot_id, self.prefix, self.library, 
                     self.invite, self.website, self.banner_card, self.banner_page,
                     self.support, self.long_description, self.description,
                     get_token(132), self.features, self.long_description_type,
                     self.css, self.donate, self.github, self.webhook, self.webhook_type, self.webhook_secret,
-                    self.privacy_policy, self.nsfw, self.keep_banner_decor, self.client_id
+                    self.privacy_policy, self.nsfw, self.keep_banner_decor, self.client_id, approx_guild_count,
+                    self.system_bot
                 ) # Add new bot info
     
                 await connection.execute("INSERT INTO vanity (type, vanity_url, redirect) VALUES ($1, $2, $3)", enums.Vanity.bot, self.vanity, self.bot_id) # Add new vanity if not empty string
 
-                await connection.execute("INSERT INTO bot_owner (bot_id, owner, main) VALUES ($1, $2, $3)", self.bot_id, self.user_id, True) # Add new main bot owner
+                if not self.system_bot:
+                    await connection.execute("INSERT INTO bot_owner (bot_id, owner, main) VALUES ($1, $2, $3)", self.bot_id, self.user_id, True) # Add new main bot owner
+                else:
+                    await connection.execute("INSERT INTO bot_owner (bot_id, owner, main) VALUES ($1, $2, $3)", self.bot_id, self.extra_owners[0], True)
+                    await connection.execute("UPDATE bots set state = $1 WHERE bot_id = $2", enums.BotState.approved, self.bot_id)
+                    self.extra_owners = self.extra_owners[1:] + [self.user_id]
                 extra_owners_fixed = []
                 for owner in self.extra_owners:
                     if owner in extra_owners_fixed:
@@ -228,8 +242,11 @@ class BotActions():
             color=0x00ff00,
             url=f"https://fateslist.xyz/bot/{self.bot_id}"
         )
+
+        add_embed.add_field(name="Guild Count (approx.)", value=approx_guild_count)
         msg = {"content": f"<@&{staff_ping_add_role}>", "embed": add_embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": [str(staff_ping_add_role)]}
-        await redis_ipc_new(redis_db, "SENDMSG", msg=msg, timeout=None)
+        if not self.system_bot:
+            await redis_ipc_new(redis_db, "SENDMSG", msg=msg, timeout=None)
 
 
     async def edit_bot(self):
@@ -275,6 +292,7 @@ class BotActions():
             url=f"https://fateslist.xyz/bot/{self.bot_id}"
         )
         msg = {"content": "", "embed": edit_embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": []}
-        await redis_ipc_new(redis_db, "SENDMSG", msg=msg, timeout=None)
+        if not self.system_bot:
+            await redis_ipc_new(redis_db, "SENDMSG", msg=msg, timeout=None)
 
 

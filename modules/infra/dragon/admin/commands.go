@@ -102,7 +102,7 @@ func CmdInit() map[string]types.SlashCommand {
 		Server:       common.TestServer,
 		SlashOptions: []*discordgo.ApplicationCommandOption{},
 		Handler: func(context types.AdminContext) string {
-			bots, err := context.Postgres.Query(context.Context, "SELECT bots.bot_id::text, bots.prefix, bots.description, bot_owner.owner::text FROM bots INNER JOIN bot_owner ON bots.bot_id = bot_owner.bot_id WHERE bots.state = $1 AND bot_owner.main = true", types.BotStatePending.Int())
+			bots, err := context.Postgres.Query(context.Context, "SELECT bots.bot_id::text, bots.prefix, bots.description, bots.guild_count::text, bot_owner.owner::text FROM bots INNER JOIN bot_owner ON bots.bot_id = bot_owner.bot_id WHERE bots.state = $1 AND bot_owner.main = true ORDER BY bots.guild_count DESC", types.BotStatePending.Int())
 			if err != nil {
 				return err.Error()
 			}
@@ -116,10 +116,14 @@ func CmdInit() map[string]types.SlashCommand {
 				var botId pgtype.Text
 				var prefix pgtype.Text
 				var description pgtype.Text
+				var guildCount pgtype.Text
 				var botOwner pgtype.Text
-				err := bots.Scan(&botId, &prefix, &description, &botOwner)
+				err := bots.Scan(&botId, &prefix, &description, &guildCount, &botOwner)
 				if err != nil {
 					return err.Error() + " in iteration " + strconv.Itoa(currBot)
+				}
+				if guildCount.String == "0" {
+					guildCount.String = "Unknown"
 				}
 				if prefix.Status != pgtype.Present {
 					prefix = pgtype.Text{String: "This bot uses slash commands", Status: pgtype.Present}
@@ -133,7 +137,7 @@ func CmdInit() map[string]types.SlashCommand {
 					botUser = &discordgo.User{Username: "Unknown", Discriminator: "0000"}
 				}
 
-				output += "**" + strconv.Itoa(currBot) + ".** " + botUser.Username + "#" + botUser.Discriminator + "\n**Prefix:** " + prefix.String + "\n**Description:** " + description.String + "\n**Invite:** " + "<https://fateslist.xyz/bot/" + botId.String + "/invite>\n" + "**Main Owner:** " + botOwner.String + "\n\n"
+				output += "**" + strconv.Itoa(currBot) + ".** " + botUser.Username + "#" + botUser.Discriminator + "\n**Prefix:** " + prefix.String + "\n**Description:** " + description.String + "\n**Guild Count (approx.):** " + guildCount.String + "\n**Invite:** " + "<https://fateslist.xyz/bot/" + botId.String + "/invite>\n" + "**Main Owner:** " + botOwner.String + "\n\n"
 				if currBot%perMessageQueueCount == 0 {
 					slashbot.SendIResponse(context.Discord, context.Interaction, output, false)
 					output = ""

@@ -211,6 +211,24 @@
 					),
 					required=True
 				) }}
+				{% if staff.perm > 4 %}
+					{{ selectInput(
+						"system_bot",
+						"System Bot (use no if unsure, head admin+ only)",
+						"System Bot Status",
+						(
+							{
+								"value": "true",
+								"text": "Yes",
+							},
+							{
+								"value": "false",
+								"text": "No",
+								"default": True
+							},
+						),
+					) }}
+				{% endif %}
 			</section>
 			<section id="links-tab" class="tabcontent">
 				{{ optional() }}

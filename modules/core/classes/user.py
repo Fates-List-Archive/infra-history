@@ -38,7 +38,7 @@ class User(DiscordUser):
             """SELECT bots.description, bots.prefix, bots.banner_card AS banner, bots.state, bots.votes, 
             bots.guild_count, bots.bot_id, bots.nsfw FROM bots 
             INNER JOIN bot_owner ON bot_owner.bot_id = bots.bot_id 
-            WHERE bot_owner.owner = $1""",
+            WHERE bot_owner.owner = $1 AND bots.system = false""",
             self.id
         )
         
