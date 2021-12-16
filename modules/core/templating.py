@@ -50,7 +50,8 @@ class templates():
             "site_lang": arg_dict.get("site_lang"),
             "logged_in": "user_id" in arg_dict.keys(),
             "index": "/",
-            "type": "bot"
+            "type": "bot",
+            "site_url": site_url
         }
         
         arg_dict["context"] = base_context | context

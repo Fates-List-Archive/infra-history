@@ -34,7 +34,7 @@ async def _user_fetch(
     if cache: # We got a match
         cache = orjson.loads(cache)
         cache_time = time.time() - cache['epoch']
-        if cache["fl_cache_ver"] != CACHE_VER or (not cache["valid_user"] and time.time() - cache_time > 60*20) or cache_time > 60*60*11:
+        if cache["fl_cache_ver"] != CACHE_VER or (not cache["valid_user"] and time.time() - cache_time > 60*20) or cache_time > 60*60*24:
             # Check for cache expiry
             logger.debug(f"Not using cache for id {user_id}")
         else:

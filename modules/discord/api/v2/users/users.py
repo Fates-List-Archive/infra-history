@@ -63,10 +63,23 @@ async def update_user_preferences(request: Request, user_id: int, data: UpdateUs
         await db.execute("UPDATE users SET profile_css = $1 WHERE user_id = $2", data.profile_css, user_id)
     return api_success()
 
+@router.get(
+    "/{user_id}/username",
+)
+async def get_username_db(request: Request, user_id: int):
+    return {"username": await db.fetchval("SELECT username FROM users WHERE user_id = $1", user_id)}
 
 @router.get(
     "/{user_id}/obj",
-    response_model = BaseUser
+    response_model = BaseUser,
+    dependencies=[
+        Depends(
+            Ratelimiter(
+                global_limit = Limit(times=30, seconds=3),
+                operation_bucket="fetch_user_obj"
+            )
+        )    
+    ],
 )
 async def get_cache_user(request: Request, user_id: int):
     user = await get_any(user_id)

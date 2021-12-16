@@ -293,7 +293,7 @@
 					"Make sure that this is random and secure!"
 				) }}
 				<p class="white info-content">Want to test your webhook? First make sure that <em>you have saved your changes first</em> and then click 'Test Webhook' to see if your bots webhook works!</p>
-				<button class="btn btn-outline-light" style="margin-bottom: 10px;" onclick="testHook()">Test Webhook</button>
+				<button class="btn btn-outline-light" style="margin-bottom: 10px;" onclick="voteBot()">Test Webhook</button>
 				{{ tip("Didn't get anything? Make sure you have saved your bot first before clicking Test Webhook. Also check your firewall and network settings as well") }}
 			</section>
 			<section id="extras-tab" class="tabcontent">
@@ -346,9 +346,10 @@
 			select_multiple: {{form_values_select_multiple|tojson}}
 		}
 	</script>
-	<script src="/static/assets/prod/bot_add_edit.min.js?v=54"></script>
+	<script src="/static/assets/prod/bot_add_edit.min.js?v=73"></script>
 	{% if context.mode == "edit" %}
 		<script src="/static/assets/prod/ws.min.js?v=2"></script>
+		<script src="https://fateslist.xyz/static/assets/prod/vote.min.js?v=13"></script>
 	{% endif %}
 	<script src="/static/assets/prod/tabs.min.js?v=4" defer></script>
 	<script src="https://cdn.jsdelivr.net/npm/select-pure@latest/dist/index.js"></script>

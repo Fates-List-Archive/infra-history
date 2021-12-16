@@ -78,25 +78,40 @@ func DragonServer() {
 		if common.IPCOnly {
 			return
 		}
-		ts, err := m.Member.JoinedAt.Parse()
-		if err != nil {
-			log.Error(err)
-			return
-		}
-		if ts.UnixMicro()-time.Now().UnixMicro() > 10 {
-			return
-		}
+
+		log.Info("New user found. Handling them...")
 
 		if m.Member.GuildID == common.TestServer {
 			if !m.Member.User.Bot {
 				_, isStaff, _ := common.GetPerms(s, m.Member.User.ID, 5)
 				if isStaff {
-					s.GuildMemberRoleAdd(m.Member.GuildID, m.Member.User.ID, common.TestServerStaffRole)
+					err := s.GuildMemberRoleAdd(m.Member.GuildID, m.Member.User.ID, common.TestServerStaffRole)
+					if err != nil {
+						log.Error(err)
+					}
 				}
 			}
 		}
 
+		if m.Member.GuildID == common.MainServer && m.Member.User.Bot {
+			// Auto kick code. Minotaur handles autoroles and does it better than me
+			_, err := s.State.Member(common.TestServer, m.Member.User.ID)
+			if err != nil {
+				return
+			}
+			s.GuildMemberDeleteWithReason(common.TestServer, m.Member.User.ID, "Done testing and invited to main server")
+		}
+
 		if m.Member.GuildID == common.StaffServer && m.Member.User.Bot {
+			ts, err := m.Member.JoinedAt.Parse()
+			if err != nil {
+				log.Error(err)
+				ts = time.Now()
+			}
+			log.Info(time.Now().UnixMicro(), ts.UnixMicro(), time.Now().UnixMicro()-ts.UnixMicro())
+			if time.Now().UnixMicro()-ts.UnixMicro() >= 3000000 {
+				return
+			}
 			admin.SilverpeltStaffServerProtect(s, m.Member.User.ID)
 		}
 	})

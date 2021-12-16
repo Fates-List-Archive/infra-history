@@ -112,7 +112,9 @@ func CmdInit() map[string]types.SlashCommand {
 
 			var output string
 
+			var iterOnce bool
 			for bots.Next() {
+				iterOnce = true
 				var botId pgtype.Text
 				var prefix pgtype.Text
 				var description pgtype.Text
@@ -143,6 +145,10 @@ func CmdInit() map[string]types.SlashCommand {
 					output = ""
 				}
 				currBot += 1
+			}
+
+			if !iterOnce {
+				return "Darkstripe says there are no bots in queue, he's probably right *grumble* *grumble*..."
 			}
 
 			if output != "" {

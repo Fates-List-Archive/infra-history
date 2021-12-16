@@ -130,18 +130,6 @@ function showToken(but) {
 	window.location.reload()
   }
 
-function testHook(url, type) {
-	request({
-		userAuth: true,
-		url: `/api/dragon/users/vote?user_id=${context.user_id}&bot_id=${context.bot_id}&test=true`,
-		method: "POST",
-		statusCode: {
-			200: function(data) {
-				modalShow("Sent test query", "See the below tip if you didn't get it!")
-			}
-		}
-	})
-  }
 
 function hideSaveOnAboutTab(id, evt, data) {
 	if(id == "about" || id == "actions" || id == "analytics") {
@@ -154,6 +142,7 @@ function hideSaveOnAboutTab(id, evt, data) {
 
 // Analytics
 var ws = null
+var cache = {}
 
 function listenAnalytics() {
 	if(ws) {
@@ -161,14 +150,21 @@ function listenAnalytics() {
 	}
 	document.querySelector("#output-analytics").textContent = ""
 	ws = new FatesWS(context.bot_id, context.bot_token, true, false, true)
-	ws.hooks.event = function(cls, data) {
+	ws.hooks.event = async function(cls, data) {
 		if(data.chan == "global") return; // Global channel is not yet implemented
-
 		let eStr = JSON.stringify(data.dat)
 		console.log(Events, data.dat.m.e)
 		let userStr = data.dat.ctx.user
-		if(userStr == "0" || !userStr) {
+		if(userStr === "0") {
 			userStr = "Anonymous/Not logged in"
+		} else {
+			userObj = cache[data.dat.ctx.user]
+			if(!userObj) {
+				res = await fetch(`${context.site_url}/api/users/${data.dat.ctx.user}/username`)
+				cache[data.dat.ctx.user] = await res.json()
+				userObj = cache[data.dat.ctx.user]
+			}
+			userStr = `${userObj.username} (${data.dat.ctx.user})`
 		}
 		let tsDate = new Date(data.dat.m.ts * 1000);
 		let tsStr = `${tsDate} (timestamp ${data.dat.m.ts})`
