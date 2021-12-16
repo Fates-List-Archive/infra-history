@@ -502,9 +502,9 @@ type InternalUserAuth struct {
 }
 
 type UserVote struct {
-	UserID string `form:"user_id" binding:"required"`
-	BotID  string `form:"bot_id" binding:"required"`
-	Test   bool   `form:"test" binding:"-"`
+	UserID string `json:"user_id" binding:"required"`
+	BotID  string `json:"bot_id" binding:"-"`
+	Test   bool   `json:"test" binding:"-"`
 }
 
 type JAPIApp struct {

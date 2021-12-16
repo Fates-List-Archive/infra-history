@@ -24,7 +24,8 @@ async def get_botlist_stats(request: Request,
     """
     Returns uptime and stats about the list.
 
-    uptime - The current uptime for the given worker
+    uptime - The current uptime for the given worker. All workers reboot periodically to avoid memory leaks
+    so this will mostly be low
 
     pid - The pid of the worker you are connected to
 
@@ -36,17 +37,18 @@ async def get_botlist_stats(request: Request,
 
     bot_count - The approved and certified bots on the list
 
-    workers - The worker pids
+    workers - The worker pids. This is sorted and retrived from dragon IPC if not directly available on the worker
     """
     db = worker_session.postgres
     bot_count_total = await db.fetchval("SELECT COUNT(1) FROM bots")
     bot_count = await db.fetchval(
         "SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
-    if not worker_session.workers:
+    if not worker_session.workers or worker_session.worker_count != len(worker_session.workers):
         workers = await redis_ipc_new(worker_session.redis, "WORKERS")
         if not workers:
             return abort(503)
         worker_session.workers = orjson.loads(workers)
+        worker_session.workers.sort()
         worker_session.up = True # If workers is actually existant
     return {
         "uptime": time.time() - worker_session.start_time,

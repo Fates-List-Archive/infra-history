@@ -178,17 +178,19 @@ class FatesWorkerSession(Singleton):  # pylint: disable=too-many-instance-attrib
         session_id: str,
         postgres: asyncpg.Pool,
         redis: aioredis.Connection,
-        oauth: FatesWorkerOauth
+        oauth: FatesWorkerOauth,
+        worker_count: int
     ):
         self.id = session_id
         self.postgres = postgres
         self.redis = redis
         self.oauth = oauth
+        self.worker_count = worker_count
 
         # Record basic stats and initially set workers to None
         self.start_time = time.time()
         self.up = False
-        self.workers = None
+        self.workers = []
         
         # FUP = finally up/all workers are now up
         self.fup = False
@@ -198,10 +200,6 @@ class FatesWorkerSession(Singleton):  # pylint: disable=too-many-instance-attrib
         
         # Templating
         self.templates = Jinja2Templates(directory="data/templates")
-
-    def set_up(self):
-        """Set the worker to up"""
-        self.up = True
 
     def publish_workers(self, workers):
         """Publish workers"""
@@ -314,7 +312,8 @@ async def finish_init(app, session_id, workers, dbs):
                     redirect_uri=discord_redirect_uri
                 ),
             )
-        )
+        ),
+        worker_count=workers
     )
 
     # Create the shutdown handler to work around uvicorn faults

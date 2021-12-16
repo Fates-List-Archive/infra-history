@@ -89,12 +89,20 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 	})
 	router := r.Group("/api/dragon")
 
-	router.POST("/users/vote", func(c *gin.Context) {
+	router.PATCH("/bots/:id/votes", func(c *gin.Context) {
 		var vote types.UserVote
-		if err := c.ShouldBindQuery(&vote); err != nil {
+		if err := c.ShouldBindJSON(&vote); err != nil {
 			c.JSON(400, apiReturn(false, err.Error(), nil))
 			return
 		}
+
+		vote.BotID = c.Param("id")
+
+		if _, err := strconv.ParseInt(vote.BotID, 10, 64); err != nil {
+			c.JSON(400, apiReturn(false, err.Error(), nil))
+			return
+		}
+
 		var auth types.InternalUserAuth
 
 		if err := c.ShouldBindHeader(&auth); err != nil {

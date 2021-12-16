@@ -13,18 +13,30 @@ sys.path.append("../../../")
 
 
 import ws
+import os
+
+try:
+    import dotenv
+    dotenv.load_dotenv(".env")
+except:
+    pass
 
 from modules.models import enums
-bot_id = input("Enter Bot ID: ")
-try:
-    bot_id = int(bot_id)
-except ValueError:
-    bot_id = 811073947382579200
 
-if bot_id == 811073947382579200:
-    api_token = "AzbnMlEABvKnIe3zt6zHMCOGrnoan5tS0hXCfzpBa3UiHdl045p1h5vxivMBtH5UFETZJdQ9TkpoDsy954uia74Hak5KWECqCufjvRZfV66enoB1rHf1HQtk6g04GajKqr98"
+if os.environ.get("ID"):
+    bot_id = int(os.environ.get("ID"))
+    api_token = os.environ.get("TOKEN")
 else:
-    api_token = input("Enter API Token: ")
+    bot_id = input("Enter Bot ID: ")
+    try:
+        bot_id = int(bot_id)
+    except ValueError:
+        bot_id = 811073947382579200
+
+    if bot_id == 811073947382579200:
+        api_token = "AzbnMlEABvKnIe3zt6zHMCOGrnoan5tS0hXCfzpBa3UiHdl045p1h5vxivMBtH5UFETZJdQ9TkpoDsy954uia74Hak5KWECqCufjvRZfV66enoB1rHf1HQtk6g04GajKqr98"
+    else:
+        api_token = input("Enter API Token: ")
 
 bot = input("Is this a bot (Y/N): ")
 bot = bot.lower() in ("y", "yes")

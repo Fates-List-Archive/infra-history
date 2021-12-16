@@ -9,8 +9,9 @@ function voteBot() {
 	}
 	modalShow("Sending your vote", "Please wait...")
 	request({
-		url: `/api/dragon/users/vote?user_id=${context.user_id}&bot_id=${context.id}&test=false`,
-		method: "POST",
+		url: `/api/dragon/bots/${context.id}/votes`,
+		json: {user_id: context.user_id, test: false},
+		method: "PATCH",
 		userAuth: true,
 		statusCode: {
 			200: function(data) {
