@@ -23,4 +23,4 @@ data/pycache/*
 data/pycache
 config/data/secrets.json
 data/snowfall/info/.env
-*/.env
+data/snowfall/info/ws/py/.env
