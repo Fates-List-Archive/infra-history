@@ -82,8 +82,9 @@ async def login_user(request: Request, data: Login, worker_session = Depends(wor
             )
         if userjson["username"] != user_info["username"]:
             await db.execute(
-                "UPDATE users SET username = $1", 
-                userjson["username"]
+                "UPDATE users SET username = $1 WHERE user_id = $2", 
+                userjson["username"],
+                int(userjson["id"])
             ) 
 
         token, css, state, js_allowed, site_lang = user_info["api_token"], user_info["css"] if user_info["css"] else None, state, user_info["js_allowed"], user_info["site_lang"]

@@ -100,7 +100,7 @@ func setupCommands() {
 
 			if int64(len(pids)) >= worker_amt {
 				pids = make([]string, 0, worker_amt)
-				context.Redis.Publish(ctx, workerChannel, "REGET "+sessionId+" 1")
+				context.Redis.Publish(ctx, workerChannel, "REGET 1")
 				log.Warn("Sent REGET due to a invalid state (1)")
 				return ""
 			} else {

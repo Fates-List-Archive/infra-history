@@ -32,7 +32,7 @@ async def bot_settings(request: Request, bot_id: int):
         return await templates.e(request, "You are not allowed to edit this bot!", status_code=403)
     
     bot = await db.fetchrow(
-        "SELECT bot_id, client_id, state, prefix, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, system AS system_bot, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1", 
+        "SELECT bot_id, client_id, state, prefix, votes, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, system AS system_bot, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1", 
         bot_id
     )
     if not bot:
@@ -70,7 +70,8 @@ async def bot_settings(request: Request, bot_id: int):
         "bot_id": str(bot_id),
         "owners_html": owners_html,
         "tags": [{"text": tag["name"], "value": tag["id"]} for tag in tags_fixed],
-        "features": [{"text": feature["name"], "value": id} for id, feature in features.items()]
+        "features": [{"text": feature["name"], "value": id} for id, feature in features.items()],
+        "votes": bot["votes"]
     }
     
     fn = "bot_add_edit.html"

@@ -64,18 +64,12 @@ async def update_user_preferences(request: Request, user_id: int, data: UpdateUs
     return api_success()
 
 @router.get(
-    "/{user_id}/username",
-)
-async def get_username_db(request: Request, user_id: int):
-    return {"username": await db.fetchval("SELECT username FROM users WHERE user_id = $1", user_id)}
-
-@router.get(
     "/{user_id}/obj",
     response_model = BaseUser,
     dependencies=[
         Depends(
             Ratelimiter(
-                global_limit = Limit(times=30, seconds=3),
+                global_limit = Limit(times=100, seconds=5),
                 operation_bucket="fetch_user_obj"
             )
         )    

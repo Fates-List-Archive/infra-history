@@ -142,7 +142,7 @@ function hideSaveOnAboutTab(id, evt, data) {
 
 // Analytics
 var ws = null
-var cache = {}
+var cache = {"btl": {"username": "Unknown, bot too large"}}
 
 function listenAnalytics() {
 	if(ws) {
@@ -158,11 +158,15 @@ function listenAnalytics() {
 		if(userStr === "0") {
 			userStr = "Anonymous/Not logged in"
 		} else {
-			userObj = cache[data.dat.ctx.user]
-			if(!userObj) {
-				res = await fetch(`${context.site_url}/api/users/${data.dat.ctx.user}/username`)
-				cache[data.dat.ctx.user] = await res.json()
+			if(context.votes > 3000) {
+				userObj = cache["btl"]
+			} else {
 				userObj = cache[data.dat.ctx.user]
+				if(!userObj) {
+					res = await fetch(`${context.site_url}/api/users/${data.dat.ctx.user}/obj`)
+					cache[userkey] = await res.json()
+					userObj = cache[userkey]
+				}
 			}
 			userStr = `${userObj.username} (${data.dat.ctx.user})`
 		}
