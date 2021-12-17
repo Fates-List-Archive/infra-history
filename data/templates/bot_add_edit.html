@@ -140,16 +140,40 @@
 					"extra_owners", 
 					"790722073248661525, 563808552288780322"
 				) }}
-				{{ textInput("Prefix (leave blank for slash command only bot)", "prefix", "$, ! etc.", max=9, required=False) }}
-				{{ textInput("Library", "library", "discord.py etc.", required=True) }}
-				{{ textInput("Vanity", "vanity", "mybot, fateslist etc. Prefix with _ to disable", required=True) }}
-				{{ tip("You can use P:PERM_NUMBER (or just leave this blank) if the Bot ID and Client ID are the same (almost always true except for old bots)") }}
+				{{ textInput(
+					"Prefix (leave blank for slash command only bot)", 
+					"prefix", "$, ! etc.", 
+					max=9, 
+					required=False
+				) }}
+				{{ textInput(
+					"Library", 
+					"library", 
+					"discord.py etc.", 
+					required=True
+				) }}
+				{{ textInput(
+					"Vanity", 
+					"vanity", 
+					"mybot, fateslist etc. Prefix with _ to disable", 
+					required=True
+				) }}
+				{{ tip(
+					"You can use P:PERM_NUMBER (or just leave this blank) if the Bot ID and Client ID are the same (almost always true except for old bots)"
+				) }}
 				{{ textInput(
 					"Invite URL (Leave blank for automatic)", 
 					"invite", 
 					"https://discord.com/api/oauth2/..."
 				) }}
-				{{ textInput("Short Description", "description", "Fates List is a great bot that does everything you need it to do!", min=10, max=105, required=True) }}
+				{{ textInput(
+					"Short Description",
+					"description", 
+					"Fates List is a great bot that does everything you need it to do!", 
+					min=10, 
+					max=105, 
+					required=True
+				) }}
 				{{ selectInput(
 					"tags",
 					"Tags",
