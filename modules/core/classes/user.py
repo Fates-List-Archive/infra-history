@@ -2,7 +2,7 @@ from .base import DiscordUser
 from .bot import Bot
 from .badge import Badge
 from modules.core.cache import get_user
-from modules.core.helpers import redis_ipc_new
+from modules.core.helpers import redis_ipc_new, flags_check
 from modules.models import enums   
 import orjson
 
@@ -33,22 +33,18 @@ class User(DiscordUser):
         else:
             bot_logs = []
 
-        if not system_bots:
-            cond = "AND bots.system = false"
-        else:
-            cond = ""
-
-        # TODO: This whole section
         _bots = await self.db.fetch(
             f"""SELECT bots.description, bots.prefix, bots.banner_card AS banner, bots.state, bots.votes, 
-            bots.guild_count, bots.bot_id, bots.nsfw FROM bots 
+            bots.guild_count, bots.bot_id, bots.nsfw, bots.flags FROM bots 
             INNER JOIN bot_owner ON bot_owner.bot_id = bots.bot_id 
-            WHERE bot_owner.owner = $1 {cond}""",
+            WHERE bot_owner.owner = $1""",
             self.id
         )
         
         bots = []
         for bot in _bots:
+            if not system_bots and flags_check(bot["flags"], enums.BotFlag.system):
+                continue
             bot_obj = Bot(id = bot["bot_id"], db = self.db)
             bots.append(dict(bot) | {"invite": await bot_obj.invite_url(), "user": await bot_obj.fetch()})
         

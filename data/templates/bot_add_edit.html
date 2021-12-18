@@ -46,8 +46,8 @@
 			<section id="about-tab" class="tabcontent">
 				<h5 class="white">Bot Info</h5>
 				<div class="info-content">	
-					<p class="white">Username: {{bot.user.username}}</p>
 					<p class="white">Bot State: {{enums.BotState(bot.state).__doc__}} ({{bot.state}})</p>
+					<p class="white">Bot Flags: {% for flag in bot.flags %}{{ enums.BotFlag(flag) }}, {% endfor %}</p>
 					<p class="white"><u>Owners of this bot</u><br/> {{context.owners_html|safe}}</p>
 				</div>
 				<h5 class="white">API Token</h5>
@@ -110,6 +110,7 @@
 			</section>
 			<section id="analytics-tab" class="tabcontent">
 				<h5 class="white">Bot Analytics (Beta)</h5>
+				{{ tip("If you face any issues with this feature, please try testing it on the latest version of Google Chrome. This feature is still in beta and may be buggy. Massive UI/UX improvements are planned (graphs)" ) }}
 				<button class="section btn btn-outline-light" onclick="listenAnalytics()">Listen</button>
 				<div id="output-analytics" class="white" style="border: 1px solid; min-height: 400px; max-height: 400px; overflow: scroll; text-align: left; padding: 3px; white-space: pre-line;">
 					Events will be seen here once you start listening!

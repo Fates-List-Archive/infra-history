@@ -32,13 +32,19 @@ async def bot_settings(request: Request, bot_id: int):
         return await templates.e(request, "You are not allowed to edit this bot!", status_code=403)
     
     bot = await db.fetchrow(
-        "SELECT bot_id, client_id, state, prefix, votes, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, system AS system_bot, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1", 
+        "SELECT bot_id, client_id, state, prefix, votes, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, flags, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1", 
         bot_id
     )
     if not bot:
         return abort(404)
     
     bot = dict(bot)
+
+    if flags_check(bot["flags"], enums.BotFlag.system):
+        bot["system_bot"] = True
+    else:
+        bot["system_bot"] = False
+
     tags = await db.fetch("SELECT tag FROM bot_tags WHERE bot_id = $1", bot_id)
     bot["tags"] = [tag["tag"] for tag in tags]
     owners = await db.fetch("SELECT owner, main FROM bot_owner WHERE bot_id = $1", bot_id)

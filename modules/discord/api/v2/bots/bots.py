@@ -95,7 +95,7 @@ async def fetch_random_bot(request: Request, bot_id: int, lang: str = "default")
         )
 
     random_unp = await db.fetchrow(
-        "SELECT description, banner_card, state, votes, guild_count, bot_id FROM bots WHERE (system = false AND state = 0 OR state = 6) ORDER BY RANDOM() LIMIT 1"
+        "SELECT description, banner_card, state, votes, guild_count, bot_id FROM bots WHERE (state = 0 OR state = 6) ORDER BY RANDOM() LIMIT 1"
     ) # Unprocessed, use the random function to get a random bot
     bot_obj = await get_bot(random_unp["bot_id"], worker_session = request.app.state.worker_session)
     if bot_obj is None or bot_obj["disc"] == "0000":
@@ -151,7 +151,7 @@ async def fetch_bot(
             return orjson.loads(cache)
 
     api_ret = await db.fetchrow(
-        "SELECT bot_id, last_stats_post, system, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id FROM bots WHERE bot_id = $1 OR client_id = $1", 
+        "SELECT bot_id, last_stats_post, flags, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id FROM bots WHERE bot_id = $1 OR client_id = $1", 
         bot_id
     )
     if api_ret is None:
@@ -290,26 +290,24 @@ async def set_bot_stats(request: Request, bot_id: int, api: BotStats):
     return await _set_bot_stats(request, bot_id, api.dict())
 
 async def _set_bot_stats(request: Request, bot_id: int, api: dict, no_abuse_checks: bool = False):
-    lock = await redis_db.get(f"statslock:{bot_id}")
-    if lock:
-        return api_error("You have been banned from using this API endpoint")
-
     stats_old = await db.fetchrow(
         "SELECT guild_count, shard_count, shards, user_count FROM bots WHERE bot_id = $1",
         bot_id
     )
-    stats_new = api
     stats = {}
-    for stat in stats_new.keys():
-        if stats_new[stat] is None:
+    for stat, value in api.items():
+        if value is None:
             stats[stat] = stats_old[stat]
         else:
-            stats[stat] = stats_new[stat]
+            stats[stat] = value
 
-    info = await db.fetchrow("SELECT state, client_id FROM bots WHERE bot_id = $1", bot_id)
+    info = await db.fetchrow("SELECT state, flags, client_id FROM bots WHERE bot_id = $1", bot_id)
     state = info["state"]
     if state not in (enums.BotState.approved, enums.BotState.certified):
         return api_error("This endpoint can only be used by approved and certified bots!")
+    if flags_check(info["flags"], enums.BotFlag.stats_locked):
+        logger.warning("This bot has been banned from this API endpoint")
+        return api_error("You have been banned from using this API endpoint")
     app_id = bot_id if (not info["client_id"] or info["client_id"] == bot_id) else info["client_id"]
 
     async def _flag_bot():
@@ -317,11 +315,13 @@ async def _set_bot_stats(request: Request, bot_id: int, api: dict, no_abuse_chec
         key = f"statscheck:{bot_id}"
         redis = request.app.state.worker_session.redis
         check = await redis.incr(key)
+        logger.warning(f"Bot flagged {stats}")
         if int(check) <= 5:
             await redis.expire(key, 60*60*8)
             return api_error("You have been caught by our anti-abuse systems. Please try setting your stats using its actual value", ctx="Get your bot certified to avoid anti-abuse. You may only try to post invalid stats 5 times every 8 hours or you will be banned (invalid stats are not set and will only flag you)") 
         await redis.persist(key)
-        await redis.set(f"statslock:{bot_id}", 1)
+        await db.execute("UPDATE bots SET flags = flags || $1 WHERE bot_id = $2", [enums.BotFlag.stats_locked], bot_id) 
+        logger.warning("Bot has been banned")
         return api_error("You have been banned from using this API due to triggering our anti-abuse systems in a very short timeframe!")
 
     if stats["guild_count"] > 300000000000 or stats["shard_count"] > 300000000000 or len(stats["shards"]) > (100 + stats["shard_count"]):

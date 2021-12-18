@@ -49,11 +49,14 @@ class BotAdminOp(Enum):
     bot_lock = "BLOCK", "Bot Lock", 0, False, False, None
     bot_unlock = "BUNLOCK", "Bot Unlock", 4, False, False, CooldownBucket.lock
 
-class BotLock(IntEnum):
+class BotFlag(IntEnum):
     _init_ = 'value __doc__'
     unlocked = 0, "Bot unlocked for editing"
-    locked = 1, "Bot locked for editing"
-    locked_staff = 2, "Bot locked by staff"
+    edit_locked = 1, "Bot locked for editing"
+    staff_locked = 2, "Bot locked by staff"
+    stats_locked = 3, "Stats locked"
+    vote_locked = 4, "Vote locked"
+    system = 5, "System bot"
 
 class UserState(IntEnum):
     _init_ = 'value __doc__ __sitelock__'

@@ -7,7 +7,7 @@ CREATE TABLE bots (
     username_cached text DEFAULT '',
     bot_id bigint not null unique,
     client_id bigint,
-    lock integer default 0,
+    locks integer[] default '{}',
     votes bigint default 0,
     total_votes bigint default 0,
     guild_count bigint DEFAULT 0,
@@ -250,7 +250,7 @@ CREATE TABLE servers (
     tags text[] default '{}',
     deleted boolean default false,
     js_allowed boolean default true,
-    system boolean default false
+    flags integer[] default '{}'
 );
 
 -- In server tags, owner_guild is the first guild a tag was given to

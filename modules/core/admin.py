@@ -144,10 +144,9 @@ class BotActions():
         if check is not None:
             return check
         
-        lock = await self.db.fetchval("SELECT lock FROM bots WHERE bot_id = $1", int(self.bot_id))
-        lock = enums.BotLock(lock)
-        if lock != enums.BotLock.unlocked:
-            return f"This bot cannot be edited as it has been locked with a code of {int(lock)}: ({lock.__doc__}). If this bot is not staff locked, join the support server and run /unlock <BOT> to unlock it."
+        flags = await self.db.fetchval("SELECT flags FROM bots WHERE bot_id = $1", int(self.bot_id))
+        if flags_check(flags, (enums.BotFlag.staff_locked, enums.BotFlag.edit_locked)):
+            return "This bot cannot be edited as it has been locked (see Bot Settings). Join the support server and run /unlock <BOT> to unlock it."
 
         check = await is_bot_admin(int(self.bot_id), int(self.user_id)) # Check for owner
         if not check:
@@ -191,7 +190,7 @@ class BotActions():
                     css, donate, github,
                     webhook, webhook_type, webhook_secret,
                     privacy_policy, nsfw, keep_banner_decor, 
-                    client_id, guild_count, system, id) VALUES(
+                    client_id, guild_count, id) VALUES(
                     $1, $2, $3,
                     $4, $5, $6,
                     $7, $8, $9,
@@ -199,16 +198,18 @@ class BotActions():
                     $13, $14, $15, 
                     $16, $17, $18, 
                     $19, $20, $21, 
-                    $22, $23, $24, $25, $1)""", 
+                    $22, $23, $24, $1)""", 
                     self.bot_id, self.prefix, self.library, 
                     self.invite, self.website, self.banner_card, self.banner_page,
                     self.support, self.long_description, self.description,
                     get_token(132), self.features, self.long_description_type,
                     self.css, self.donate, self.github, self.webhook, self.webhook_type, self.webhook_secret,
                     self.privacy_policy, self.nsfw, self.keep_banner_decor, self.client_id, approx_guild_count,
-                    self.system_bot
                 ) # Add new bot info
-    
+   
+                if self.system_bot:
+                    await connection.execute("UPDATE bots SET flags = flags || $1 WHERE bot_id = $2", [enums.BotFlag.system], self.bot_id)
+
                 await connection.execute("INSERT INTO vanity (type, vanity_url, redirect) VALUES ($1, $2, $3)", enums.Vanity.bot, self.vanity, self.bot_id) # Add new vanity if not empty string
 
                 if not self.system_bot:
@@ -260,9 +261,14 @@ class BotActions():
         async with self.db.acquire() as connection: # Acquire a connection
             async with connection.transaction() as tr: # Make a transaction to avoid data loss
                 await connection.execute(
-                    "UPDATE bots SET bot_library=$2, webhook=$3, description=$4, long_description=$5, prefix=$6, website=$7, discord=$8, banner_card=$9, invite=$10, github = $11, features = $12, long_description_type = $13, webhook_type = $14, css = $15, donate = $16, privacy_policy = $17, nsfw = $18, webhook_secret = $19, banner_page = $20, keep_banner_decor = $21, client_id = $22, system = $23 WHERE bot_id = $1",  # pylint: disable=line-too-long 
-                    self.bot_id, self.library, self.webhook, self.description, self.long_description, self.prefix, self.website, self.support, self.banner_card, self.invite, self.github, self.features, self.long_description_type, self.webhook_type, self.css, self.donate, self.privacy_policy, self.nsfw, self.webhook_secret, self.banner_page, self.keep_banner_decor, self.client_id, self.system_bot  # pyline: disable=line-too-long
+                    "UPDATE bots SET bot_library=$2, webhook=$3, description=$4, long_description=$5, prefix=$6, website=$7, discord=$8, banner_card=$9, invite=$10, github = $11, features = $12, long_description_type = $13, webhook_type = $14, css = $15, donate = $16, privacy_policy = $17, nsfw = $18, webhook_secret = $19, banner_page = $20, keep_banner_decor = $21, client_id = $22 WHERE bot_id = $1",  # pylint: disable=line-too-long 
+                    self.bot_id, self.library, self.webhook, self.description, self.long_description, self.prefix, self.website, self.support, self.banner_card, self.invite, self.github, self.features, self.long_description_type, self.webhook_type, self.css, self.donate, self.privacy_policy, self.nsfw, self.webhook_secret, self.banner_page, self.keep_banner_decor, self.client_id  # pyline: disable=line-too-long
                 ) # Update bot with new info
+
+                if self.system_bot:
+                    await connection.execute("UPDATE bots SET flags = flags || $1 WHERE bot_id = $2", [enums.BotFlag.system], self.bot_id)
+                else:
+                    await connection.execute("UPDATE bots SET flags = array_remove(flags, $1) WHERE bot_id = $2", enums.BotFlag.system, self.bot_id)
 
                 await connection.execute("DELETE FROM bot_owner WHERE bot_id = $1 AND main = false", self.bot_id) # Delete all extra owners
                 done = []

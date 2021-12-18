@@ -75,9 +75,7 @@
 				<a rel="noopener" target="_blank" href="{{data.website}}"><button class="btn btn-outline-light buttons-all" id="buttons-website">Website</button></a>
 			{% endif %}
 		{% endif %}
-		{% if type == "bot" %}
-			<a href="/{{type}}/{{id}}/settings"><button class="btn btn-outline-light buttons-all" id="buttons-settings">Settings</button></a>
-		{% endif %}
+		<a href="{% if type == "bot" %}/{{type}}/{{id}}/settings{% else %}javascript:modalShow('Edit Servers', 'You can use our bot to change server settings. Use /help for more information!'){% endif %}"><button class="btn btn-outline-light buttons-all" id="buttons-settings">Settings</button></a>
 	</div>
 	<div style="display: inline-block; width: fit-content; height: fit-content; margin: 7px; padding: 7px;" class="key-container">
 		<section id="tags">

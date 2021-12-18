@@ -35,8 +35,7 @@ class PrettyJSONResponse(Response):
 
 # Some replace tuples
 # TODO: Move this elsewhere
-js_rem_tuple = (("onclick", ""), ("onhover", ""), ("script", ""), ("onload",
-                                                                   ""))
+js_rem_tuple = (("onclick", ""), ("onhover", ""), ("script", ""), ("onload", ""))
 banner_replace_tuple = (
     ('"', ""),
     ("'", ""),
@@ -48,6 +47,16 @@ banner_replace_tuple = (
 ldesc_replace_tuple = (("window.location", ""), ("document.ge", ""))
 
 cleaner = Cleaner(remove_unknown_tags=False)
+
+def flags_check(locks, check_locks):
+    """Check if a particular lock is present in a bots locks"""
+    if isinstance(check_locks, int):
+        check_locks = [check_locks]
+    locks_set = set(locks)
+    check_locks_set = set([lock.value for lock in check_locks])
+    if locks_set.intersection(check_locks_set):
+        return True
+    return False
 
 
 def id_check(check_t: str):
@@ -254,6 +263,7 @@ async def parse_index_query(
     worker_session,
     fetch: List[asyncpg.Record],
     type: enums.ReviewType = enums.ReviewType.bot,
+    **kwargs
 ) -> list:
     """
     Parses a index query to a list of partial bots
@@ -266,6 +276,8 @@ async def parse_index_query(
             ("http://", "https://"),
             ("file://", ""),
         )
+        if bot.get("flags") and flags_check(bot["flags"], enums.BotFlag.system):
+            continue
         if type == enums.ReviewType.server:
             bot_obj = dict(bot) | {
                 "user":
@@ -308,6 +320,7 @@ async def do_index_query(
     state: list = None,
     limit: Optional[int] = 12,
     type: enums.ReviewType = enums.ReviewType.bot,
+    **kwargs
 ) -> List[asyncpg.Record]:
     """
     Performs a 'index' query which can also be used by other things as well
@@ -324,14 +337,14 @@ async def do_index_query(
         main_key = "guild_id"
 
     states = "WHERE " + " OR ".join([f"state = {s}" for s in state])
-    base_query = f"SELECT description, banner_card AS banner, state, votes, guild_count, {main_key}, nsfw FROM {table} {states}"
+    base_query = f"SELECT flags, description, banner_card AS banner, state, votes, guild_count, {main_key}, nsfw FROM {table} {states}"
     if limit:
         end_query = f"LIMIT {limit}"
     else:
         end_query = ""
     logger.debug(base_query, add_query, end_query)
     fetch = await db.fetch(" ".join((base_query, add_query, end_query)))
-    return await parse_index_query(worker_session, fetch, type=type)
+    return await parse_index_query(worker_session, fetch, type=type, **kwargs)
 
 
 async def vanity_check(id, vanity):

@@ -16,6 +16,12 @@ type StaffRole struct {
 	FriendlyName string  `json:"fname"`
 }
 
+type BotFlag int
+
+const (
+	BotFlagSystem BotFlag = 5
+)
+
 type UserBotAuditLog int
 
 const (

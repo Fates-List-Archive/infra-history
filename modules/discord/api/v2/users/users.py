@@ -154,11 +154,10 @@ async def delete_bot(request: Request, user_id: int, bot_id: int):
                 "You aren't the owner of this bot. Only main bot owners may delete bots and staff may only delete bots once they have been unverified/denied/banned"
             )
         
-    lock = await db.fetchval("SELECT lock FROM bots WHERE bot_id = $1", bot_id)
-    lock = enums.BotLock(lock)
-    if lock != enums.BotLock.unlocked:
+    flags = await db.fetchval("SELECT flags FROM bots WHERE bot_id = $1", bot_id)
+    if flags_check(flags, (enums.BotFlag.edit_locked, enums.BotFlag.staff_locked)):
         return api_error(
-            f"This bot cannot be deleted as it has been locked with a code of {int(lock)}: ({lock.__doc__}). If this bot is not staff locked, join the support server and run +unlock <BOT> to unlock it."
+            "This bot cannot be deleted as it has been locked. Join the support server and run /unlock <BOT> to unlock it."
         )
     await db.execute("DELETE FROM bots WHERE bot_id = $1", bot_id)
     await db.execute("DELETE FROM vanity WHERE redirect = $1", bot_id)
@@ -219,10 +218,9 @@ async def transfer_bot_ownership(request: Request, user_id: int, bot_id: int, tr
             "Specified user is not an actual user"
         )
 
-    lock = await db.fetchval("SELECT lock FROM bots WHERE bot_id = $1", int(bot_id))
-    lock = enums.BotLock(lock)
-    if lock != enums.BotLock.unlocked:
-        return api_error(f"This bot cannot be edited as it has been locked with a code of {int(lock)}: ({lock.__doc__}). If this bot is not staff staff locked, join the support server and run +unlock <BOT> to unlock it.")
+    flags = await db.fetchval("SELECT flags FROM bots WHERE bot_id = $1", bot_id)
+    if flags_check(flags, (enums.BotFlag.edit_locked, enums.BotFlag.staff_locked)):
+        return api_error("This bot cannot be edited as it has been locked. Join our support server and run /unlock <BOT> to unlock it.")
 
     async with db.acquire() as conn:
         async with conn.transaction() as tr:
@@ -255,7 +253,9 @@ async def appeal_bot(request: Request, bot_id: int, data: BotAppeal):
         )
     db = request.app.state.worker_session.postgres
 
-    state = await db.fetchval("SELECT state FROM bots WHERE bot_id = $1", bot_id)
+    check = await db.fetchrow("SELECT state, flags FROM bots WHERE bot_id = $1", bot_id)
+    state = check["state"]
+    flags = check["flags"]
 
     if state == enums.BotState.denied:
         title = "Bot Resubmission"
@@ -267,6 +267,10 @@ async def appeal_bot(request: Request, bot_id: int, data: BotAppeal):
         return api_error(
             "You cannot send an appeal for a bot that is not banned or denied!"
         )
+
+    if flags_check(flags, (enums.BotFlag.staff_lock,)):
+        return api_error("You cannot send an appeal for a bot that is staff locked")
+
     resubmit_embed = discord.Embed(title=title, color=0x00ff00)
     bot = await get_bot(bot_id)
     resubmit_embed.add_field(name="Username", value = bot['username'])
