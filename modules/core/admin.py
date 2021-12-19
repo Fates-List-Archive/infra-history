@@ -66,7 +66,8 @@ class BotActions():
                 except ValueError:
                     return "Invalid Bot Invite: Your permission number must be a integer", 4 # Invalid Invite
             elif not self.invite.startswith("https://discord.com") or "oauth" not in self.invite:
-                if not self.system_bot and bot.state != enums.BotState.certified:
+                state = await db.fetchval("SELECT state FROM bots WHERE bot_id = $1", self.bot_id)
+                if not self.system_bot and state != enums.BotState.certified:
                     return "Invalid Bot Invite: Your bot invite must be in the format of https://discord.com/api/oauth2... or https://discord.com/oauth2..." # Invalid Invite
 
         if len(self.description) > 110 and not self.system_bot:
@@ -265,10 +266,13 @@ class BotActions():
                     self.bot_id, self.library, self.webhook, self.description, self.long_description, self.prefix, self.website, self.support, self.banner_card, self.invite, self.github, self.features, self.long_description_type, self.webhook_type, self.css, self.donate, self.privacy_policy, self.nsfw, self.webhook_secret, self.banner_page, self.keep_banner_decor, self.client_id  # pyline: disable=line-too-long
                 ) # Update bot with new info
 
+                flags = await connection.fetchval("SELECT flags FROM bots WHERE bot_id = $1", self.bot_id)
+                flags = set(flags)
                 if self.system_bot:
-                    await connection.execute("UPDATE bots SET flags = flags || $1 WHERE bot_id = $2", [enums.BotFlag.system], self.bot_id)
+                    flags.add(enums.BotFlag.system)
                 else:
-                    await connection.execute("UPDATE bots SET flags = array_remove(flags, $1) WHERE bot_id = $2", enums.BotFlag.system, self.bot_id)
+                    flags.discard(enums.BotFlag.system)
+                await connection.execute("UPDATE bots SET flags = $1 WHERE bot_id = $2", list(flags), self.bot_id)
 
                 await connection.execute("DELETE FROM bot_owner WHERE bot_id = $1 AND main = false", self.bot_id) # Delete all extra owners
                 done = []

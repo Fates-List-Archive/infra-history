@@ -15,9 +15,17 @@
 		#api-token {word-wrap: break-word; background-color: black;}
 		#api-button {margin-top: 7px;}
 		.section {margin-top: 20px;}
-		.info-content {text-align: left; margin-left: 30px;}
+		.info-content {text-align: left;}
 		.text-input {border-radius: 4px 4px 4px 4px !important;}
 		.btn {margin-bottom: 15px !important;}
+		.tabcontent {
+			text-align: left;
+			margin-left: 6%;
+			margin-top: 13px;
+		}
+		.fform {
+			margin: 0px !important;
+		}
 	</style>
 {% endblock %}
 
@@ -45,10 +53,12 @@
 			{% if context.mode == "edit" %}
 			<section id="about-tab" class="tabcontent">
 				<h5 class="white">Bot Info</h5>
-				<div class="info-content">	
-					<p class="white">Bot State: {{enums.BotState(bot.state).__doc__}} ({{bot.state}})</p>
-					<p class="white">Bot Flags: {% for flag in bot.flags %}{{ enums.BotFlag(flag) }}, {% endfor %}</p>
-					<p class="white"><u>Owners of this bot</u><br/> {{context.owners_html|safe}}</p>
+				<div>
+					<p class="white"><u>Bot State</u><br/><br/>{{enums.BotState(bot.state).__doc__}} ({{bot.state}})</p><br/>
+					{% if bot.flags %}
+						<p class="white"><u>Bot Flags</u><br/><br/>{% for flag in bot.flags %}{{enums.BotFlag(flag).name}} ({{flag}})<br/>{% endfor %}</p><br/>
+					{% endif %}
+					<p class="white"><u>Owners of this bot</u><br/><br/>{{context.owners_html|safe}}</p><br/>
 				</div>
 				<h5 class="white">API Token</h5>
 				<code class="white" id="api-token">Click 'Show' to see your bots token</code>
@@ -62,15 +72,17 @@
 				<h5 class="white">Critical Actions Needed</h5>
 				{{ tip("These are actions you <em>must</em> take to continue using all features!") }}
 				{% if bot.state in (enums.BotState.denied, enums.BotState.banned) %}
-					{% set actions = True %}
+				{% set _ = context.update({"actions": True}) %}
 					{% set appeal_type = "denied" if bot.state == enums.BotState.denied else "banned" %}
-					<h5 class="white section text-center">Bot Appeal</h5>
+					<h5 class="white section">Bot Appeal</h5>
 					<div class="info-content">
                         			<p class="white">
-							Your bot was {{ appeal_type }} and needs to be appealed in order to continue using Fates List. These are subject to approval and potential retesting of your bot</br/><br/>
-							Did you fix the issues you were asked to fix? <br/>
-							Do you feel like your bot was {{ appeal_type }} for a wrong reason? <br/>
-							If so (or even if not), mention your reasoning (<em>convincing</em> argument) here! <br/>
+							Your bot was {{ appeal_type }} and needs to be appealed in order to continue using Fates List. These are subject to approval and potential retesting of your bot. Some criteria that you could include:</br/>
+							<ul class="white">
+								<li>Did you fix the issues you were asked to fix? </li>
+								<li>Do you feel like your bot was {{ appeal_type }} for a wrong reason? </li>
+								<li>If so (or even if not), mention your reasoning (<em>convincing</em> argument) here! </li>
+							</ul>
 						</p>
 					</div>
 					{{ textInput(
@@ -82,7 +94,7 @@
 					) }}
 					<button class="btn btn-outline-light" onclick="submitAppeal()">Appeal</button>
 				{% endif %}
-				{% if not actions %}
+				{% if not context.actions %}
 					<p class="white">All good! You have no critical actions pending (or pending approval)</p>
 				{% endif %}
 				<h5 class="white">Other Actions</h5>
@@ -369,6 +381,13 @@
 			text: {{form_values_text|tojson}},
 			select_single: {{form_values_select_single|tojson}},
 			select_multiple: {{form_values_select_multiple|tojson}}
+		}
+
+		if(context.actions) {
+			setTimeout(() => {
+				modalShow("Urgent", "There are some urgent actions you must take in order to continue using Fates List!")
+				document.querySelector("#actions-button").click()
+			}, 100)
 		}
 	</script>
 	<script src="/static/assets/prod/bot_add_edit.min.js?v=86"></script>

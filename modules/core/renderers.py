@@ -46,7 +46,7 @@ async def render_index(request: Request, api: bool, type: enums.ReviewType = enu
 def gen_owner_html(owners_lst: tuple):
     """Generate the owner html"""
     # First owner will always be main and hence should have the crown, set initial state to crown for that
-    owners_html = '<span class="iconify" data-icon="mdi-crown" data-inline="false"></span>'
+    owners_html = '<span class="iconify" data-icon="mdi-crown" data-inline="false" data-height="1.5em" style="margin-right: 3px"></span>'
     owners_html += "<br/>".join([f"<a class='long-desc-link' href='/profile/{owner[0]}'>{owner[1]}</a>" for owner in owners_lst if owner])
     return owners_html
 
