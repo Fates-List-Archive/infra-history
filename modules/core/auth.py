@@ -41,7 +41,12 @@ async def _user_auth(user_id: int, api_token: str):
         return None
     if api_token.startswith("User "):
         api_token = api_token.replace("User ", "", 1)
-    return await db.fetchval("SELECT user_id FROM users WHERE user_id = $1 AND api_token = $2", user_id, str(api_token))
+    user = await db.fetchrow("SELECT user_id, state FROM users WHERE user_id = $1 AND api_token = $2", user_id, str(api_token))
+    if not user:
+        return
+    if user["state"] in (enums.UserState.api_ban, enums.UserState.global_ban):
+        raise HTTPException(status_code=400, detail="This user has been banned from using the Fates List API")
+    return user["user_id"]
 
 async def server_auth_check(guild_id: int, server_auth: str = Security(server_auth_header)):
     if server_auth.startswith("Server "):
@@ -57,7 +62,7 @@ async def bot_auth_check(bot_id: int, bot_auth: str = Security(bot_auth_header))
     if id is None:
         raise HTTPException(status_code=401, detail="Invalid Bot Token")
 
-async def user_auth_check(request: Request, user_id: int, user_auth: str = Security(user_auth_header)):
+async def user_auth_check(user_id: int, user_auth: str = Security(user_auth_header)):
     if user_auth.startswith("User "):
         user_auth = user_auth.replace("User ", "", 1)
     id = await _user_auth(user_id, user_auth)

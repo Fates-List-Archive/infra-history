@@ -64,6 +64,7 @@ class UserState(IntEnum):
     global_ban = 1, "Global Ban", True
     profile_edit_ban = 2, "Profile Edit Ban", False
     ddr_ban = 3, "Data Deletion Request Ban", True
+    api_ban = 4, "Full API Ban", False
 
 class WebhookType(IntEnum):
     _init_ = 'value __doc__'

@@ -16,7 +16,8 @@ async def exp1(request: Request):
         "vote_epoch": None,
         "user_agent": request.headers.get("User-Agent"),
         "user": None,
-        "pid": os.getpid()
+        "pid": os.getpid(),
+        "ip": request.headers.get("X-Forwarded-For")
     }
 
     if data["logged_in"]:

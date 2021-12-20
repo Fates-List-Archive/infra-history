@@ -129,29 +129,31 @@ async def fetch_bot(
     bot_id: int, 
     compact: Optional[bool] = True, 
     offline: Optional[bool] = False,
-    no_cache: Optional[bool] = False
+    no_cache: Optional[bool] = False,
+    user_id: Optional[int] = 0,
 ):
     """
     Fetches bot information given a bot ID. If not found, 404 will be returned. 
 
     This endpoint handles both bot IDs and client IDs
     
-    Setting compact to true (default) -> description, long_description, long_description_type, keep_banner_decor and css will be null
+    Setting compact to true (default) -> long_description, long_description_type, keep_banner_decor and css will be null. To disable compact mode, 
+    you must provide a user token to avoid abuse.
 
     Setting offline to true -> user will be null and no ownership info will be given. If the bot is no longer on discord, this endpoint will still return if offline is set to true
 
     No cache means cached responses will not be served (may be temp disabled in the case of a DDOS or temp disabled for specific bots as required)
     """
-    if len(str(bot_id)) not in [17, 18, 19, 20]:
-        return abort(404)
+    if not compact:
+        await user_auth_check(user_id, request.headers.get("Authorization", ""))
 
     if not no_cache:
-        cache = await redis_db.get(f"botcache-{bot_id}")
+        cache = await redis_db.get(f"botcache-{bot_id}-{compact}")
         if cache:
             return orjson.loads(cache)
 
     api_ret = await db.fetchrow(
-        "SELECT bot_id, last_stats_post, flags, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id FROM bots WHERE bot_id = $1 OR client_id = $1", 
+        "SELECT bot_id, last_stats_post, description, flags, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id FROM bots WHERE bot_id = $1 OR client_id = $1", 
         bot_id
     )
     if api_ret is None:
@@ -163,7 +165,7 @@ async def fetch_bot(
 
     if not compact:
         extra = await db.fetchrow(
-            "SELECT description, long_description_type, long_description, css, keep_banner_decor FROM bots WHERE bot_id = $1",
+            "SELECT long_description_type, long_description, css, keep_banner_decor FROM bots WHERE bot_id = $1",
             bot_id
         )
         api_ret |= dict(extra)
@@ -209,7 +211,7 @@ async def fetch_bot(
         bot_id
     )
 
-    await redis_db.set(f"botcache-{bot_id}", orjson.dumps(api_ret), ex=60*60*8)
+    await redis_db.set(f"botcache-{bot_id}-{compact}", orjson.dumps(api_ret), ex=60*60*8)
 
     return api_ret
 
