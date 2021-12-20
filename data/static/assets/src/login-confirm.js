@@ -54,7 +54,7 @@ function loginUser() {
 					You have been ${data.responseJSON.ban.type} banned.<br/>
 					As a result, ${data.responseJSON.ban.desc}
 	       				<br/><br/>
-					<strong>Please contact a Fates List Staff Member to appeal this ban</strong>
+					<strong>Please click <a href="/fates/banappeal?token=${data.responseJSON.token}">here</a> or contact a Fates List Staff Member to appeal this ban</strong>
 					</p>
 					`
 				$("#msg").html(data.responseJSON.reason + banInfo)

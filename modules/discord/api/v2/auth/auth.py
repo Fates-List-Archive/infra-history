@@ -70,6 +70,15 @@ async def login_user(request: Request, data: Login, worker_session = Depends(wor
         state = enums.UserState(user_info["state"])
         if state.__sitelock__:
             ban_data = bans_data[str(state.value)]
+            ban_token = get_token(91)
+            redis = request.app.state.worker_session.redis
+            await redis.set(ban_token, orjson.dumps(
+                {
+                    "username": userjson["username"],
+                    "id": userjson["id"],
+                    "state": state.value
+                }
+            ), ex=60*10)
             return api_error(
                 "You have been banned from Fates List",
                 banned = True,
@@ -77,6 +86,7 @@ async def login_user(request: Request, data: Login, worker_session = Depends(wor
                     type = ban_data["type"],
                     desc = ban_data["desc"],
                 ),
+                token = ban_token,
                 state = state,
                 status_code = 403
             )

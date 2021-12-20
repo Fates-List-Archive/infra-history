@@ -132,6 +132,10 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         process_time = time.time() - start_time
         response.headers["X-Process-Time"] = str(process_time)
         response.headers["X-Worker-PID"] = str(os.getpid())
+        response.headers["Content-Security-Policy"] = "default-src https: 'unsafe-inline'; img-src https: data:; report-uri /csp/"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
 
         if is_api:
             response.headers["X-API-Version"] = api_ver

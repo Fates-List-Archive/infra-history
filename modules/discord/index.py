@@ -26,9 +26,13 @@ async def exp1(request: Request):
     return PrettyJSONResponse({"message": "Please send a screenshot of this page and send it", "data": data})
 
 
-@router.get("/discord")
-def reroute_support():
-    return RedirectResponse("/fates/support/invite")
+@router.get("/fates/banappeal")
+async def ban_appeal(request: Request, token: str):
+    redis = request.app.state.worker_session.redis
+    data = await redis.get(token)
+    if not data:
+        return await templates.e(request, "Invalid ban token, try logging in again!")
+    return "Coming soon"
 
 # We want to handle any request method to index page.
 # cert = certified bots
