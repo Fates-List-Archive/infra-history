@@ -18,7 +18,7 @@ from loguru import logger
 from config import ag_role, log_channel, main, manager_key, site_url, staff, testing
 from modules.core.ipc import redis_ipc_new
 from modules.core.permissions import StaffMember
-from modules.models.enums import BotLock, BotState, Status, UserState
+from modules.models.enums import BotState, Status, UserState
 
 
 async def set_cmd_perm(bot, guild, name, perm):

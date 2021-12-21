@@ -132,7 +132,7 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         process_time = time.time() - start_time
         response.headers["X-Process-Time"] = str(process_time)
         response.headers["X-Worker-PID"] = str(os.getpid())
-        response.headers["Content-Security-Policy"] = "default-src https: 'unsafe-inline'; img-src https: data:; report-uri /csp/"
+        response.headers["Content-Security-Policy"] = "default-src 'none'; connect-src 'self' https://discord.com; script-src https: 'unsafe-inline'; img-src https: data:; font-src https: data:; child-src https: blob:; style-src https: 'unsafe-inline'; object-src 'none'; frame-ancestors https://docs.fateslist.xyz https://apidocs.fateslist.xyz; base-uri 'none'; report-uri /fates/csp"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"

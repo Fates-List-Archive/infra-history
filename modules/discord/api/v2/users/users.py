@@ -268,7 +268,7 @@ async def appeal_bot(request: Request, bot_id: int, data: BotAppeal):
             "You cannot send an appeal for a bot that is not banned or denied!"
         )
 
-    if flags_check(flags, (enums.BotFlag.staff_lock,)):
+    if flags_check(flags, enums.BotFlag.staff_locked):
         return api_error("You cannot send an appeal for a bot that is staff locked")
 
     resubmit_embed = discord.Embed(title=title, color=0x00ff00)

@@ -489,7 +489,7 @@ class _CertifySelect(discord.ui.Select):
         res = await request(
             "GET",
             MiniContext(interaction.user, self.bot),
-            f"/api/bots/{id}?compact=false&no_cache=true",
+            f"/api/bots/{id}?compact=true&no_cache=true",
             staff=False,
         )
         if res[0] != 200:

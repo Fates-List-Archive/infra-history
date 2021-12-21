@@ -117,35 +117,34 @@ async def fetch_random_bot(request: Request, bot_id: int, lang: str = "default")
     dependencies=[
         Depends(
             Ratelimiter(
-                global_limit = Limit(times=5, minutes=2),
-                operation_bucket="fetch_bot"
+                global_limit = Limit(times=7, seconds=45),
+                operation_bucket="get_bot"
             )
         )
     ],
-    operation_id="fetch_bot"
+    operation_id="get_bot"
 )
 async def fetch_bot(
     request: Request, 
     bot_id: int, 
     compact: Optional[bool] = True, 
-    offline: Optional[bool] = False,
     no_cache: Optional[bool] = False,
-    user_id: Optional[int] = 0,
 ):
     """
     Fetches bot information given a bot ID. If not found, 404 will be returned. 
 
     This endpoint handles both bot IDs and client IDs
-    
-    Setting compact to true (default) -> long_description, long_description_type, keep_banner_decor and css will be null. To disable compact mode, 
-    you must provide a user token to avoid abuse.
 
-    Setting offline to true -> user will be null and no ownership info will be given. If the bot is no longer on discord, this endpoint will still return if offline is set to true
+    - **compact** (default: `true`) -> `long_description`, `long_description_type`, `keep_banner_decor` and `css` will be null if true. To disable compact mode, 
+    you must provide a user token to avoid abuse and to allow auditing of sensitive data usage (compact mode can be forced for malicious users)
 
-    No cache means cached responses will not be served (may be temp disabled in the case of a DDOS or temp disabled for specific bots as required)
+    - **no_cache** (default: `false`) -> cached responses will not be served (may be temp disabled in the case of a DDOS or temp disabled for specific 
+    bots as required). **Uncached requests may take up to 100-200 times longer or possibly more**
     """
     if not compact:
-        await user_auth_check(user_id, request.headers.get("Authorization", ""))
+        auth = request.headers.get("Authorization", "")
+        user_id = await db.fetchval("SELECT user_id FROM users WHERE api_token = $1", auth)
+        await user_auth_check(user_id, auth)
 
     if not no_cache:
         cache = await redis_db.get(f"botcache-{bot_id}-{compact}")
@@ -173,38 +172,34 @@ async def fetch_bot(
     tags = await db.fetch("SELECT tag FROM bot_tags WHERE bot_id = $1", bot_id)
     api_ret["tags"] = [tag["tag"] for tag in tags]
    
-    if not offline:
-        owners_db = await db.fetch("SELECT owner, main FROM bot_owner WHERE bot_id = $1", bot_id)
-        owners = []
-        _done = []
+    owners_db = await db.fetch("SELECT owner, main FROM bot_owner WHERE bot_id = $1", bot_id)
+    owners = []
+    _done = []
 
-        # Preperly sort owners
-        for owner in owners_db:
-            if owner in _done: continue
+    # Preperly sort owners
+    for owner in owners_db:
+        if owner in _done: continue
         
-            _done.append(owner["owner"])
-            user = await get_user(owner["owner"])
-            main = owner["main"]
+        _done.append(owner["owner"])
+        user = await get_user(owner["owner"])
+        main = owner["main"]
 
-            if not user: continue
+        if not user: continue
         
-            owner_obj = {
-                "user": user,
-                "main": main
-            }
+        owner_obj = {
+            "user": user,
+            "main": main
+        }
         
-            if main: owners.insert(0, owner_obj)
-            else: owners.append(owner_obj)
+        if main: owners.insert(0, owner_obj)
+        else: owners.append(owner_obj)
 
-        api_ret["owners"] = owners
-    
+    api_ret["owners"] = owners
+
     api_ret["features"] = api_ret["features"]
-    api_ret["invite_link"] = await invite_bot(bot_id, api = True)
+    api_ret["invite_link"] = await invite_bot(bot_id, api=True)
     
-    if not offline:
-        api_ret["user"] = await get_bot(bot_id)
-        if not api_ret["user"]:
-            return abort(404)
+    api_ret["user"] = await get_bot(bot_id)
     
     api_ret["vanity"] = await db.fetchval(
         "SELECT vanity_url FROM vanity WHERE redirect = $1", 

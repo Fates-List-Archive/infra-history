@@ -34,6 +34,10 @@ async def ban_appeal(request: Request, token: str):
         return await templates.e(request, "Invalid ban token, try logging in again!")
     return "Coming soon"
 
+@router.post("/fates/csp")
+async def csp(request: Request):
+    logger.info((await request.json()))
+
 # We want to handle any request method to index page.
 # cert = certified bots
 @router.get("/")
