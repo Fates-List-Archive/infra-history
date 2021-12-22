@@ -140,6 +140,9 @@ async def fetch_bot(
 
     - **no_cache** (default: `false`) -> cached responses will not be served (may be temp disabled in the case of a DDOS or temp disabled for specific 
     bots as required). **Uncached requests may take up to 100-200 times longer or possibly more**
+    
+    **Important note: the first owner may or may not be the main owner. Use the `main` key instead of object order**
+
     """
     if not compact:
         auth = request.headers.get("Authorization", "")
@@ -178,7 +181,7 @@ async def fetch_bot(
 
     # Preperly sort owners
     for owner in owners_db:
-        if owner in _done: continue
+        if owner["owner"] in _done: continue
         
         _done.append(owner["owner"])
         user = await get_user(owner["owner"])
@@ -191,8 +194,7 @@ async def fetch_bot(
             "main": main
         }
         
-        if main: owners.insert(0, owner_obj)
-        else: owners.append(owner_obj)
+        owners.append(owner_obj)
 
     api_ret["owners"] = owners
 

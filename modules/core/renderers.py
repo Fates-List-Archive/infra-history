@@ -102,24 +102,23 @@ async def render_bot(request: Request, bt: BackgroundTasks, bot_id: int, api: bo
     if bot["long_description_type"] == enums.LongDescType.markdown_pymarkdown: # If we are using markdown
         bot["long_description"] = emd(markdown.markdown(bot['long_description'], extensions = md_extensions))
 
-    if bot["state"] != enums.BotState.certified:
-        def _style_combine(s: str) -> list:
-            """
-            Given margin/padding, this returns margin, margin-left, margin-right, margin-top, margin-bottom etc.
-            """
-            return [s, s+"-left", s+"-right", s+"-top", s+"-bottom"]
+    def _style_combine(s: str) -> list:
+        """
+        Given margin/padding, this returns margin, margin-left, margin-right, margin-top, margin-bottom etc.
+        """
+        return [s, s+"-left", s+"-right", s+"-top", s+"-bottom"]
 
-        bot["long_description"] = bleach.clean(
-            bot["long_description"], 
-            tags=bleach.sanitizer.ALLOWED_TAGS+["span", "img", "iframe", "style", "p", "br", "center", "div", "h1", "h2", "h3", "h4", "h5", "section", "article"], 
-            strip=True, 
-            attributes=bleach.sanitizer.ALLOWED_ATTRIBUTES | {
-                "iframe": ["src", "height", "width"], 
-                "img": ["src", "alt", "width", "height", "crossorigin", "referrerpolicy", "sizes", "srcset"],
-                "*": ["id", "class", "style", "data-src", "data-background-image", "data-background-image-set", "data-background-delimiter", "data-icon", "data-inline", "data-height"]
-            },
-            styles=["color", "background", "background-color", "font-weight", "font-size"] + _style_combine("margin") + _style_combine("padding")
-        )
+    bot["long_description"] = bleach.clean(
+        bot["long_description"], 
+        tags=bleach.sanitizer.ALLOWED_TAGS+["span", "img", "iframe", "style", "p", "br", "center", "div", "h1", "h2", "h3", "h4", "h5", "section", "article"], 
+        strip=True, 
+        attributes=bleach.sanitizer.ALLOWED_ATTRIBUTES | {
+            "iframe": ["src", "height", "width"], 
+            "img": ["src", "alt", "width", "height", "crossorigin", "referrerpolicy", "sizes", "srcset"],
+            "*": ["id", "class", "style", "data-src", "data-background-image", "data-background-image-set", "data-background-delimiter", "data-icon", "data-inline", "data-height"]
+        },
+        styles=["color", "background", "background-color", "font-weight", "font-size"] + _style_combine("margin") + _style_combine("padding")
+    )
 
     # Take the h1...h5 anad drop it one lower and bypass peoples stupidity 
     # and some nice patches to the site to improve accessibility

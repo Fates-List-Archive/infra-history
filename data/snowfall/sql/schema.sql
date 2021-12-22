@@ -2,6 +2,12 @@ CREATE DATABASE fateslist;
 \c fateslist
 CREATE EXTENSION "uuid-ossp";
 
+-- Maps a fates snowflake to a platform specific id
+CREATE TABLE platform_map (
+    fates_id DECIMAL NOT NULL,
+    platform_id TEXT NOT NULL
+);
+
 CREATE TABLE bots (
     id BIGINT NOT NULL, -- Used by piccolo, must be equal to bot_id
     username_cached text DEFAULT '',
@@ -65,7 +71,7 @@ CREATE TABLE bot_tags (
 
 CREATE TABLE bot_list_tags (
     id TEXT NOT NULL UNIQUE, 
-    icon TEXT NOT NULL UNIQUE,
+    icon TEXT NOT NULL UNIQUE
 );
 
 CREATE INDEX bot_list_tags_index ON bot_list_tags (id, icon, type);
@@ -77,8 +83,6 @@ CREATE TABLE bot_owner (
     main BOOLEAN DEFAULT false,
     CONSTRAINT bots_fk FOREIGN KEY (bot_id) REFERENCES bots(bot_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
-
-CREATE INDEX bot_owner_index ON bot_owner USING COLUMNSTORE(bot_id, owner, main);
 
 CREATE TABLE bot_packs (
    id uuid primary key DEFAULT uuid_generate_v4(),
@@ -148,7 +152,7 @@ CREATE TABLE users (
     badges text[],
     username text,
     user_css text not null default '',
-    profile_css text not null default '';
+    profile_css text not null default '',
     state integer default 0, -- 0 = No Ban, 1 = Global Ban
     coins INTEGER DEFAULT 0,
     js_allowed BOOLEAN DEFAULT false
@@ -163,7 +167,7 @@ CREATE TABLE user_bot_logs (
 );
 
 CREATE TABLE user_reminders (
-    user_id BIGINT NOT NULL
+    user_id BIGINT NOT NULL,
     bot_id BIGINT NOT NULL,
     resolved BOOLEAN DEFAULT false,
     remind_time timestamptz NOT NULL DEFAULT NOW() + interval '8 hours',

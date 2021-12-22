@@ -113,7 +113,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		var authcheck pgtype.Int8
 		err := db.QueryRow(ctx, "SELECT user_id FROM users WHERE user_id = $1 AND api_token = $2", vote.UserID, auth.AuthToken).Scan(&authcheck)
 		if err != nil && err != pgx.ErrNoRows {
-			c.JSON(400, apiReturn(false, err.Error(), nil))
+			c.JSON(400, apiReturn(false, "Invalid User Token", nil))
 			return
 		}
 
@@ -143,7 +143,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			err := db.QueryRow(ctx, "SELECT flags, votes FROM bots WHERE bot_id = $1", vote.BotID).Scan(&flags, &votesDb)
 
 			if err == pgx.ErrNoRows {
-				c.JSON(404, apiReturn(false, "No bot found?", nil))
+				c.JSON(401, apiReturn(false, "No bot found?", nil))
 				return
 			} else if err != nil {
 				c.JSON(400, apiReturn(false, err.Error(), nil))
