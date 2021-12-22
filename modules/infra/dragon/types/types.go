@@ -16,12 +16,6 @@ type StaffRole struct {
 	FriendlyName string  `json:"fname"`
 }
 
-type BotFlag int
-
-const (
-	BotFlagSystem BotFlag = 5
-)
-
 type UserBotAuditLog int
 
 const (
@@ -243,6 +237,7 @@ type StateInterface interface {
 
 var userStateRegister []StateInterface
 var botStateRegister []StateInterface
+var botFlagRegister []StateInterface
 
 type UserState struct {
 	Value       int
@@ -267,6 +262,31 @@ func (s UserState) Register() {
 
 func (s UserState) GetRegistered() []StateInterface {
 	return userStateRegister
+}
+
+type BotFlag struct {
+	Value       int
+	Description string
+}
+
+func (s BotFlag) Int() int {
+	return s.Value
+}
+
+func (s BotFlag) ValStr() string {
+	return strconv.Itoa(s.Value)
+}
+
+func (s BotFlag) Str() string {
+	return s.Description
+}
+
+func (s BotFlag) Register() {
+	botFlagRegister = append(botFlagRegister, s)
+}
+
+func (s BotFlag) GetRegistered() []StateInterface {
+	return botFlagRegister
 }
 
 // Implements a StateInterface for bots and servers
@@ -358,6 +378,7 @@ var BotStateUnknown = BotState{
 	Description: "Unknown State",
 }
 
+// User States
 var UserStateNormal = UserState{
 	Value:       0,
 	Description: "Normal/No Ban",
@@ -378,6 +399,37 @@ var UserStateUnknown = UserState{
 	Description: "Unknown State",
 }
 
+// Bot Flags
+var BotFlagEditLocked = BotFlag{
+	Value:       1,
+	Description: "Edit Lock",
+}
+
+var BotFlagStaffLocked = BotFlag{
+	Value:       2,
+	Description: "Staff Lock",
+}
+
+var BotFlagStatsLocked = BotFlag{
+	Value:       3,
+	Description: "Stats Locked",
+}
+
+var BotFlagVoteLocked = BotFlag{
+	Value:       4,
+	Description: "Vote Locked",
+}
+
+var BotFlagSystem = BotFlag{
+	Value:       5,
+	Description: "System Bot",
+}
+
+var BotFlagUnknown = BotFlag{
+	Value:       -1,
+	Description: "Unknown",
+}
+
 func init() {
 	BotStateApproved.Register()
 	BotStatePending.Register()
@@ -393,6 +445,12 @@ func init() {
 	UserStateNormal.Register()
 	UserStateGlobalBan.Register()
 	UserStateProfileEditBan.Register()
+
+	BotFlagEditLocked.Register()
+	BotFlagStaffLocked.Register()
+	BotFlagStatsLocked.Register()
+	BotFlagVoteLocked.Register()
+	BotFlagSystem.Register()
 }
 
 // State getter
@@ -403,6 +461,15 @@ func GetBotState(state int) BotState {
 		}
 	}
 	return BotStateUnknown
+}
+
+func GetBotFlag(state int) BotFlag {
+	for _, v := range BotFlagUnknown.GetRegistered() {
+		if v.Int() == state {
+			return v.(BotFlag)
+		}
+	}
+	return BotFlagUnknown
 }
 
 type Status int

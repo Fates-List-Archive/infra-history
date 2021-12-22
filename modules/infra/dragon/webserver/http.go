@@ -143,7 +143,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			err := db.QueryRow(ctx, "SELECT flags, votes FROM bots WHERE bot_id = $1", vote.BotID).Scan(&flags, &votesDb)
 
 			if err == pgx.ErrNoRows {
-				c.JSON(401, apiReturn(false, "No bot found?", nil))
+				c.JSON(400, apiReturn(false, "No bot found?", nil))
 				return
 			} else if err != nil {
 				c.JSON(400, apiReturn(false, err.Error(), nil))
@@ -151,7 +151,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			}
 
 			for _, v := range flags.Elements {
-				if int(v.Int) == int(types.BotFlagSystem) {
+				if int(v.Int) == types.BotFlagSystem.Int() {
 					c.JSON(400, apiReturn(false, "You can't vote for system bots!", nil))
 					return
 				}

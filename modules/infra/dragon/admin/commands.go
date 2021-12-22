@@ -25,6 +25,7 @@ const perMessageQueueCount = 4 // 4 bots per message
 var (
 	commands         = make(map[string]types.AdminOp)
 	commandNameCache = make(map[string]string)
+	staffOnlyFlags   = []types.BotFlag{types.BotFlagStatsLocked, types.BotFlagVoteLocked, types.BotFlagSystem, types.BotFlagStaffLocked}
 )
 
 func autocompleter(state int) func(context types.HandlerData) (ac []*discordgo.ApplicationCommandOptionChoice) {
@@ -160,6 +161,80 @@ func CmdInit() map[string]types.SlashCommand {
 		},
 	}
 
+	commands["SETFLAG"] = types.AdminOp{
+		InternalName: "setflag",
+		Cooldown:     types.CooldownNone,
+		Description:  "Locks or unlocks a bot",
+		Event:        types.EventNone,
+		Server:       common.TestServer,
+		MinimumPerm:  1,
+		SlashOptions: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionInteger,
+				Name:        "flag",
+				Description: "The flag to set",
+				Choices:     types.GetStateChoices(types.BotFlagUnknown),
+				Required:    true,
+			},
+		},
+		Handler: func(context types.AdminContext) string {
+			flagVal := slashbot.GetArg(context.Discord, context.Interaction, "flag", false)
+			flagRaw, ok := flagVal.(int64)
+			if !ok {
+				return "Invalid flag"
+			}
+			flag := types.GetBotFlag(int(flagRaw))
+			if flag == types.BotFlagUnknown {
+				return "Invalid flag"
+			}
+
+			if context.StaffPerm < 3 {
+				for v := range staffOnlyFlags {
+					if v == flag.Int() {
+						return flag.ValStr() + " can only be set by permlevel 3 and higher!"
+					}
+				}
+			}
+
+			var currFlags pgtype.Int4Array
+
+			err := context.Postgres.QueryRow(context.Context, "SELECT flags FROM bots WHERE bot_id = $1", context.Bot.ID).Scan(&currFlags)
+
+			if err != nil {
+				return err.Error()
+			}
+
+			var flagSet = make(map[int]bool)
+			var removedFlag bool
+
+			for _, currFlag := range currFlags.Elements {
+				if flag.Int() == int(currFlag.Int) {
+					removedFlag = true
+					continue
+				}
+				flagSet[int(currFlag.Int)] = true
+			}
+
+			if !removedFlag {
+				flagSet[flag.Int()] = true
+			}
+
+			var flagFinal []int
+
+			for k, _ := range flagSet {
+				flagFinal = append(flagFinal, int(k))
+			}
+
+			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET flags = $1 WHERE bot_id = $2", flagFinal, context.Bot.ID)
+
+			if err != nil {
+				return err.Error()
+			}
+
+			return ""
+		},
+	}
+
 	commands["USERSTATE"] = types.AdminOp{
 		InternalName: "userstate",
 		Cooldown:     types.CooldownBan,
@@ -182,6 +257,7 @@ func CmdInit() map[string]types.SlashCommand {
 				Required:    true,
 			},
 		},
+		Server: common.StaffServer,
 		Handler: func(context types.AdminContext) string {
 			stateVal := slashbot.GetArg(context.Discord, context.Interaction, "state", false)
 			state, ok := stateVal.(int64)

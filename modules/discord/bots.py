@@ -40,6 +40,8 @@ async def bot_settings(request: Request, bot_id: int):
     
     bot = dict(bot)
 
+    bot["platform"] = "discord"  # Will be removed once discord becomes de-facto platform
+
     if flags_check(bot["flags"], enums.BotFlag.system):
         bot["system_bot"] = True
     else:

@@ -54,11 +54,11 @@
 			<section id="about-tab" class="tabcontent">
 				<h5 class="white">Bot Info</h5>
 				<div>
-					<p class="white"><u>Bot State</u><br/><br/>{{enums.BotState(bot.state).__doc__}} ({{bot.state}})</p><br/>
+					<p class="white"><u>Bot State</u><br/>{{enums.BotState(bot.state).__doc__}} ({{bot.state}})</p><br/>
 					{% if bot.flags %}
-						<p class="white"><u>Bot Flags</u><br/><br/>{% for flag in bot.flags %}{{enums.BotFlag(flag).name}} ({{flag}})<br/>{% endfor %}</p><br/>
+						<p class="white"><u>Bot Flags</u><br/>{% for flag in bot.flags %}{{enums.BotFlag(flag).name}} ({{flag}})<br/>{% endfor %}</p><br/>
 					{% endif %}
-					<p class="white"><u>Owners of this bot</u><br/><br/>{{context.owners_html|safe}}</p><br/>
+					<p class="white"><u>Owners of this bot</u><br/>{{context.owners_html|safe}}</p><br/>
 				</div>
 				<h5 class="white">API Token</h5>
 				<code class="white" id="api-token">Click 'Show' to see your bots token</code>
@@ -132,6 +132,19 @@
 			<section id="basic-settings-tab" class="tabcontent">
 				{{ tip("This is the only section you need to fill out to add or edit your bot") }}
 				<br/>
+				{{ selectInput(
+					"platform",
+					"Platform",
+					"What platform is your bot in?",
+					(
+						{
+							"value": "discord",
+							"text": "Discord",
+							"default": True
+						},
+					),
+					required=True
+				) }}
 				{% if context.mode == "add" %}
 					{{ textInput(
 						"Bot ID", 
