@@ -12,6 +12,7 @@ import (
 )
 
 // Put all env variables here
+const version = "1"
 
 var (
 	secretsJsonFile string
@@ -36,9 +37,6 @@ var (
 	CliCmd              string
 	RootPath            string
 	PythonPath          string
-	Version             string
-	CommitHash          string
-	BuildTime           string
 	Debug               bool
 	RegisterCommands    bool
 	IPCOnly             bool
@@ -57,7 +55,7 @@ func init() {
 	flag.Parse()
 
 	if CliCmd == "" && !RegisterCommands && !IPCOnly {
-		fmt.Println("Version:", Version, "\nCommit Hash:", CommitHash, "\nBuild Timestamp:", BuildTime, "\nBuilt with:", runtime.Version())
+		fmt.Println("Version:", version, "\nBuilt with:", runtime.Version())
 		flag.Usage()
 		os.Exit(3)
 	} else if RegisterCommands || IPCOnly {

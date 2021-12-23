@@ -3,7 +3,6 @@
 {% macro save() %}
 	<section id="save-changes">
 		<br/>
-		<p class="white info-content">Once you feel like your bot is as good as it can be, click the {{context.mode.title()}} button to save your changes. Make sure that you have previewed your long description beforehand if possible (marked is not yet supported by previews yet) and that you have <a class="green-link" href="/fates/rules">read our rules</a> before {{context.mode}}ing.</p>
 		<button class="btn btn-outline-light btn-save" onclick="submitBot()">{{context.mode}}</button>
 		<p style="margin-bottom: 20px"></p>
 	</section>
@@ -130,7 +129,7 @@
 			</section>
 			{% endif %}
 			<section id="basic-settings-tab" class="tabcontent">
-				{{ tip("This is the only section you need to fill out to add or edit your bot") }}
+				{{ tip("This is the only section you need to fill out to add or edit your bot. Also, <a href='/fates/rules'>read our rules</a> before submitting") }}
 				<br/>
 				{{ selectInput(
 					"platform",
@@ -310,7 +309,7 @@
 			</section>
 			<section id="webhook-tab" class="tabcontent">
 				{{ optional() }}
-				<p class="white info-content">Webhooks provide a fast and secure way for your bot to recieve events from Fates List such as voting and much more. More information about this is available on our <a class="green-link" href="https://apidocs.fateslist.xyz">API Documentation</a>. This option does require you to have a server that can recieve the webhooks and you may need to port forward or open your firewall if your server has one. Note that the IP address for Fates List keeps changing.</p>
+				{{ tip("Webhooks provide a fast and secure way for your bot to recieve events from Fates List such as voting and much more. More information about this is available on our <a href='https://apidocs.fateslist.xyz'>API Documentation</a>. This option does require you to have a server that can recieve the webhooks and you may need to port forward or open your firewall if your server has one. Note that the IP address for Fates List may change but this is rare and the IP is safe to whitelist.") }}
 				{{ selectInput(
 					"webhook_type",
 					"Webhook Type",

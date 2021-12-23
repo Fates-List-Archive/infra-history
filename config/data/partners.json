@@ -12,17 +12,6 @@
 			}
 		},
 		{
-			"id": "consteagle",
-			"name": "ConstEagle.com",
-			"owner": "910709495518920704",
-			"image": "https://cdn.discordapp.com/icons/742001124457971765/d500316fde0c631e58522fb9a26a4d41.png",
-			"description": "We have as goal to help you and make your bot way better.",
-			"links": {
-				"discord": "https://discord.gg/D7pq3m3",
-				"website": "https://consteagle.com"
-			}
-		},
-		{
 			"id": "lunar-dev",
 			"name": "Lunar Development",
 			"owner": "683530527239962627",

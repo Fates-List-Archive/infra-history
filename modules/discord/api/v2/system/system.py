@@ -87,28 +87,53 @@ async def check_staff_member(request: Request,
             operation_id="get_bots_filtered")
 async def get_bots_filtered(
         request: Request,
-        state: enums.BotState = enums.BotState.pending,
+        state: List[enums.BotState] = Query(..., description="Bot states like ?state=0&state=6"),
         verifier: int = None,
+        limit: int = 100,
+        offset: int = 0,
         worker_session=Depends(worker_session),
 ):
-    """API to get all bots filtered by its state"""
+    """
+    API to get all bots filtered by its state
+    
+    ** This api does not guarantee you will get the same number of bots as what you put in limit and may add more but not less. If you don't like this, specify only one state**
+    """
     db = worker_session.postgres
+
+    bots = []
+
+    paginator = f"LIMIT {limit} OFFSET {offset}"
+
     if verifier:
-        bots = await db.fetch(
-            "SELECT bot_id, prefix, description FROM bots WHERE state = $1 AND verifier = $2 ORDER BY created_at ASC",
-            state,
-            verifier,
+        for s in state:
+            _bots = await db.fetch(
+                f"SELECT bot_id, guild_count, website, discord AS support, votes, long_description, prefix, description, state FROM bots WHERE state = $1 AND verifier = $2 ORDER BY created_at ASC {paginator}",
+                s,
+                verifier,
+            )
+            bots += _bots
+
+    for s in state:
+        _bots = await db.fetch(
+            f"SELECT bot_id, guild_count, website, discord AS support, votes, long_description, prefix, description, state FROM bots WHERE state = $1 ORDER BY created_at ASC {paginator}",
+            s,
         )
-    bots = await db.fetch(
-        "SELECT bot_id, prefix, description FROM bots WHERE state = $1 ORDER BY created_at ASC",
-        state,
-    )
+        bots += _bots
+
     return {
         "bots": [{
             "user": await get_bot(bot["bot_id"]),
             "prefix": bot["prefix"],
             "invite": await invite_bot(bot["bot_id"], api=True),
             "description": bot["description"],
+            "state": bot["state"],
+            "guild_count": bot["guild_count"],
+            "votes": bot["votes"],
+            "long_description": bot["long_description"],
+            "website": bot["website"],
+            "support": bot["support"],
+            "owners": await db.fetch("SELECT owner AS user_id, main FROM bot_owner WHERE bot_id = $1", bot["bot_id"]),
+            "tags": await db.fetch("SELECT tag FROM bot_tags WHERE bot_id = $1", bot["bot_id"])
         } for bot in bots]
     }
 

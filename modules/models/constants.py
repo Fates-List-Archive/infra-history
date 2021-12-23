@@ -15,4 +15,5 @@ long_desc_replace_tuple = (
     ("fetch(", ""),
     ('window.location', ''), 
     ('document.ge', ''),
+    ("iframe", "iframe sandbox='allow-scripts'")
 )

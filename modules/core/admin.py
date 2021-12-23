@@ -191,7 +191,7 @@ class BotActions():
                     css, donate, github,
                     webhook, webhook_type, webhook_secret,
                     privacy_policy, nsfw, keep_banner_decor, 
-                    client_id, guild_count, id) VALUES(
+                    client_id, guild_count, flags, id) VALUES(
                     $1, $2, $3,
                     $4, $5, $6,
                     $7, $8, $9,
@@ -199,13 +199,14 @@ class BotActions():
                     $13, $14, $15, 
                     $16, $17, $18, 
                     $19, $20, $21, 
-                    $22, $23, $24, $1)""", 
+                    $22, $23, $24, $25, $1)""", 
                     self.bot_id, self.prefix, self.library, 
                     self.invite, self.website, self.banner_card, self.banner_page,
                     self.support, self.long_description, self.description,
                     get_token(132), self.features, self.long_description_type,
                     self.css, self.donate, self.github, self.webhook, self.webhook_type, self.webhook_secret,
                     self.privacy_policy, self.nsfw, self.keep_banner_decor, self.client_id, approx_guild_count,
+                    [enums.BotFlag.system] if self.system_bot else []
                 ) # Add new bot info
    
                 if self.system_bot:

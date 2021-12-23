@@ -17,12 +17,26 @@ class BotListStats(BaseModel):
     workers: list[int]
 
 
+class FilteredBotOwner(BaseModel):
+    user_id: str
+    main: bool
+
+class FilteredBotTag(BaseModel):
+    tag: str
+
 class PartialBotQueue(BaseModel):
     user: BaseUser | None = BaseUser()
     prefix: str
     invite: str
     description: str
-
+    state: enums.BotState
+    guild_count: int
+    votes: int
+    long_description: str
+    website: str | None = None
+    support: str | None = None
+    owners: list[FilteredBotOwner]
+    tags: list[FilteredBotTag]
 
 class BotQueueList(BaseModel):
     __root__: list[PartialBotQueue]

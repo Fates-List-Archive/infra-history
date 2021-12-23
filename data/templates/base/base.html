@@ -79,7 +79,7 @@
     <!-- Material CSS -->
     <link href="https://cdn.jsdelivr.net/gh/djibe/material@4.6.0-rc.2/css/material.min.css" rel="stylesheet" defer />
     <!-- Base Styles -->
-    <link href="/static/assets/prod/base.min.css?v=101" rel="stylesheet">
+    <link href="/static/assets/prod/base.min.css?v=103" rel="stylesheet">
 </head>
 <body style="background-color: #1D1E23;">
 
@@ -122,7 +122,7 @@
         <span class="nav-link dropdown-toggle" id="navbarDropdownMenuLink-333" data-toggle="dropdown"
           aria-haspopup="true" aria-expanded="false">
 	{% if username %}<img alt="{{username}}'s Avatar" width="25px" style="border-radius: 50%; margin-right: 5px;" src="{{avatar}}">{{username}}{% else %}Not Logged In{%endif%}</span>
-	<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink-333">
+	<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink-333" style="width: 130%;">
 	  {% if username %}
 	  <a class="dropdown-item" href="/profile/{{user_id}}">My Profile</a>
           <a class="dropdown-item" href="/bot/admin/add">Add Bot</a>
@@ -138,8 +138,8 @@
           <a class="dropdown-item" href="/server/789934742128558080/invite" target=”_blank”>Support Server</a>
 	  <div class="dropdown-divider"></div>
 	  <a class="dropdown-item" href="/fates/partners">Our Partners</a>
-          <a class="dropdown-item" href="/fates/tos">Terms Of Service</a>
-	  <a class="dropdown-item" href="/fates/rules">Requirements/Rules</a>
+          <a class="dropdown-item" href="/fates/tos">Privacy Policy</a>
+	  <a class="dropdown-item" href="/fates/rules">List Rules</a>
          </div>
       </li>
   </ul>

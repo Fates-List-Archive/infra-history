@@ -2,7 +2,10 @@ package common
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"dragon/types"
+	"encoding/hex"
 	"net/http"
 	"strings"
 	"time"
@@ -59,6 +62,11 @@ func WebhookReq(ctx context.Context, db *pgxpool.Pool, eventId string, webhookUR
 		}
 		return false
 	}
+	// Create HMAC request signature
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(data))
+	exportedMAC := hex.EncodeToString(mac.Sum(nil))
+
 	body := strings.NewReader(data)
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest("POST", webhookURL, body)
@@ -68,6 +76,7 @@ func WebhookReq(ctx context.Context, db *pgxpool.Pool, eventId string, webhookUR
 	req.Header.Set("Authorization", secret)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "Dragon/0.1a0")
+	req.Header.Set("X-Request-Sig", exportedMAC)
 	errHandle(err)
 	if err != nil {
 		return WebhookReq(ctx, db, eventId, webhookURL, secret, data, tries+1)

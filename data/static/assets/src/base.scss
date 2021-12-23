@@ -6,9 +6,6 @@ $form-mw: 94%; // Max width for form
 $link-size: 20px; // Link size
 $link-opacity: 0.63; 
 
-
-.btn-no {border: none !important; outline: none !important;}
-
 .fform-white::placeholder {
 	color: grey !important;
 }
@@ -192,7 +189,7 @@ background-color: blue;
 .bot-card-footer-stats {height: 30px !important; width: 55% !important;}
 .i-m3 {margin-right: 3px}
 .bot-card-actions {width: 80%;margin: 0 10%;}
-.bot-card-actions-link {width: 45%; font-weight: bold; border: none !important; outline: none !important;}
+.bot-card-actions-link {width: 45%; font-weight: bold; border: solid thin !important; outline: none !important;}
 /*width: 45%;margin-right: 5%;border-radius: 25px;font-weight: bold;*/
 .white {color:white;}
 .bold {font-weight: bold;}
