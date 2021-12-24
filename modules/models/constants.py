@@ -5,8 +5,6 @@ long_desc_replace_tuple = (
     ("</h2", "</h4"),
     ("<a", "<a class='long-desc-link ldlink'"),
     ("<!DOCTYPE", ""),
-    ("html>", ""),
-    ("<body", ""),
     (".click", ""),
     ("bootstrap.min.css", ""),
     ("bootstrap.css", ""),

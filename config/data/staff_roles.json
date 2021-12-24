@@ -41,10 +41,10 @@
         "perm": 6,
         "fname": "Head Admin"
     },
-    "owner": {
+    "overseer": {
         "id": "836326299223195738",
         "staff_id": "830540676952227863",
         "perm": 7,
-        "fname": "Owner"
+        "fname": "Overseer"
     }
 }

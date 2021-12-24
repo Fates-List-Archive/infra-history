@@ -28,6 +28,15 @@ class CooldownBucket(Enum):
     lock = 60*2
     delete = 60*3.5
 
+class SiteLang(Enum):
+    """Site languages"""
+    _init_ = 'value __doc__'
+    en = "en", "English"
+    es = "es", "Spanish"
+    fr = "fr", "France"
+    hi = "hi", "Hindi"
+    ru = "ru", "Russian"
+
 class BotAdminOp(Enum):
     """Handles bot admin operations"""
     _init_ = 'value __doc__ __perm__ __reason_needed__ __recursive__ __cooldown__'

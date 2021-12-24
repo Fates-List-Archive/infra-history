@@ -44,7 +44,8 @@ async def profile_editor(
     context = {
         "real_user_token": await db.fetchval("SELECT api_token FROM users WHERE user_id = $1", user_id),
         "mode": "edit",
-        "bot": dict(profile) | profile["profile"]
+        "bot": dict(profile) | profile["profile"],
+        "langs": [{"value": lang.value, "text": lang.__doc__} for lang in list(enums.SiteLang)]
     }
     return await templates.TemplateResponse("profile_edit.html", {"request": request} | context, context=context)
 

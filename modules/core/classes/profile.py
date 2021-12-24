@@ -32,5 +32,6 @@ class Profile(BaseModel):
     approved_bots: list[ProfileBot]
     certified_bots: list[ProfileBot]
     profile: ProfileData
+    site_lang: str | None = None  # Not a part of profile because legacy code
     user: enums.BaseUser
     bot_logs: list[dict]   

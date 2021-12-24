@@ -16,6 +16,8 @@ class UpdateUserPreferences(BaseModel):
     description: str | None = None
     profile_css: str | None = None
     user_css: str | None = None
+    site_lang: enums.SiteLang | None = None
+
 
 class BotMeta(BaseModel):
     """

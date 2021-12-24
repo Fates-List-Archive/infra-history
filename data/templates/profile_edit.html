@@ -3,7 +3,6 @@
 {% macro save() %}
 	<section id="save-changes">
 		<br/>
-		<p class="white info-content">Once you feel like your profile is as good as it can be, click the {{context.mode.title()}} button to save your changes.</p> 
 		<button class="btn btn-outline-light btn-save" onclick="submitProfile()">{{context.mode}}</button>
 		<p style="margin-bottom: 20px"></p>
 	</section>
@@ -11,14 +10,7 @@
 
 {% block head %}
 	<link rel="stylesheet" href="/static/assets/prod/bot_server.min.css" media="none" onload="if(media!='all')media='all'"/>
-	<style>
-		#api-token {word-wrap: break-word; background-color: black;}
-		#api-button {margin-top: 7px;}
-		.section {margin-top: 20px;}
-		.info-content {text-align: left; margin-left: 30px;}
-		.text-input {border-radius: 4px 4px 4px 4px !important;}
-		.btn {margin-bottom: 15px !important;}
-	</style>
+	<link rel="stylesheet" href="/static/assets/prod/common-settings-menu.min.css" media="none" onload="if(media!='all')media='all'"/>
 {% endblock %}
 
 {% block content %}
@@ -38,7 +30,7 @@
 						<p class="white">Profile State: {{enums.UserState(bot.state).__doc__}} ({{bot.state}})</p>
 					</div>
 				<h5 class="white">User Token</h5>
-					<code class="white" id="api-token">Click 'Show' to see your profile token</code>
+					<code class="white" id="api-token">Click 'Show' to see your user token</code>
 					<br/>
 					<button id="api-button" class="btn btn-outline-light" onclick="showToken(this)">Show</button>
 				<h6 class="white section" id="regen-token-header">Regenerate</h6>
@@ -46,6 +38,12 @@
 					<button onclick='regenToken()' class="btn btn-outline-light">Regenerate</button>
 			</section>
 			<section id="basic-settings-tab" class="tabcontent">
+				{{ selectInput(
+					"site_lang",
+					"Site Language (logged in only for now)",
+					"Site Language",
+					context.langs
+				) }}
 				{{ textInput(
 					"Description",
 					"description",

@@ -61,6 +61,8 @@ async def update_user_preferences(request: Request, user_id: int, data: UpdateUs
         await db.execute("UPDATE users SET user_css = $1 WHERE user_id = $2", data.user_css, user_id)
     if data.profile_css is not None:
         await db.execute("UPDATE users SET profile_css = $1 WHERE user_id = $2", data.profile_css, user_id)
+    if data.site_lang is not None:
+        await db.execute("UPDATE users SET site_lang = $1 WHERE user_id = $2", data.site_lang.value, user_id)
     return api_success()
 
 @router.get(

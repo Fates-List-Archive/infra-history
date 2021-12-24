@@ -299,6 +299,8 @@ async def parse_index_query(
         else:
             _user = await get_bot(bot["bot_id"], worker_session=worker_session)
             if _user:
+                if _user.get("username", "").startswith("Deleted User "):
+                    continue
                 bot_obj = (dict(bot)
                            | {
                                "user":

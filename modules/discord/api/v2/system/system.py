@@ -24,20 +24,20 @@ async def get_botlist_stats(request: Request,
     """
     Returns uptime and stats about the list.
 
-    uptime - The current uptime for the given worker. All workers reboot periodically to avoid memory leaks
+    **uptime** - The current uptime for the given worker. All workers reboot periodically to avoid memory leaks
     so this will mostly be low
 
-    pid - The pid of the worker you are connected to
+    **pid** - The pid of the worker you are connected to
 
-    up - Whether the databases are up on this worker
+    **up** - Whether the databases are up on this worker
 
-    server_uptime - How long the Fates List Server has been up for totally
+    **server_uptime** - How long the Fates List Server has been up for totally
 
-    bot_count_total - The bot count of the list
+    **bot_count_total** - The bot count of the list
 
-    bot_count - The approved and certified bots on the list
+    **bot_count** - The approved and certified bots on the list
 
-    workers - The worker pids. This is sorted and retrived from dragon IPC if not directly available on the worker
+    **workers** - The worker pids. This is sorted and retrived from dragon IPC if not directly available on the worker
     """
     db = worker_session.postgres
     bot_count_total = await db.fetchval("SELECT COUNT(1) FROM bots")
@@ -96,7 +96,7 @@ async def get_bots_filtered(
     """
     API to get all bots filtered by its state
     
-    ** This api does not guarantee you will get the same number of bots as what you put in limit and may add more but not less. If you don't like this, specify only one state**
+    **Warning: This api does not guarantee you will get the same number of bots as what you put in limit and may add more but not less. If you don't like this, specify only one state**
     """
     db = worker_session.postgres
 

@@ -15,7 +15,7 @@ class User(DiscordUser):
     async def profile(self, bot_logs: bool = True, system_bots: bool = False):
         """Gets a users profile"""
         user = await self.db.fetchrow(
-            "SELECT badges, state, description, user_css, profile_css, js_allowed FROM users WHERE user_id = $1", 
+            "SELECT site_lang, badges, state, description, user_css, profile_css, js_allowed FROM users WHERE user_id = $1", 
             self.id
         )
         
@@ -64,6 +64,7 @@ class User(DiscordUser):
             "approved_bots": approved_bots, 
             "certified_bots": certified_bots, 
             "profile": user,
+            "site_lang": user["site_lang"],
             "dup": True,
             "user": user_obj
         }
