@@ -78,7 +78,14 @@ label {
 .tip {
 	width: $form-mw; 
 	max-width: $form-mw; 
-	background: #259db0 !important; 
+}
+
+.tip-blue {
+	background: #259db0 !important;
+}
+
+.tip-red {
+	background: #EE4B2B !important;
 }
 
 textarea {

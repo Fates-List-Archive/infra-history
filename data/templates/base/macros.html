@@ -46,7 +46,12 @@
 {% endmacro %}
 {% macro tags(tags_fixed) %}
 	{% for tag in tags_fixed %}
-		<button id="tags-{{tag.id}}" class="btn d-flex btn-sm justify-content-center align-items-center btn-outline-light buttons-all" style="margin-bottom: 4px !important; margin-left: 6px;" onclick="location.href='/search/tags?tag={{tag.id}}&target_type={{type}}'" title="{{tag.name}}"><span class="iconify" data-icon="{{tag.iconify_data}}" data-inline="false" aria-hidden="true"></span><span style="margin-left: 3px; font-size: 13px;"><strong>{{tag.name}}</strong></span></button>
+		<button id="tags-{{tag.id}}" class="tag-item btn btn-sm btn-outline-light" onclick="location.href='/search/tags?tag={{tag.id}}&target_type={{type}}'" title="{{tag.name}}">
+			<span class="iconify" data-icon="{{tag.iconify_data}}" data-inline="false" aria-hidden="true"></span>
+			<span style="font-size: 13px;">
+				<strong>{{tag.name}}</strong>
+			</span>
+		</button>
 	{% endfor %}
 {% endmacro %}
 
@@ -57,9 +62,9 @@
 {% set actions = False %}
 
 
-{% macro tip(text) %}
-	<div class="d-inline-block white alert alert-info tip" role="alert">
-		<span class="iconify" data-icon="foundation:lightbulb" data-inline="false" data-height="1.5em" style="margin-right: 3px"></span>{{text|safe}}
+{% macro tip(text, alert_class="alert-info tip-blue", icon="foundation:lightbulb") %}
+	<div class="d-inline-block white alert {{alert_class}} tip" role="alert">
+		<span class="iconify" data-icon="{{icon}}" data-inline="false" data-height="1.5em" style="margin-right: 3px"></span>{{text|safe}}
 	</div>
 {% endmacro %}
 {% macro optional() %}

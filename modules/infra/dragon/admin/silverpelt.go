@@ -48,6 +48,13 @@ func SilverpeltCmdHandle(
 			return "Please exit mock mode and try again!"
 		}
 
+		if !admin_op.Critical {
+			verify, err := rdb.Get(ctx, "staffverify:"+user_id).Result()
+			if err != nil || verify != common.VerificationCode(user_id) {
+				return "You must verify in the staff server again to ensure you are up to date with our rules and staff guide"
+			}
+		}
+
 		if !is_staff {
 			return "This operation requires perm: " + strconv.Itoa(int(admin_op.MinimumPerm)) + " but you only have perm number " + strconv.Itoa(int(perm)) + ".\nUser ID: " + user_id
 		}

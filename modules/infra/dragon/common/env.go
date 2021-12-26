@@ -12,7 +12,12 @@ import (
 )
 
 // Put all env variables here
-const version = "1"
+const version = "2"
+
+// Staff Verification Code (sigh, people don't read staff info anymore)
+func VerificationCode(userId string) string {
+	return "Mistystar"
+}
 
 var (
 	secretsJsonFile string

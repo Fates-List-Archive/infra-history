@@ -367,10 +367,18 @@ func CmdInit() map[string]types.SlashCommand {
 		Cooldown:     types.CooldownBan,
 		Description:  "Get access to the staff server",
 		MinimumPerm:  0,
+		Critical:     true,
 		SlashRaw:     true,
 		Event:        types.EventNone,
 		Server:       common.StaffServer,
-		SlashOptions: []*discordgo.ApplicationCommandOption{},
+		SlashOptions: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "verify-code",
+				Description: "The verification code",
+				Required:    true,
+			},
+		},
 		Handler: func(context types.AdminContext) string {
 			if context.StaffPerm < 2 {
 				time.AfterFunc(3*time.Second, func() {
@@ -391,6 +399,20 @@ func CmdInit() map[string]types.SlashCommand {
 					context.Discord.GuildMemberRoleAdd(common.StaffServer, context.User.ID, v.StaffID)
 				}
 			}
+
+			verifyVal := slashbot.GetArg(context.Discord, context.Interaction, "verify-code", false)
+			verify, ok := verifyVal.(string)
+
+			if !ok {
+				return "You did not input a verification code"
+			}
+
+			if verify != common.VerificationCode(context.User.ID) {
+				return "Incorrect verification code!"
+			}
+
+			// Set verification code with 7 day expiry
+			context.Redis.Set(context.Context, "staffverify:"+context.User.ID, verify, 7*24*time.Hour)
 
 			return "Welcome back... master!"
 		},

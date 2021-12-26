@@ -8,6 +8,7 @@
 	<!-- TOCHeader = Header/Base for index and search -->
     <h2 style="font-weight: bold;font-size: 67px;color: rgba(255,255,255,0.87);">Fates List</h2>
     <p style="font-weight: bold;opacity: 0.82;font-size: 20px;color: rgba(255,255,255,0.87);">{% if type == "bot" %}Find the best bots for your servers.{% elif type == "server" %}Find the best servers personalized based on your interests!{% endif %}</p>
+    <link rel="stylesheet" href="/static/assets/prod/tags.min.css?v=6" media="none" onload="if(media!='all')media='all'"/>
     <div class="is-centered">
     	<form method="GET" action="/search/t">
 		<input type="hidden" name="target_type" value="{{type}}" />
@@ -20,7 +21,7 @@
         {% endif %}
     </div>
    </div>
-   <div class="d-flex flex-wrap justify-content-center align-items-center" style="width: 97%;margin: 0 auto;">
+   <div class="tag-container">
 	{{ tags(tags_fixed) }}
    </div>
    <p></p>

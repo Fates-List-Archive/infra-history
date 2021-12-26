@@ -196,6 +196,7 @@ type AdminOp struct {
 	Server        string                                `json:"server"`        // Slash command server
 	SlashOptions  []*discordgo.ApplicationCommandOption `json:"slash_options"` // Slash command options
 	SlashRaw      bool                                  `json:"slash_raw"`     // Whether or not to add the bot option
+	Critical      bool                                  `json:"critical"`      // Whether or not a command is critical and should be usable without a verification code set
 }
 
 type ServerListCommand struct {

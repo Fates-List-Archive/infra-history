@@ -101,7 +101,11 @@
 				) }}
 				<button class="section btn btn-outline-light" onclick='transferOwnership()'>Transfer</button>
 				<h5 class="white section">Delete Bot</h5>
-				<p class="white info-content"><span class="red">Warning:</span> This <em>cannot</em> be undone and you <em>will</em> lose any perks your bot may have such as certification and any votes your bot may have. Think twice before proceeding as not even staff can revert bot deletions, even if accidental...</p>
+				{{ tip(
+					"This <em>cannot</em> be undone and you <em>will</em> lose any perks your bot may have such as certification and any votes your bot may have. Think twice before proceeding as not even staff can revert bot deletions, even if accidental...", 
+					alert_class="alert-danger tip-red",
+					icon="jam:triangle-danger-f"
+				) }}
 				<button class="btn btn-danger" onclick="deleteBot()">Delete Bot</button>
 			</section>
 			<section id="analytics-tab" class="tabcontent">
@@ -326,9 +330,8 @@
 					"webhook_secret",
 					"Make sure that this is random and secure!"
 				) }}
-				<p class="white info-content">Want to test your webhook? First make sure that <em>you have saved your changes first</em> and then click 'Test Webhook' to see if your bots webhook works!</p>
 				<button class="btn btn-outline-light" style="margin-bottom: 10px;" onclick="voteBot()">Test Webhook</button>
-				{{ tip("Didn't get anything? Make sure you have saved your bot first before clicking Test Webhook. Also check your firewall and network settings as well") }}
+				{{ tip("Didn't get anything? Make sure you have <em>saved</em> your bot first before clicking Test Webhook. Also check your firewall and network settings as well") }}
 			</section>
 			<section id="extras-tab" class="tabcontent">
 				{{ optional() }}
