@@ -46,7 +46,7 @@
     </div>
     <div class="d-flex flex-wrap justify-content-sm-center align-items-sm-center justify-content-md-center justify-content-lg-center" id="tt-1" style="width: 90%;margin: 10px 5%;">
         {% for bot in user.bots %}
-		{% if personal or bot.state in (enums.BotState.verified, enums.BotState.certified) %}
+		{% if personal or bot.state in (enums.BotState.approved, enums.BotState.certified) %}
 			{{ flCard(bot, False, 'bot') }}
 		{% endif %}
 	{% endfor %}

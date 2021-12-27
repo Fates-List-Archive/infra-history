@@ -24,7 +24,7 @@
 			<a href="/{{type}}/{{id}}/invite" class="white banner-decor"><h3 class="text-center white" style="font-weight: bold;" id="{{type}}-name">{{data.user.username}} {% if type == "bot" %}<span style="opacity: 0.65;">({{data.prefix or "/"}})</span>{% endif %}</h3></a>
 			{% if data.system %}
 				<div class="alert alert-info" style="text-align: center; justify-content: center; color: white !important;" role="alert">
-					<strong>This bot is a system bot and was added as a placeholder to avoid malicious use of your bot. If you are the bots owner, please contact Fates List Support to claim the bot. To avoid misinformation and false advertising, the actual owner of the bot is listed in About who may edit their bot if they wish to change anything on it</strong>
+					<strong>This bot is a system bot and was added as a placeholder to avoid malicious use of your bot. If you are the bots owner, please either edit your bot setting System to False if available or contact Fates List Support to claim the bot. To avoid misinformation and false advertising, the actual owner of the bot is listed in About who may edit their bot if they wish to change anything on it</strong>
 				</div>
 			{% endif %}
 			{% if type == "bot" %}

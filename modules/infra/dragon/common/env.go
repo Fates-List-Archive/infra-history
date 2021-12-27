@@ -1,6 +1,8 @@
 package common
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -16,7 +18,10 @@ const version = "2"
 
 // Staff Verification Code (sigh, people don't read staff info anymore)
 func VerificationCode(userId string) string {
-	return "Mistystar"
+	hasher := sha1.New()
+	hasher.Write([]byte("Frostpaw/" + userId))
+	sha := hex.EncodeToString(hasher.Sum(nil))
+	return sha
 }
 
 var (
