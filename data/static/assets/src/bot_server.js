@@ -87,7 +87,7 @@ function commandModal(id) {
 function getCommands(bot_id) {
 	commandsTab = document.querySelector("#commands-tab")
 	error = document.querySelector("#commands-error")
-	jQuery.get({
+	request({
 		url: `/api/bots/${context.id}/commands?lang=${context.site_lang}`,
 		statusCode: {
 			404: function(data) {
@@ -158,15 +158,11 @@ function getCommands(bot_id) {
 setTimeout(function(){getCommands(context.id)}, 700)
 
 function deleteReview(rev_id) {
-	jQuery.ajax({
-		type: 'DELETE',
+	request({
+		method: 'DELETE',
 		url: `/api/users/${context.user_id}/reviews/${rev_id}`,
-		headers: {"Authorization": context.user_token},
-		contentType: 'application/json',
+		userAuth: true,
 		statusCode: {
-			400: function(data) {
-				modalShow("Error", data.responseJSON.reason)
-			},
 			200: function(data) {
 				modalShow("Success!", "Deleted Review Successfully")
 				window.location.refresh()
@@ -194,12 +190,6 @@ function voteReview(rev_id, upvote) {
 			200: function(data) {
 				modalShow("Success!", `Successfully ${vote_type} this review`)
 				setTimeout(() => window.location.reload(), 1500)
-			},
-			404: function(data) {
-				modalShow("404 Not Found", "Review does not exist on our database! Maybe it has been deleted?")
-			},
-			401: function(data) {
-				modalShow("Unauthorized", "We could not authenticate you, make sure you are logged in")
 			}
 		}
 	});
@@ -231,9 +221,6 @@ function newReview(reply, root) {
 			200: function(data) {
 				modalShow("Success", "Successfully created your review!")
 				setTimeout(() => window.location.reload(), 1500)
-			},
-			401: function(data) {
-				modalShow("Unauthorized", "We could not authenticate you, make sure you are logged in")
 			}
 		}
 	})
@@ -243,26 +230,15 @@ function editReview(id) {
 	modalShow("Editting Review", "Please wait while Fates List edits your review...")
 	star_rating = document.querySelector(`#r-${id}-edit-slider`).value
 	review = document.querySelector(`#r-${id}-edit-text`).value
-	jQuery.ajax({
+	request({
 		method: 'PATCH',
 		url: `/api/users/${context.user_id}/reviews/${id}`,
-		data: JSON.stringify({"review": review, "star_rating": star_rating}),
-		headers: {"Authorization": context.user_token},
-		processData: false,
-		contentType: 'application/json',
+		json: JSON.stringify({"review": review, "star_rating": star_rating}),
+		userAuth: true,
 		statusCode: {
 			200: function(data) {
 				modalShow("Success", "Successfully editted your review!")
 				setTimeout(() => window.location.reload(), 1500)
-			},
-			400: function(data) {
-				modalShow("Error", data.responseJSON.reason);
-			},
-			401: function(data) {
-				modalShow("Unauthorized", "We could not authenticate you, make sure you are logged in")
-			},
-			422: function(data) {
-				modalShow("Internal Error", JSON.stringify(data.responseJSON))
 			}
 		}
 	})

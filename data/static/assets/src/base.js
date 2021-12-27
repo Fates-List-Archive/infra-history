@@ -47,7 +47,7 @@ function request(data) {
   }
   if(!data.statusCode[404]) {
     data.statusCode[404] = function() {
-      modalShow("API is down", "Unfortunately, the Fates List API is down right now. Please try again later")
+      modalShow("API is down", "Unfortunately, the Fates List API is down right now (or the resource you are looking for no longer exists). Please try again later")
     }
   }
   if(!data.statusCode[400]) {
@@ -76,14 +76,14 @@ function request(data) {
   }
 
   jQuery.ajax({
-    url: data.url,
+    		url: data.url,
 		method: data.method,
 		dataType: "json",
 		processData: false,
 		contentType: 'application/json',
 		data: JSON.stringify(data.json || data.data),
 		headers: data.headers,
-    statusCode: data.statusCode
+    		statusCode: data.statusCode
   })
 }
 

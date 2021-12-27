@@ -15,7 +15,6 @@ class Vanity(Table, tablename="vanity"):
     redirect = BigInt()
 
 class User(Table, tablename="users"):
-    user_id = BigInt(primary_key = True)
     vote_epoch = Timestamptz(help_text = "When the user has last voted")
     description = Text(default = "This user prefers to be an enigma")
     badges = Array(base_column = Text(), help_text = "Custom User Badges. The ones currently on profiles are special and manually handled without using this column.")
@@ -28,7 +27,6 @@ class User(Table, tablename="users"):
     api_token = Text()
 
 class Bot(Table, tablename="bots"):
-    bot_id = BigInt(primary_key = True)
     username_cached = Text()
     verifier = BigInt()
     state = Integer(choices = enums.BotState, default = 1)
@@ -68,7 +66,7 @@ class BotTag(Table, tablename="bot_tags"):
 
 class Review(Table, tablename="reviews"):
     """Never ever make reviews on your own through this panel"""
-    id = UUID(primary_key = True)
+    id = UUID()
     target_type = Integer(choices=enums.ReviewType)
     target_id = BigInt()
     user_id = ForeignKey(references=User)
