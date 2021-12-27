@@ -1,1 +1,1 @@
-python3.10 -m uvicorn app:app --port 10000 --host 0.0.0.0
+python -m uvicorn app:app --port 10000 --host 0.0.0.0
