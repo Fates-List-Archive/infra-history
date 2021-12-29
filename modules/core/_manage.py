@@ -327,6 +327,23 @@ def site_gensecret():
 
 def site_compilestatic():
     """Compiles all labelled static files"""
+
+    # PurgeCSS on material
+    shutil.rmtree("data/static/assets/src/materiald")
+    Path("data/static/assets/src/materiald").mkdir(exist_ok=True)
+    cmd = ("purgecss --css data/static/assets/src/material.scss "
+    "--content data/templates/*.html data/templates/base/*.html "
+    "--output data/static/assets/src/materiald --safelist fade show modal")
+
+    print("Creating material-slim.css")
+    with Popen(cmd, env=os.environ, shell=True) as proc:
+        proc.wait()
+
+    shutil.copy2(
+        "data/static/assets/src/materiald/material.scss", 
+        "data/static/assets/src/material-slim.scss"
+    )
+
     for src_file in Path("data/static/assets/src").rglob("*.js"):
         out_file = (str(src_file).replace(".js", ".min.js").replace(
             "src/", "prod/").replace("js/", ""))
@@ -363,7 +380,6 @@ def site_compilestatic():
 
             with Popen(cmd, env=os.environ) as proc:
                 proc.wait()
-
 
 def db_backup():
     """Backs up the Fates List database"""

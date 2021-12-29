@@ -97,11 +97,9 @@ async def render_bot(request: Request, bt: BackgroundTasks, bot_id: int, api: bo
         if owner["main"]: _owners.insert(0, owner)
         else: _owners.append(owner)
     owners = _owners
-    bot["description"] = intl_text(bot['description'], request.session.get("site_lang", "default")) 
-    bot["description"] = bleach.clean(ireplacem(constants.long_desc_replace_tuple, bot["description"]), strip=True, tags=[])
+    bot["description"] = bleach.clean(ireplacem(constants.long_desc_replace_tuple, bot["description"]), strip=True, tags=["fl-lang"], attributes={"*": ["code"]})
     if bot["long_description_type"] == enums.LongDescType.markdown_pymarkdown: # If we are using markdown
         bot["long_description"] = emd(markdown.markdown(bot['long_description'], extensions = md_extensions))
-    bot['long_description'] = intl_text(bot['long_description'], request.session.get("site_lang", "default"))
 
 
     def _style_combine(s: str) -> list:
@@ -112,12 +110,12 @@ async def render_bot(request: Request, bt: BackgroundTasks, bot_id: int, api: bo
 
     bot["long_description"] = bleach.clean(
         bot["long_description"], 
-        tags=bleach.sanitizer.ALLOWED_TAGS+["span", "img", "iframe", "style", "p", "br", "center", "div", "h1", "h2", "h3", "h4", "h5", "section", "article"], 
+        tags=bleach.sanitizer.ALLOWED_TAGS+["span", "img", "iframe", "style", "p", "br", "center", "div", "h1", "h2", "h3", "h4", "h5", "section", "article", "fl-lang"], 
         strip=True, 
         attributes=bleach.sanitizer.ALLOWED_ATTRIBUTES | {
             "iframe": ["src", "height", "width"], 
             "img": ["src", "alt", "width", "height", "crossorigin", "referrerpolicy", "sizes", "srcset"],
-            "*": ["id", "class", "style", "data-src", "data-background-image", "data-background-image-set", "data-background-delimiter", "data-icon", "data-inline", "data-height"]
+            "*": ["id", "class", "style", "data-src", "data-background-image", "data-background-image-set", "data-background-delimiter", "data-icon", "data-inline", "data-height", "code"]
         },
         styles=["color", "background", "background-color", "font-weight", "font-size"] + _style_combine("margin") + _style_combine("padding")
     )

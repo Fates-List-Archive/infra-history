@@ -20,7 +20,7 @@
 	<div id="{{type}}-content" class="bot-card-banner lozad" data-background-image="{{data.banner}}">
 		<div class="d-flex d-xl-flex flex-column align-items-center align-items-xl-center">
 
-			<img style="border-radius: 50%; width: 120px;" class="lozad" data-src="{{data.user.avatar}}"$ id="{{type}}-avatar" alt="{{data.user.username}}'s avatar">
+			<img style="border-radius: 50%; width: 120px;" loading="lazy" src="{{data.user.avatar.replace(".png", ".webp").replace("width=", "width=120px")}}" id="{{type}}-avatar" alt="{{data.user.username}}'s avatar">
 			<a href="/{{type}}/{{id}}/invite" class="white banner-decor"><h3 class="text-center white" style="font-weight: bold;" id="{{type}}-name">{{data.user.username}} {% if type == "bot" %}<span style="opacity: 0.65;">({{data.prefix or "/"}})</span>{% endif %}</h3></a>
 			{% if data.system %}
 				<div class="alert alert-info" style="text-align: center; justify-content: center; color: white !important;" role="alert">
@@ -54,7 +54,7 @@
 			<strong>This bot is primarily NSFW (Not Safe For Work), as such lots of functionality will need a NSFW channel. If the bot allows NSFW commands in non-NSFW channels, please report it on our support server</strong>
 		</div>
 	{% endif %}
-	<p class="banner-decor white" style="font-weight: bold; font-size: 18px;" id="{{type}}-description">{{data.description}}</p>
+	<p class="banner-decor white" style="font-size: 18px;" id="{{type}}-description">{{ intl_text(data.description, site_lang).replace("p>", "span>")|safe }}</p>
 	</div>
 	<div class="d-flex justify-content-center align-items-center flex-wrap" style="width: 80%;margin: 0 auto;max-width: 1000px; margin-bottom: 3px !important;" id="{{type}}-buttons">
 		{% if data.state not in (enums.BotState.pending, enums.BotState.under_review, enums.BotState.denied, enums.BotState.banned) %}
@@ -108,7 +108,7 @@
 			  <button id="about-tab-button" class="tablinks" onclick="openf(event, 'about', this, false)">About</button>
 		</div>
 		<section id="long-description-tab" class='tabcontent tabdesign'>
-			<article id="long-description"> {% if data.long_description_type in (enums.LongDescType.html, enums.LongDescType.markdown_pymarkdown) %}{{data.long_description|safe}}{% endif %}</article> <!-- To avoid users seeing broken pages, don't add to site is markdown is used -->
+			<article id="long-description"> {% if data.long_description_type in (enums.LongDescType.html, enums.LongDescType.markdown_pymarkdown) %}{{ intl_text(data.long_description, site_lang)|safe}}{% endif %}</article> <!-- To avoid users seeing broken pages, don't add to site is markdown is used -->
 			{% if data.long_description_type == enums.LongDescType.markdown_marked %}
        				<!-- Handle markdown -->
 				<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>

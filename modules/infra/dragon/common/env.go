@@ -1,7 +1,6 @@
 package common
 
 import (
-	"crypto/sha1"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fastjson"
+	"golang.org/x/crypto/sha3"
 )
 
 // Put all env variables here
@@ -18,8 +18,8 @@ const version = "2"
 
 // Staff Verification Code (sigh, people don't read staff info anymore)
 func VerificationCode(userId string) string {
-	hasher := sha1.New()
-	hasher.Write([]byte("Frostpaw/" + userId))
+	hasher := sha3.New512()
+	hasher.Write([]byte("Fidgetflake/" + userId))
 	sha := hex.EncodeToString(hasher.Sum(nil))
 	return sha
 }

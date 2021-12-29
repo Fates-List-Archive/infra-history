@@ -17,8 +17,8 @@ class templates():
         db = worker_session.postgres
         status = arg_dict.get("status_code")
         if "user_id" in request.session.keys():
-            user_data = await db.fetchrow("SELECT state, user_css FROM users WHERE user_id = $1", int(request.session["user_id"]))
-            state, arg_dict["user_css"] = user_data["state"], user_data["user_css"]
+            user_data = await db.fetchrow("SELECT state, user_css, api_token, site_lang FROM users WHERE user_id = $1", int(request.session["user_id"]))
+            state, arg_dict["user_css"], arg_dict["user_token"], arg_dict["site_lang"] = user_data["state"], user_data["user_css"], user_data["api_token"], user_data["site_lang"]
             if (state == enums.UserState.global_ban) and not_error:
                 ban_type = enums.UserState(state).__doc__
                 return await templates.e(request, f"You have been {ban_type} banned from Fates List<br/>", status_code = 403)
@@ -27,13 +27,9 @@ class templates():
             arg_dict["avatar"] = request.session.get("avatar")
             arg_dict["username"] = request.session.get("username")
             arg_dict["user_id"] = int(request.session.get("user_id"))
-            if request.session.get("user_id"):
-                arg_dict["user_token"] = await db.fetchval("SELECT api_token FROM users WHERE user_id = $1", arg_dict["user_id"]) 
-            arg_dict["intl_text"] = intl_text # This comes from lynxfall.utils.string
-            arg_dict["site_lang"] = request.session.get("site_lang", "default")
-            arg_dict["scopes"] = request.session.get("scopes")
         else:
             arg_dict["staff"] = [False]
+            arg_dict["site_lang"] = "en"
         arg_dict["site_url"] = site_url
         arg_dict["data"] = arg_dict.get("data")
         arg_dict["path"] = request.url.path
@@ -43,7 +39,7 @@ class templates():
         arg_dict["ireplacem"] = ireplacem
         arg_dict["human_format"] = human_format
         arg_dict["server_bot_invite"] = server_bot_invite
-
+        arg_dict["intl_text"] = intl_text # This comes from lynxfall.utils.string
         base_context = {
             "user_id": str(arg_dict["user_id"]) if "user_id" in arg_dict.keys() else None,
             "user_token": arg_dict.get("user_token"),

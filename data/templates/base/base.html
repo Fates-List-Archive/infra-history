@@ -9,14 +9,6 @@
 		<p>This site needs JavaScript enabled in order to work properly. Please disable NoScript before trying to use this site</p>
 	</div>
 </noscript>
-<script>
-;(function () {
-    var src = '//cdn.jsdelivr.net/npm/eruda';
-    if (!/eruda=true/.test(window.location) && localStorage.getItem('active-eruda') != 'true') return;
-	    document.write('<scr' + 'ipt src="' + src + '"></scr' + 'ipt>');
-	        document.write('<scr' + 'ipt>eruda.init();</scr' + 'ipt>');
-		})();
-</script>
 <script src="https://code.iconify.design/1/1.0.7/iconify.min.js"></script>
 {% if not botp %}
 	<!-- Primary Meta Tags -->
@@ -29,7 +21,7 @@
 	<meta name="description" content="{{data.description}}">
 {% endif %}
 
-<meta name="keywords" content="discord bot list, fateslist, fates list, bot list, discord list, list of bost, discord bots, fateslist bots, fates list">
+<meta name="keywords" content="discord bot, discord bot list, fateslist, fates list, bot list, discord list, list of bost, discord bots, fateslist bots, fates list">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="language" content="English">
 
@@ -44,7 +36,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://fateslist.xyz/bot/{{id}}">
 <meta property="og:title" content="Discover {{data.user.username}} on FatesList!">
-<meta property="og:description" content="{{data.description}}">
+<meta property="og:description" content="{{ intl_text(data.description, "en")|safe }}">
 <meta property="og:image" content="{{data.user.avatar}}">
 {% endif %}
 <!-- Twitter -->
@@ -71,13 +63,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <!-- Add Material font (Roboto) and Material icon as needed -->
-    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend+Deca&display=swap" rel="stylesheet" media="none" onload="if(media!='all')media='all'">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet" media="none" onload="if(media!='all')media='all'">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net/" crossorigin>
+    <link href="/static/assets/prod/lexend-deca.min.css" rel="stylesheet" />
+    <link href="/static/assets/prod/material-icons.min.css" rel="stylesheet" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net/">
     <link rel="shortcut icon" href="/static/favicon.ico"/>
     <!-- Material CSS -->
-    <link href="https://cdn.jsdelivr.net/gh/djibe/material@4.6.0-rc.2/css/material.min.css" rel="stylesheet" defer />
+    <!--<link href="https://cdn.jsdelivr.net/gh/djibe/material@4.6.0-rc.2/css/material.min.css" rel="stylesheet" defer />-->
+	<link href="/static/assets/prod/material-slim.min.css?v=3" rel="stylesheet"/>
     <!-- Base Styles -->
     <link href="/static/assets/prod/base.min.css?v=105" rel="stylesheet">
 </head>
