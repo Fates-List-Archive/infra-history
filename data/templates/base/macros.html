@@ -9,7 +9,7 @@
 	            <span class="iconify bot-card-cert" data-icon="fa-solid:certificate" data-inline="false" data-height="3em"></span>
             {% endif %}
             <a href="/{{type}}/{{id}}" class="bot-card-view-link">
-		    <img alt="Bot Avatar" class="lozad bot-card-avatar" data-placeholder-background="black" data-src="{% if not rand %}{{data.user.avatar}}{% endif %}" width="30%"/>
+		    <img alt="Bot Avatar" class="lozad bot-card-avatar" data-placeholder-background="black" data-src="{% if not rand %}{{data.user.avatar.replace('.png', '.webp')}}{% endif %}" width="30%" height="65%"/>
             </a>
         </div>
         <div>
