@@ -331,7 +331,7 @@ def site_compilestatic():
     # PurgeCSS on material
     shutil.rmtree("data/static/assets/src/materiald")
     Path("data/static/assets/src/materiald").mkdir(exist_ok=True)
-    cmd = ("purgecss --css data/static/assets/src/material.scss "
+    cmd = ("purgecss --css data/static/assets/src/material.css "
     "--content data/templates/*.html data/templates/base/*.html "
     "--output data/static/assets/src/materiald --safelist fade show modal")
 
@@ -340,7 +340,7 @@ def site_compilestatic():
         proc.wait()
 
     shutil.copy2(
-        "data/static/assets/src/materiald/material.scss", 
+        "data/static/assets/src/materiald/material.css", 
         "data/static/assets/src/material-slim.scss"
     )
 
