@@ -178,6 +178,7 @@ async def delete_bot(request: Request, user_id: int, bot_id: int):
     await redis_ipc_new(redis_db, "SENDMSG", msg=msg, timeout=None)
 
     await bot_add_event(bot_id, enums.APIEvents.bot_delete, {"user": user_id})    
+    await redis_db.delete(f"botpagecache:{bot_id}")
     return api_success(status_code = 202)
 
 @router.patch(

@@ -53,112 +53,141 @@ def gen_owner_html(owners_lst: tuple):
 async def render_bot(request: Request, bt: BackgroundTasks, bot_id: int, api: bool, rev_page: int = 1):
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
+    redis = worker_session.redis
     if bot_id >= 9223372036854775807: # Max size of bigint
         return abort(404)
-
-    bot = await db.fetchrow(
-        """SELECT bot_id, prefix, shard_count, state, description, bot_library AS library, 
-        website, votes, guild_count, discord AS support, banner_page AS banner, github, features, 
-        invite_amount, css, long_description_type, long_description, donate, privacy_policy, 
-        nsfw, keep_banner_decor, flags, last_stats_post, created_at FROM bots WHERE bot_id = $1 OR client_id = $1""", 
-        bot_id
-    )
-    if not bot:
-        return abort(404)
-    bot_id = bot["bot_id"]
-    resources = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", bot_id, enums.ReviewType.bot.value)
-    tags = await db.fetch("SELECT tag FROM bot_tags WHERE bot_id = $1", bot_id)
-    if not tags:
-        return abort(404)
-
-
-    bot = dict(bot) | {"tags": [tag["tag"] for tag in tags], "resources": resources}
     
-    # Ensure bot banner_page is disable if not approved or certified
-    if bot["state"] not in (enums.BotState.approved, enums.BotState.certified):
-        bot["banner"] = None
+    BOT_CACHE_VER = 1
 
-    # Get all bot owners
-    if flags_check(bot["flags"], enums.BotFlag.system):
-        owners = await db.fetch("SELECT DISTINCT ON (owner) owner, main FROM bot_owner WHERE bot_id = $1 AND main = true", bot_id)
-        bot["system"] = True
+    bot_cache = await redis.get(f"botpagecache:{bot_id}")
+    use_cache = True
+    if not bot_cache:
+        use_cache = False
     else:
-        owners = await db.fetch(
-            "SELECT DISTINCT ON (owner) owner, main FROM bot_owner WHERE bot_id = $1 ORDER BY owner, main DESC", 
+        bot_cache = orjson.loads(bot_cache)
+        if bot_cache.get("fl_cache_ver") != BOT_CACHE_VER:
+            use_cache = False
+    
+    if not use_cache:
+        logger.info("Using cache for new bot request")
+        bot = await db.fetchrow(
+            """SELECT bot_id, prefix, shard_count, state, description, bot_library AS library, 
+            website, votes, guild_count, discord AS support, banner_page AS banner, github, features, 
+            invite_amount, css, long_description_type, long_description, donate, privacy_policy, 
+            nsfw, keep_banner_decor, flags, last_stats_post, created_at FROM bots WHERE bot_id = $1 OR client_id = $1""", 
             bot_id
         )
-        bot["system"] = False
-    _owners = []
-    for owner in owners:
-        if owner["main"]: _owners.insert(0, owner)
-        else: _owners.append(owner)
-    owners = _owners
-    bot["description"] = bleach.clean(ireplacem(constants.long_desc_replace_tuple, bot["description"]), strip=True, tags=["fl-lang"], attributes={"*": ["code"]})
-    if bot["long_description_type"] == enums.LongDescType.markdown_pymarkdown: # If we are using markdown
-        bot["long_description"] = emd(markdown.markdown(bot['long_description'], extensions = md_extensions))
+        if not bot:
+            return abort(404)
+        bot_id = bot["bot_id"]
+        _resources = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", bot_id, enums.ReviewType.bot.value)
+        resources = []
+
+        # Bypass for UUID issue
+        for resource in _resources:
+            resource_dat = dict(resource)
+            resource_dat["id"] = str(resource_dat["id"])
+            resources.append(resource_dat)
+
+        tags = await db.fetch("SELECT tag FROM bot_tags WHERE bot_id = $1", bot_id)
+        if not tags:
+            return abort(404)
+
+        bot = dict(bot) | {"tags": [tag["tag"] for tag in tags], "resources": resources}
+        
+        # Ensure bot banner_page is disable if not approved or certified
+        if bot["state"] not in (enums.BotState.approved, enums.BotState.certified):
+            bot["banner"] = None
+
+        # Get all bot owners
+        if flags_check(bot["flags"], enums.BotFlag.system):
+            owners = await db.fetch("SELECT DISTINCT ON (owner) owner, main FROM bot_owner WHERE bot_id = $1 AND main = true", bot_id)
+            bot["system"] = True
+        else:
+            owners = await db.fetch(
+                "SELECT DISTINCT ON (owner) owner, main FROM bot_owner WHERE bot_id = $1 ORDER BY owner, main DESC", 
+                bot_id
+            )
+            bot["system"] = False
+        _owners = []
+        for owner in owners:
+            if owner["main"]: _owners.insert(0, owner)
+            else: _owners.append(owner)
+        owners = _owners
+        bot["description"] = bleach.clean(ireplacem(constants.long_desc_replace_tuple, bot["description"]), strip=True, tags=["fl-lang"], attributes={"*": ["code"]})
+        if bot["long_description_type"] == enums.LongDescType.markdown_pymarkdown: # If we are using markdown
+            bot["long_description"] = emd(markdown.markdown(bot['long_description'], extensions = md_extensions))
 
 
-    def _style_combine(s: str) -> list:
-        """
-        Given margin/padding, this returns margin, margin-left, margin-right, margin-top, margin-bottom etc.
-        """
-        return [s, s+"-left", s+"-right", s+"-top", s+"-bottom"]
+        def _style_combine(s: str) -> list:
+            """
+            Given margin/padding, this returns margin, margin-left, margin-right, margin-top, margin-bottom etc.
+            """
+            return [s, s+"-left", s+"-right", s+"-top", s+"-bottom"]
 
-    bot["long_description"] = bleach.clean(
-        bot["long_description"], 
-        tags=bleach.sanitizer.ALLOWED_TAGS+["span", "img", "iframe", "style", "p", "br", "center", "div", "h1", "h2", "h3", "h4", "h5", "section", "article", "fl-lang"], 
-        strip=True, 
-        attributes=bleach.sanitizer.ALLOWED_ATTRIBUTES | {
-            "iframe": ["src", "height", "width"], 
-            "img": ["src", "alt", "width", "height", "crossorigin", "referrerpolicy", "sizes", "srcset"],
-            "*": ["id", "class", "style", "data-src", "data-background-image", "data-background-image-set", "data-background-delimiter", "data-icon", "data-inline", "data-height", "code"]
-        },
-        styles=["color", "background", "background-color", "font-weight", "font-size"] + _style_combine("margin") + _style_combine("padding")
-    )
+        bot["long_description"] = bleach.clean(
+            bot["long_description"], 
+            tags=bleach.sanitizer.ALLOWED_TAGS+["span", "img", "iframe", "style", "p", "br", "center", "div", "h1", "h2", "h3", "h4", "h5", "section", "article", "fl-lang"], 
+            strip=True, 
+            attributes=bleach.sanitizer.ALLOWED_ATTRIBUTES | {
+                "iframe": ["src", "height", "width"], 
+                "img": ["src", "alt", "width", "height", "crossorigin", "referrerpolicy", "sizes", "srcset"],
+                "*": ["id", "class", "style", "data-src", "data-background-image", "data-background-image-set", "data-background-delimiter", "data-icon", "data-inline", "data-height", "code"]
+            },
+            styles=["color", "background", "background-color", "font-weight", "font-size"] + _style_combine("margin") + _style_combine("padding")
+        )
 
-    # Take the h1...h5 anad drop it one lower and bypass peoples stupidity 
-    # and some nice patches to the site to improve accessibility
-    bot["long_description"] = ireplacem(constants.long_desc_replace_tuple, bot["long_description"])
+        # Take the h1...h5 anad drop it one lower and bypass peoples stupidity 
+        # and some nice patches to the site to improve accessibility
+        bot["long_description"] = ireplacem(constants.long_desc_replace_tuple, bot["long_description"])
 
-    if bot["banner"]:
-        bot["banner"] = bot["banner"].replace(" ", "%20").replace("\n", "")
+        if bot["banner"]:
+            bot["banner"] = bot["banner"].replace(" ", "%20").replace("\n", "")
 
-    bot_info = await get_bot(bot_id, worker_session = worker_session)
-    
-    owners_lst = [
-        (await get_user(obj["owner"], user_only = True, worker_session = worker_session)) 
-        for obj in owners if obj["owner"] is not None
-    ]
-    owners_html = gen_owner_html(owners_lst)
-    if bot["features"] is not None:
-        bot["features"] = "<br/>".join([f"<a class='long-desc-link' href='/feature/{feature}'>{features[feature]['name']}</a>" for feature in bot["features"]])
+        bot_info = await get_bot(bot_id, worker_session = worker_session)
+        
+        owners_lst = [
+            (await get_user(obj["owner"], user_only = True, worker_session = worker_session)) 
+            for obj in owners if obj["owner"] is not None
+        ]
+        owners_html = gen_owner_html(owners_lst)
+        if bot["features"] is not None:
+            bot["features"] = "<br/>".join([f"<a class='long-desc-link' href='/feature/{feature}'>{features[feature]['name']}</a>" for feature in bot["features"]])
 
-    bot_extra = {
-        "owners_html": owners_html, 
-        "user": bot_info, 
-    }
-    bot |= bot_extra
-    
-    if not bot_info:
-        return await templates.e(request, "Bot Not Found")
-    
-    _tags_fixed_bot = [tag for tag in tags_fixed if tag["id"] in bot["tags"]]
+        bot_extra = {
+            "owners_html": owners_html, 
+            "user": bot_info, 
+        }
+        bot |= bot_extra
+        
+        if not bot_info:
+            return await templates.e(request, "Bot Not Found")
+        
+        _tags_fixed_bot = [tag for tag in tags_fixed if tag["id"] in bot["tags"]]
+
+        bot_cache = {
+            "fl_cache_ver": BOT_CACHE_VER,
+            "data": bot,
+            "tags_fixed": _tags_fixed_bot,
+        }
+
+        # Only cache for bots with more than 1000 votes
+        if bot["votes"] > 1000:
+            await redis.set(f"botpagecache:{bot_id}", orjson.dumps(bot_cache), ex=60*60*4)
+
     bt.add_task(add_ws_event, bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}})
     
     context = {
         "id": str(bot_id),
-        "bot_token": "",
         "type": "bot",
         "replace_list": constants.long_desc_replace_tuple
     }
     
-    data = {
-        "data": bot, 
+    data = bot_cache | {
         "type": "bot", 
         "id": bot_id, 
-        "tags_fixed": _tags_fixed_bot, 
-        "promos": await get_promotions(bot_id),
         "botp": True,
+        "promos": await get_promotions(bot_id),
     }
 
     return await templates.TemplateResponse("bot_server.html", {"request": request, "replace_last": replace_last} | data, context = context)

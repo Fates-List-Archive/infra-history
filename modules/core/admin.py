@@ -139,6 +139,8 @@ class BotActions():
         if self.webhook_secret and len(self.webhook_secret) < 8:
             return "Your webhook secret must be at least 8 characters long"
 
+        await redis_db.delete(f"botpagecache:{self.bot_id}")
+
     async def edit_check(self):
         """Perform extended checks for editing bots"""
         check = await self.base_check("edit") # Initial base checks

@@ -37,6 +37,7 @@ async def add_resources(request: Request, target_id: int, target_type: enums.Rev
     """
     Adds a resource to your bot/guild. If it already exists, this will delete and readd the resource so it can be used to edit already existing resources
     """
+    await redis_db.delete(f"botpagecache:{target_id}")
     ids = []
     for resource in res.resources:
         if not resource.resource_link.startswith("https://"):
@@ -70,6 +71,7 @@ async def delete_resources(request: Request, target_id: int, target_type: enums.
     If ids/names is provided, all resources with said ids/names will be deleted (this can be used together). 
     If nuke is provided, then all resources will deleted. Ids/names and nuke cannot be used at the same time
     """
+    await redis_db.delete(f"botpagecache:{target_id}")
     if resources.nuke:
         await db.execute("DELETE FROM resources WHERE target_id = $1 AND target_type = $2", target_id, target_type)
         if target_type == enums.ReviewType.bot:

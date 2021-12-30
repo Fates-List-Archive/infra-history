@@ -272,6 +272,10 @@ func SendIResponseEphemeral(discord *discordgo.Session, i *discordgo.Interaction
 
 func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, content string, clean bool, flags uint64, largeContent []string, embeds []*discordgo.MessageEmbed, tries int) {
 	// Sends a response to a interaction using iResponseMap as followup if needed. If clean is set, iResponseMap is cleaned out
+	if tries > 10 {
+		return
+	}
+
 	if len(content) > 2000 {
 		log.Info("Sending large content of length: " + strconv.Itoa(len(content)))
 		var offset int = 0
@@ -342,7 +346,7 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 			})
 			if err != nil {
 				log.Error(err)
-				sendIResponseComplex(discord, i, "Something happened!\nError: "+err.Error(), false, flags, []string{}, nil, 0)
+				sendIResponseComplex(discord, i, "Something happened!\nError: "+err.Error(), false, flags, []string{}, nil, tries+1)
 			}
 		}
 	}
