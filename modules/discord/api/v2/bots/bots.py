@@ -1,4 +1,5 @@
-from lxml.html.clean import Cleaner
+import bleach
+import markdown
 
 from modules.core import *
 from lynxfall.utils.string import human_format
@@ -212,6 +213,159 @@ async def fetch_bot(
 
     return api_ret
 
+@router.get("/{bot_id}/raw")
+async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks):
+    """
+    Internally used by sunbeam to render bot pages.
+
+    While the data you get from this API is sanitized because
+    it is actually rendered for users, it is *not* recommended
+    to rely or use this API outside of internal use cases. Data
+    is unstructured and will constantly change. **This API is not
+    backwards compatible whatsoever**
+
+    Additionally, this API *will* trigger a WS View Event.
+
+    This API will also be heavily monitored. If we find you attempting
+    to abuse this API endpoint or doing anything out of the ordinary with
+    it, you may be IP or user banned. Calling it once or twice is OK but
+    automating it is not. Use the Get Bot API instead for automation.
+
+    **This API is only documented because it's in our FastAPI backend and
+    to be complete**
+    """
+    worker_session = request.app.state.worker_session
+    db = worker_session.postgres
+    redis = worker_session.redis
+    if bot_id >= 9223372036854775807: # Max size of bigint
+        return abort(404)
+    
+    BOT_CACHE_VER = 4
+
+    bot_cache = await redis.get(f"botpagecache-sunbeam:{bot_id}")
+    use_cache = True
+    if not bot_cache:
+        use_cache = False
+    else:
+        bot_cache = orjson.loads(bot_cache)
+        if bot_cache.get("fl_cache_ver") != BOT_CACHE_VER:
+            use_cache = False
+    
+    if not use_cache:
+        logger.info("Using cache for new bot request")
+        bot = await db.fetchrow(
+            """SELECT bot_id, prefix, shard_count, state, description, bot_library AS library, 
+            website, votes, guild_count, discord AS support, banner_page AS banner, github, features, 
+            invite_amount, css, long_description_type, long_description, donate, privacy_policy, 
+            nsfw, keep_banner_decor, flags, last_stats_post, created_at FROM bots WHERE bot_id = $1 OR client_id = $1""", 
+            bot_id
+        )
+        if not bot:
+            return abort(404)
+
+        bot_id = bot["bot_id"]
+        _resources = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", bot_id, enums.ReviewType.bot.value)
+        resources = []
+
+        # Bypass for UUID issue
+        for resource in _resources:
+            resource_dat = dict(resource)
+            resource_dat["id"] = str(resource_dat["id"])
+            resources.append(resource_dat)
+
+        tags = await db.fetch("SELECT tag FROM bot_tags WHERE bot_id = $1", bot_id)
+        if not tags:
+            return abort(404)
+
+        bot = dict(bot) | {"tags": [tag["tag"] for tag in tags], "resources": resources}
+        
+        # Ensure bot banner_page is disable if not approved or certified
+        if bot["state"] not in (enums.BotState.approved, enums.BotState.certified):
+            bot["banner"] = None
+
+        # Get all bot owners
+        if flags_check(bot["flags"], enums.BotFlag.system):
+            owners = await db.fetch("SELECT DISTINCT ON (owner) owner, main FROM bot_owner WHERE bot_id = $1 AND main = true", bot_id)
+            bot["system"] = True
+        else:
+            owners = await db.fetch(
+                "SELECT DISTINCT ON (owner) owner, main FROM bot_owner WHERE bot_id = $1 ORDER BY owner, main DESC", 
+                bot_id
+            )
+            bot["system"] = False
+        _owners = []
+        for owner in owners:
+            if owner["main"]: _owners.insert(0, owner)
+            else: _owners.append(owner)
+        owners = _owners
+        bot["description"] = bleach.clean(ireplacem(constants.long_desc_replace_tuple, bot["description"]), strip=True, tags=["fl-lang"], attributes={"*": ["code"]})
+        if bot["long_description_type"] == enums.LongDescType.markdown_pymarkdown: # If we are using markdown
+            bot["long_description"] = emd(markdown.markdown(bot['long_description'], extensions = md_extensions))
+
+
+        def _style_combine(s: str) -> list:
+            """
+            Given margin/padding, this returns margin, margin-left, margin-right, margin-top, margin-bottom etc.
+            """
+            return [s, s+"-left", s+"-right", s+"-top", s+"-bottom"]
+
+        bot["long_description"] = bleach.clean(
+            bot["long_description"], 
+            tags=bleach.sanitizer.ALLOWED_TAGS+["span", "img", "iframe", "style", "p", "br", "center", "div", "h1", "h2", "h3", "h4", "h5", "section", "article", "fl-lang"], 
+            strip=True, 
+            attributes=bleach.sanitizer.ALLOWED_ATTRIBUTES | {
+                "iframe": ["src", "height", "width"], 
+                "img": ["src", "alt", "width", "height", "crossorigin", "referrerpolicy", "sizes", "srcset"],
+                "*": ["id", "class", "style", "data-src", "data-background-image", "data-background-image-set", "data-background-delimiter", "data-icon", "data-inline", "data-height", "code"]
+            },
+            styles=["color", "background", "background-color", "font-weight", "font-size"] + _style_combine("margin") + _style_combine("padding")
+        )
+
+        # Take the h1...h5 anad drop it one lower and bypass peoples stupidity 
+        # and some nice patches to the site to improve accessibility
+        bot["long_description"] = ireplacem(constants.long_desc_replace_tuple, bot["long_description"])
+
+        if bot["banner"]:
+            bot["banner"] = bot["banner"].replace(" ", "%20").replace("\n", "")
+
+        bot_info = await get_bot(bot_id, worker_session = worker_session)
+        
+        owners_lst = [
+            {
+                "user": await get_user(obj["owner"], worker_session = worker_session),
+                "main": obj["main"]
+            }
+            for obj in owners if obj["owner"] is not None
+        ]
+
+        bot_extra = {
+            "owners": owners_lst, 
+            "user": bot_info, 
+        }
+        bot |= bot_extra
+        
+        if not bot_info:
+            return abort(404)
+        
+        bot["tags"] = [tag for tag in tags_fixed if tag["id"] in bot["tags"]]
+
+        bot_cache = {
+            "fl_cache_ver": BOT_CACHE_VER,
+            "data": bot,
+        }
+
+        # Only cache for bots with more than 1000 votes
+        if bot["votes"] > 1000:
+            await redis.set(f"botpagecache-sunbeam:{bot_id}", orjson.dumps(bot_cache), ex=60*60*4)
+
+    bt.add_task(add_ws_event, bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}})
+        
+    data = bot_cache | {
+        "type": "bot", 
+        "promos": await get_promotions(bot_id),
+        "replace_list": constants.long_desc_replace_tuple
+    }
+    return data
 
 @router.head("/{bot_id}", operation_id="bot_exists")
 async def bot_exists(request: Request, bot_id: int):
