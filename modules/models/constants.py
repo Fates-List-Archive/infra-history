@@ -15,3 +15,8 @@ long_desc_replace_tuple = (
     ('document.ge', ''),
     ("iframe", "iframe sandbox='allow-scripts'")
 )
+
+long_desc_replace_tuple_sunbeam = (
+    ("iframe", "iframe sandbox='allow-scripts'"),
+    ("<!DOCTYPE", ""),
+)

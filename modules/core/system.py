@@ -149,6 +149,7 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         acam = "Access-Control-Allow-Methods"
 
         response.headers[acao] = origin if origin else "*"
+        response.headers["Access-Control-Allow-Headers"] = "Frostpaw"
         
         if is_api and origin:
             response.headers[acac] = "true"
@@ -158,7 +159,7 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         response.headers[acam] = self.cors_allowed
         if response.status_code == 405:
             if request.method == "OPTIONS" and is_api:
-                response.status_code = 204
+                response.status_code = 200
                 response.headers["Allow"] = self.cors_allowed
        
         return response if response else PlainTextResponse("Something went wrong!")

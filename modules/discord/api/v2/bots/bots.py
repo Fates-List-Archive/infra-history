@@ -213,8 +213,8 @@ async def fetch_bot(
 
     return api_ret
 
-@router.get("/{bot_id}/raw")
-async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks):
+@router.get("/{bot_id}/_sunbeam")
+async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang: str = "en"):
     """
     Internally used by sunbeam to render bot pages.
 
@@ -226,6 +226,9 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks):
 
     Additionally, this API *will* trigger a WS View Event.
 
+    To protect against scraping, this endpoint requires a proper
+    Frostpaw header to be set.
+
     This API will also be heavily monitored. If we find you attempting
     to abuse this API endpoint or doing anything out of the ordinary with
     it, you may be IP or user banned. Calling it once or twice is OK but
@@ -234,15 +237,18 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks):
     **This API is only documented because it's in our FastAPI backend and
     to be complete**
     """
+    if not request.headers.get("Frostpaw"):
+        return api_error("You may not call this API without the Frostpaw header set")
+
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
     redis = worker_session.redis
     if bot_id >= 9223372036854775807: # Max size of bigint
         return abort(404)
     
-    BOT_CACHE_VER = 4
+    BOT_CACHE_VER = 7
 
-    bot_cache = await redis.get(f"botpagecache-sunbeam:{bot_id}")
+    bot_cache = await redis.get(f"botpagecache-sunbeam:{bot_id}:{lang}")
     use_cache = True
     if not bot_cache:
         use_cache = False
@@ -298,10 +304,9 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks):
             if owner["main"]: _owners.insert(0, owner)
             else: _owners.append(owner)
         owners = _owners
-        bot["description"] = bleach.clean(ireplacem(constants.long_desc_replace_tuple, bot["description"]), strip=True, tags=["fl-lang"], attributes={"*": ["code"]})
+        bot["description"] = bleach.clean(ireplacem(constants.long_desc_replace_tuple_sunbeam, intl_text(bot["description"], lang)), strip=True, tags=["strong", "em"])
         if bot["long_description_type"] == enums.LongDescType.markdown_pymarkdown: # If we are using markdown
             bot["long_description"] = emd(markdown.markdown(bot['long_description'], extensions = md_extensions))
-
 
         def _style_combine(s: str) -> list:
             """
@@ -321,9 +326,10 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks):
             styles=["color", "background", "background-color", "font-weight", "font-size"] + _style_combine("margin") + _style_combine("padding")
         )
 
-        # Take the h1...h5 anad drop it one lower and bypass peoples stupidity 
-        # and some nice patches to the site to improve accessibility
-        bot["long_description"] = ireplacem(constants.long_desc_replace_tuple, bot["long_description"])
+        bot["long_description"] = intl_text(bot["long_description"], lang)
+
+        # Some nice patches to the long descriptions
+        bot["long_description"] = ireplacem(constants.long_desc_replace_tuple_sunbeam, bot["long_description"])
 
         if bot["banner"]:
             bot["banner"] = bot["banner"].replace(" ", "%20").replace("\n", "")
@@ -356,16 +362,48 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks):
 
         # Only cache for bots with more than 1000 votes
         if bot["votes"] > 1000:
-            await redis.set(f"botpagecache-sunbeam:{bot_id}", orjson.dumps(bot_cache), ex=60*60*4)
+            await redis.set(f"botpagecache-sunbeam:{bot_id}:{lang}", orjson.dumps(bot_cache), ex=60*60*4)
 
     bt.add_task(add_ws_event, bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}})
         
     data = bot_cache | {
         "type": "bot", 
         "promos": await get_promotions(bot_id),
-        "replace_list": constants.long_desc_replace_tuple
+        "replace_list": constants.long_desc_replace_tuple_sunbeam
     }
     return data
+
+@router.get("/{bot_id}/_sunbeam/invite")
+async def get_bot_invite(request: Request, bot_id: int, user_id: int = 0):
+    """
+    Internally used by sunbeam for inviting users.
+
+    While the data you get from this API is sanitized because
+    it is actually rendered for users, it is *not* recommended
+    to rely or use this API outside of internal use cases. Data
+    is unstructured and will constantly change. **This API is not
+    backwards compatible whatsoever**
+
+    Additionally, this API *will* trigger a WS Invite Event.
+
+    To protect against scraping, this endpoint requires a proper
+    Frostpaw header to be set.
+
+    This API will also be heavily monitored. If we find you attempting
+    to abuse this API endpoint or doing anything out of the ordinary with
+    it, you may be IP or user banned. Calling it once or twice is OK but
+    automating it is not. Use the Get Bot API instead for automation.
+
+    **This API is only documented because it's in our FastAPI backend and
+    to be complete**
+    """
+    if not request.headers.get("Frostpaw"):
+        return api_error("You may not call this API without the Frostpaw header set")
+    invite = await invite_bot(bot_id, user_id = user_id)
+    if invite is None:
+        return abort(404)
+    return {"invite": invite}
+
 
 @router.head("/{bot_id}", operation_id="bot_exists")
 async def bot_exists(request: Request, bot_id: int):
