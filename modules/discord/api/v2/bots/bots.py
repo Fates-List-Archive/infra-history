@@ -102,7 +102,7 @@ async def fetch_random_bot(request: Request, bot_id: int, lang: str = "default")
     bot_obj = await get_bot(random_unp["bot_id"], worker_session = request.app.state.worker_session)
     if bot_obj is None or bot_obj["disc"] == "0000":
         return await fetch_random_bot(request, lang) # Get a new bot
-    bot = bot_obj | dict(random_unp) # Get bot from cache and add that in
+    bot = {"user": bot_obj} | bot_obj | dict(random_unp) # Get bot from cache and add that in
     bot["bot_id"] = str(bot["bot_id"]) # Make sure bot id is a string to prevent corruption issues in javascript
     bot["formatted"] = {
         "votes": human_format(bot["votes"]),

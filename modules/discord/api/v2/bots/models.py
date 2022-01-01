@@ -16,6 +16,8 @@ class GCVFormat(BaseModel):
 class BotRandom(BaseModel):
     """
     Represents a random bot on Fates List
+
+    **Note:** Inline user fields are deprecated, use user instead
     """
     bot_id: str
     description: str
@@ -26,6 +28,7 @@ class BotRandom(BaseModel):
     guild_count: int
     votes: int
     formatted: GCVFormat
+    user: BaseUser
 
 class BotOwner(BaseModel):
     user: BaseUser
