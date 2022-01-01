@@ -282,7 +282,7 @@ async def parse_index_query(
             bot_obj = dict(bot) | {
                 "user":
                 await db.fetchrow(
-                    "SELECT name_cached AS username, avatar_cached AS avatar FROM servers WHERE guild_id = $1",
+                    "SELECT guild_id AS id, name_cached AS username, avatar_cached AS avatar FROM servers WHERE guild_id = $1",
                     bot["guild_id"],
                 ),
                 "bot_id":
