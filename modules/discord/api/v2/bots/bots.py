@@ -108,7 +108,7 @@ async def fetch_random_bot(request: Request, bot_id: int, lang: str = "default")
         "votes": human_format(bot["votes"]),
         "guild_count": human_format(bot["guild_count"])
     }
-    bot["description"] = cleaner.clean_html(intl_text(bot["description"], lang)) # Prevent XSS attacks in short description
+    bot["description"] = bleach.clean(intl_text(bot["description"], lang), tags=[], strip=True) # Prevent XSS attacks in short description
     if not bot["banner_card"]: # Ensure banner is always a string
         bot["banner_card"] = "" 
     return bot
