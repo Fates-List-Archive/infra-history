@@ -164,13 +164,7 @@ async def get_index(request: Request,
 @router.get(
     "/search",
     response_model=BotSearch,
-    dependencies=[
-        Depends(
-            Ratelimiter(
-                global_limit=Limit(times=20, minutes=1),
-                sub_limits=[Limit(times=5, seconds=15)],
-            ))
-    ],
+    dependencies=[],
 )
 async def search_list(request: Request, q: str, target_type: enums.SearchType):
     """For any potential Android/iOS app, crawlers etc. Q is the query to search for. Target type is the type to search for"""
@@ -178,6 +172,28 @@ async def search_list(request: Request, q: str, target_type: enums.SearchType):
                                q=q,
                                api=True,
                                target_type=target_type)
+
+@router.get(
+    "/search/tags",
+    response_model=BotSearch,
+    dependencies=[]
+)
+async def search_by_tag(request: Request, tag: str, target_type: enums.SearchType):
+    if target_type == enums.SearchType.bot:
+        fetch = await db.fetch("SELECT DISTINCT bots.bot_id, bots.description, bots.state, bots.banner_card AS banner, bots.votes, bots.guild_count FROM bots INNER JOIN bot_tags ON bot_tags.bot_id = bots.bot_id WHERE bot_tags.tag = $1 AND (bots.state = 0 OR bots.state = 6) ORDER BY bots.votes DESC LIMIT 15", tag)
+        tags = tags_fixed # Gotta love python
+    else:
+        fetch = await db.fetch("SELECT DISTINCT guild_id, description, state, banner_card AS banner, votes, guild_count FROM servers WHERE state = 0 AND tags && $1", [tag])
+        tags = await db.fetch("SELECT DISTINCT id, name, iconify_data FROM server_tags")
+    search_bots = await parse_index_query(request.app.state.worker_session, fetch, type=enums.ReviewType.bot if target_type == enums.SearchType.bot else enums.ReviewType.server)
+    return {
+        "search_res": search_bots,
+        "tags_fixed": tags, 
+        "profile_search": False, 
+        "type": target_type.name,
+        "query": tag
+    }
+
 
 @router.get("/_sunbeam/redirect")
 async def sunbeam_redirect(request: Request, id: uuid.UUID):
