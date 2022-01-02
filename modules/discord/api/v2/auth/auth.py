@@ -43,7 +43,7 @@ async def login_user(request: Request, response: Response, data: Login, worker_s
 
     try:
         if request.headers.get("Frostpaw"):
-            override_redirect_uri = "https://sunbeam.fateslist.xyz/frostpaw/login"
+            override_redirect_uri = f"{request.headers.get('Origin', 'https://sunbeam.fateslist.xyz')}/frostpaw/login"
         else:
             override_redirect_uri = None
         access_token = await oauth.discord.get_access_token(data.code, data.scopes, override_redirect_uri=override_redirect_uri)
