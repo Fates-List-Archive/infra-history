@@ -7,6 +7,8 @@ from .models import (APIResponse, BaseUser, Login, LoginBan,
                      LoginInfo, LoginResponse, OAuthInfo)
 import aiohttp
 from config import auth_namespaces
+from itsdangerous import URLSafeSerializer
+from fastapi import Response
 
 router = APIRouter(
     prefix = f"/api/v{API_VERSION}",
@@ -26,15 +28,25 @@ async def get_login_link(request: Request, data: LoginInfo, worker_session = Dep
     url = await oauth.discord.get_auth_url(
         data.scopes,
     )
+
+    # Workaround for sunbeam
+    if request.headers.get("Frostpaw"):
+        url.url = url.url.replace("https://fateslist.xyz", request.headers.get("Frostpaw-Server", "https://sunbeam.fateslist.xyz")).replace("/static/login-finish.html", "/frostpaw/login", 1)
+
     return api_success(url = url.url, state=url.state)
 
 @router.post("/users", response_model = LoginResponse)
-async def login_user(request: Request, data: Login, worker_session = Depends(worker_session)):
+async def login_user(request: Request, response: Response, data: Login, worker_session = Depends(worker_session)):
     oauth = worker_session.oauth
     db = worker_session.postgres
+    redis = worker_session.redis
 
     try:
-        access_token = await oauth.discord.get_access_token(data.code, data.scopes)
+        if request.headers.get("Frostpaw"):
+            override_redirect_uri = "https://sunbeam.fateslist.xyz/frostpaw/login"
+        else:
+            override_redirect_uri = None
+        access_token = await oauth.discord.get_access_token(data.code, data.scopes, override_redirect_uri=override_redirect_uri)
         userjson = await oauth.discord.get_user_json(access_token)
         if not userjson or not userjson.get("id"):
             raise ValueError("Invalid user json. Please contact Fates List Staff")
@@ -71,7 +83,6 @@ async def login_user(request: Request, data: Login, worker_session = Depends(wor
         if state.__sitelock__:
             ban_data = bans_data[str(state.value)]
             ban_token = get_token(91)
-            redis = request.app.state.worker_session.redis
             await redis.set(ban_token, orjson.dumps(
                 {
                     "username": userjson["username"],
@@ -117,15 +128,25 @@ async def login_user(request: Request, data: Login, worker_session = Depends(wor
     request.session["user_token"], request.session["user_css"] = token, css
     request.session["js_allowed"], request.session["site_lang"] = js_allowed, site_lang
 
+
+    user = BaseUser(
+        id = userjson["id"],
+        username = userjson["username"],
+        bot = False,
+        disc = userjson["discriminator"],
+        avatar = avatar,
+        status = user["status"] if user else 0
+    )
+
+    if request.headers.get("Frostpaw"):
+        auth_s = URLSafeSerializer(request.app.state.rl_key, "auth")
+        login_token = auth_s.dumps({"token": token, "user": user.dict()})
+        cookie = {"Set-Cookie": f"sunbeam-session={login_token}; max-age={60*60*8}; Secure; Path=/; SameSite=Lax; HttpOnly; Domain=fateslist.xyz;"}
+    else:
+        cookie = {}
+
     return api_success(
-        user = BaseUser(
-            id = userjson["id"],
-            username = userjson["username"],
-            bot = False,
-            disc = userjson["discriminator"],
-            avatar = avatar,
-            status = user["status"] if user else 0
-        ),
+        user = user.dict(),
         token = token,
         css = css,
         state = state,
@@ -133,6 +154,19 @@ async def login_user(request: Request, data: Login, worker_session = Depends(wor
         access_token = access_token,
         banned = False,
         scopes = data.scopes,
-        site_lang = site_lang
+        site_lang = site_lang,
+        headers=cookie
     )
 
+@router.get("/jwtparse/_sunbeam")
+def jwt_parse_sunbeam(request: Request, jwt: str):
+    try:
+        auth_s = URLSafeSerializer(request.app.state.rl_key, "auth")
+        return auth_s.loads(jwt)
+    except:
+        return abort(400)
+
+@router.post("/logout/_sunbeam")
+def logout_sunbeam(request: Request, response: Response):
+    cookie = {"Set-Cookie": "sunbeam-session=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; Path=/; SameSite=Lax; HttpOnly; Domain=fateslist.xyz;"}
+    return api_success(headers=cookie)
