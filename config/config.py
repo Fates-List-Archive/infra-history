@@ -57,6 +57,7 @@ with open("config/data/policy.json") as fp:
     _policy_data = json.load(fp)
     rules: Dict[str, List[str]] = _policy_data["rules"]
     privacy_policy: Dict[str, Union[List[str], Dict[str, str]]] = _policy_data["privacy_policy"]
+    policies = _policy_data
 
 with open("config/data/secrets.json") as fp:
     _secret_data = json.load(fp)

@@ -1,6 +1,6 @@
 from modules.core import *
 from ..base import API_VERSION
-from config import privacy_policy as pp, rules
+from config import privacy_policy as pp, rules, policies
 
 router = APIRouter(
     prefix = f"/api/v{API_VERSION}/policies",
@@ -9,11 +9,15 @@ router = APIRouter(
 )
 
 @router.get("/privacy")
-async def privacy_policy(request: Request):
+def privacy_policy(request: Request):
     """Returns the privacy policy for fates list as a JSON"""
     return pp
 
 @router.get("/rules")
-async def rules(request: Request):
+def rules(request: Request):
     """Returns the rules for fates list as a JSON"""
     return rules
+
+@router.get("/all")
+def all_policies(request: Request):
+    return policies
