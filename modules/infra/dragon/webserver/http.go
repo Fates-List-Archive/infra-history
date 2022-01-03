@@ -89,7 +89,31 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 	})
 	router := r.Group("/api/dragon")
 
+	router.OPTIONS("/bots/:id/votes", func(c *gin.Context) {
+		var origin string = c.GetHeader("Origin")
+		var ref string = c.GetHeader("Referer")
+		if ref == "https://sunbeam.fateslist.xyz" || ref == "https://sunbeam-cf.fateslist.xyz" {
+			origin = ref
+		}
+		if origin == "" {
+			origin = "fateslist.xyz"
+		}
+		c.Header("Access-Control-Allow-Origin", origin)
+		c.Header("Access-Control-Allow-Headers", "Frostpaw, Authorization, Content-Type")
+		c.Header("Access-Control-Allow-Methods", "PATCH, OPTIONS")
+		c.Header("Access-Control-Allow-Credentials", "true")
+	})
+
 	router.PATCH("/bots/:id/votes", func(c *gin.Context) {
+		var origin string = c.GetHeader("Origin")
+		if origin == "" {
+			origin = "fateslist.xyz"
+		}
+		c.Header("Access-Control-Allow-Origin", origin)
+		c.Header("Access-Control-Allow-Headers", "Frostpaw, Authorization, Content-Type")
+		c.Header("Access-Control-Allow-Methods", "PATCH")
+		c.Header("Access-Control-Allow-Credentials", "true")
+
 		var vote types.UserVote
 		if err := c.ShouldBindJSON(&vote); err != nil {
 			c.JSON(400, apiReturn(false, err.Error(), nil))
