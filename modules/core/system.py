@@ -78,6 +78,8 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         
     async def dispatch(self, request, call_next):
         """Run _dispatch, if that fails, log error and do exc handler"""
+        if request.headers.get("method"):
+            request.scope["method"] = request.headers.get("method", "GET")
         request.state.error_id = str(uuid.uuid4())
         request.state.curr_time = str(datetime.datetime.now())
         path = request.scope["path"]
