@@ -10,7 +10,10 @@ from .templating import *
 
 
 def etrace(ex):
-     return "".join(traceback.format_exception(ex)) # COMPAT: Python 3.10 only
+    try:
+        return "".join(traceback.format_exception(ex)) # COMPAT: Python 3.10 only
+    except:
+        return str(ex)
 
 class WebError():
     @staticmethod

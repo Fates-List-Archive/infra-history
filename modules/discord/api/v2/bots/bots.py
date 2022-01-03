@@ -247,7 +247,7 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
     if bot_id >= 9223372036854775807: # Max size of bigint
         return abort(404)
     
-    BOT_CACHE_VER = 7
+    BOT_CACHE_VER = 8
 
     bot_cache = await redis.get(f"botpagecache-sunbeam:{bot_id}:{lang}")
     use_cache = True
@@ -348,6 +348,7 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
         bot_extra = {
             "owners": owners_lst, 
             "user": bot_info, 
+            "css_html": f"<style>{bot['css']}</style>"
         }
         bot |= bot_extra
         
