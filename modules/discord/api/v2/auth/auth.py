@@ -140,7 +140,7 @@ async def login_user(request: Request, response: Response, data: Login, worker_s
 
     if request.headers.get("Frostpaw"):
         auth_s = URLSafeSerializer(request.app.state.rl_key, "auth")
-        login_token = auth_s.dumps({"token": token, "user": user.dict()})
+        login_token = auth_s.dumps({"token": token, "user": user.dict(), "site_lang": site_lang, "css": css})
         cookie = {"Set-Cookie": f"sunbeam-session={login_token}; max-age={60*60*8}; Secure; Path=/; SameSite=Lax; HttpOnly; Domain=fateslist.xyz;"}
     else:
         cookie = {}
@@ -168,5 +168,7 @@ def jwt_parse_sunbeam(request: Request, jwt: str):
 
 @router.post("/logout/_sunbeam")
 def logout_sunbeam(request: Request, response: Response):
+    if not request.headers.get("Frostpaw"):
+        return abort(404)
     cookie = {"Set-Cookie": "sunbeam-session=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; Path=/; SameSite=Lax; HttpOnly; Domain=fateslist.xyz;"}
     return api_success(headers=cookie)

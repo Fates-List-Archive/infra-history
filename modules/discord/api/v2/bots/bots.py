@@ -1,5 +1,3 @@
-import bleach
-import markdown
 import urllib.parse
 
 from modules.core import *
@@ -214,6 +212,12 @@ async def fetch_bot(
 
     return api_ret
 
+def gen_owner_html(owners_lst: tuple[dict]):
+    """Generate the owner html"""
+    # First owner will always be main and hence should have the crown, set initial state to crown for that
+    owners_html = "<br/>".join([f"<a class='long-desc-link' href='/profile/{owner['user']['id']}'>{owner['user']['username'].replace('%CROWN%', '')}</a>" for owner in owners_lst if owner])
+    return owners_html
+
 @router.get("/{bot_id}/_sunbeam")
 async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang: str = "en"):
     """
@@ -239,7 +243,7 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
     to be complete**
     """
     if not request.headers.get("Frostpaw"):
-        return api_error("You may not call this API without the Frostpaw header set")
+        return abort(404)
 
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
@@ -247,7 +251,7 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
     if bot_id >= 9223372036854775807: # Max size of bigint
         return abort(404)
     
-    BOT_CACHE_VER = 8
+    BOT_CACHE_VER = 13
 
     bot_cache = await redis.get(f"botpagecache-sunbeam:{bot_id}:{lang}")
     use_cache = True
@@ -305,32 +309,8 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
             if owner["main"]: _owners.insert(0, owner)
             else: _owners.append(owner)
         owners = _owners
-        bot["description"] = bleach.clean(ireplacem(constants.long_desc_replace_tuple_sunbeam, intl_text(bot["description"], lang)), strip=True, tags=["strong", "em"])
-        if bot["long_description_type"] == enums.LongDescType.markdown_pymarkdown: # If we are using markdown
-            bot["long_description"] = emd(markdown.markdown(bot['long_description'], extensions = md_extensions))
 
-        def _style_combine(s: str) -> list:
-            """
-            Given margin/padding, this returns margin, margin-left, margin-right, margin-top, margin-bottom etc.
-            """
-            return [s, s+"-left", s+"-right", s+"-top", s+"-bottom"]
-
-        bot["long_description"] = bleach.clean(
-            bot["long_description"], 
-            tags=bleach.sanitizer.ALLOWED_TAGS+["span", "img", "iframe", "style", "p", "br", "center", "div", "h1", "h2", "h3", "h4", "h5", "section", "article", "fl-lang"], 
-            strip=True, 
-            attributes=bleach.sanitizer.ALLOWED_ATTRIBUTES | {
-                "iframe": ["src", "height", "width"], 
-                "img": ["src", "alt", "width", "height", "crossorigin", "referrerpolicy", "sizes", "srcset"],
-                "*": ["id", "class", "style", "data-src", "data-background-image", "data-background-image-set", "data-background-delimiter", "data-icon", "data-inline", "data-height", "code"]
-            },
-            styles=["color", "background", "background-color", "font-weight", "font-size"] + _style_combine("margin") + _style_combine("padding")
-        )
-
-        bot["long_description"] = intl_text(bot["long_description"], lang)
-
-        # Some nice patches to the long descriptions
-        bot["long_description"] = ireplacem(constants.long_desc_replace_tuple_sunbeam, bot["long_description"])
+        bot = sanitize_bot(bot, lang)
 
         if bot["banner"]:
             bot["banner"] = bot["banner"].replace(" ", "%20").replace("\n", "")
@@ -344,6 +324,8 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
             }
             for obj in owners if obj["owner"] is not None
         ]
+
+        bot["owners_html"] = gen_owner_html(owners_lst)
 
         bot_extra = {
             "owners": owners_lst, 

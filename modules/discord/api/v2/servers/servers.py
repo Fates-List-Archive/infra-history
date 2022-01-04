@@ -181,6 +181,46 @@ async def fetch_server(
 
     return api_ret
 
+@router.get("/{guild_id}/_sunbeam")
+async def get_server_page(request: Request, guild_id: int, bt: BackgroundTasks, lang: str = "en"):
+    if not request.headers.get("Frostpaw"):
+        return abort(404)
+    data = await db.fetchrow(
+        """SELECT banner_page AS banner, keep_banner_decor, guild_count, nsfw, state, invite_amount, avatar_cached, name_cached, votes, css, description, 
+        long_description, long_description_type, website, tags AS _tags, js_allowed, flags FROM servers WHERE guild_id = $1""",
+        guild_id
+    )
+    if not data:
+        logger.info("Something happened!")
+        return abort(404)
+    data = dict(data)
+    data["resources"] = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", guild_id, enums.ReviewType.server.value)
+    if not data["description"]:
+        data["description"] = await default_server_desc(data["name_cached"], guild_id)
+    data["user"] = {
+        "username": data["name_cached"],
+        "avatar": data["avatar_cached"]
+    }
+    data["tags_fixed"] = [(await db.fetchrow("SELECT id, name, iconify_data FROM server_tags WHERE id = $1", id)) for id in data["_tags"]]
+    context = {"type": "server", "replace_list": constants.long_desc_replace_tuple, "id": str(guild_id), "index": "/servers"}
+    data["type"] = "server"
+    data["id"] = str(guild_id)
+    bt.add_task(add_ws_event, guild_id, {"m": {"e": enums.APIEvents.server_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}}, type = "server")
+    # Ensure server banner_page is disabled if not approved or certified
+    if data["state"] not in (enums.BotState.approved, enums.BotState.certified, enums.BotState.private_viewable):
+        data["banner"] = None
+        data["js_allowed"] = False
+
+    data = sanitize_bot(data, lang)
+
+    base = {
+        "type": "server", 
+        "promos": [],
+        "replace_list": constants.long_desc_replace_tuple_sunbeam,
+        "fl_cache_ver": -1,
+    }
+    return {"data": data} | base
+
 
 @router.head("/{guild_id}", operation_id="server_exists")
 async def server_exists(request: Request, guild_id: int):

@@ -9,6 +9,9 @@ import typing
 
 import asyncpg
 import bleach
+import markdown
+from modules.models import constants
+
 from fastapi import datastructures
 from lxml.html.clean import Cleaner
 
@@ -392,3 +395,30 @@ async def vanity_redirector(request: Request,
                                 guild_id=vurl[0],
                                 **extra_args)
     return await ext(request=request, bot_id=vurl[0], **extra_args)
+
+def sanitize_bot(bot: dict, lang: str) -> dict:
+    bot["description"] = bleach.clean(ireplacem(constants.long_desc_replace_tuple_sunbeam, intl_text(bot["description"], lang)), strip=True, tags=["strong", "em"])
+    if bot["long_description_type"] == enums.LongDescType.markdown_pymarkdown: # If we are using markdown
+        bot["long_description"] = emd(markdown.markdown(bot['long_description'], extensions = md_extensions))
+
+    def _style_combine(s: str) -> list:
+        """
+        Given margin/padding, this returns margin, margin-left, margin-right, margin-top, margin-bottom etc.
+        """
+        return [s, s+"-left", s+"-right", s+"-top", s+"-bottom"]
+
+    bot["long_description"] = bleach.clean(
+        bot["long_description"], 
+        tags=bleach.sanitizer.ALLOWED_TAGS+["span", "img", "iframe", "style", "p", "br", "center", "div", "h1", "h2", "h3", "h4", "h5", "section", "article", "fl-lang"], 
+        strip=True, 
+        attributes=bleach.sanitizer.ALLOWED_ATTRIBUTES | {
+            "iframe": ["src", "height", "width"], 
+            "img": ["src", "alt", "width", "height", "crossorigin", "referrerpolicy", "sizes", "srcset"],
+            "*": ["id", "class", "style", "data-src", "data-background-image", "data-background-image-set", "data-background-delimiter", "data-icon", "data-inline", "data-height", "code"]
+        },
+        styles=["color", "background", "background-color", "font-weight", "font-size"] + _style_combine("margin") + _style_combine("padding")
+    )
+
+    bot["long_description"] = intl_text(bot["long_description"], lang)
+    bot["long_description"] = ireplacem(constants.long_desc_replace_tuple_sunbeam, bot["long_description"])
+    return bot
