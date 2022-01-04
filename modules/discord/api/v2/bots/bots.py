@@ -251,7 +251,7 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
     if bot_id >= 9223372036854775807: # Max size of bigint
         return abort(404)
     
-    BOT_CACHE_VER = 15
+    BOT_CACHE_VER = 16
 
     bot_cache = await redis.get(f"botpagecache-sunbeam:{bot_id}:{lang}")
     use_cache = True
@@ -265,7 +265,7 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
     if not use_cache:
         logger.info("Using cache for new bot request")
         bot = await db.fetchrow(
-            """SELECT bot_id, prefix, shard_count, state, description, bot_library AS library, 
+            """SELECT bot_id, prefix, shard_count, user_count, shards, state, description, bot_library AS library, 
             website, votes, guild_count, discord AS support, banner_page AS banner, github, features, 
             invite_amount, css, long_description_type, long_description, donate, privacy_policy, 
             nsfw, keep_banner_decor, flags, last_stats_post, created_at FROM bots WHERE bot_id = $1 OR client_id = $1""", 
