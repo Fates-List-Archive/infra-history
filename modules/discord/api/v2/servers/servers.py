@@ -202,12 +202,12 @@ async def get_server_page(request: Request, guild_id: int, bt: BackgroundTasks, 
         data["description"] = await default_server_desc(data["name_cached"], guild_id)
     data["user"] = {
         "username": data["name_cached"],
-        "avatar": data["avatar_cached"]
+        "avatar": data["avatar_cached"],
+        "id": str(guild_id)
     }
     data["tags_fixed"] = [(await db.fetchrow("SELECT id, name, iconify_data FROM server_tags WHERE id = $1", id)) for id in data["_tags"]]
     context = {"type": "server", "replace_list": constants.long_desc_replace_tuple, "id": str(guild_id), "index": "/servers"}
     data["type"] = "server"
-    data["id"] = str(guild_id)
     bt.add_task(add_ws_event, guild_id, {"m": {"e": enums.APIEvents.server_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}}, type = "server")
     # Ensure server banner_page is disabled if not approved or certified
     if data["state"] not in (enums.BotState.approved, enums.BotState.certified, enums.BotState.private_viewable):

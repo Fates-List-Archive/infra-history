@@ -73,7 +73,7 @@ async def regenerate_bot_token(request: Request, bot_id: int):
 )
 async def fetch_random_bot(request: Request, bot_id: int, lang: str = "default"):
     """
-    Fetch a random bot. Bot ID should be the recursive/root bot 0
+    Fetch a random bot. Bot ID should be the root bot 0
 
 
     Example:
