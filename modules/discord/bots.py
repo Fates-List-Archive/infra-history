@@ -92,13 +92,14 @@ async def bot_rdir(request: Request):
 
 @router.get("/{bot_id}")
 async def bot_index(request: Request, bot_id: int, bt: BackgroundTasks, rev_page: int = 1):
-    return await render_bot(
-        request, 
-        bot_id = bot_id, 
-        bt = bt, 
-        api = False, 
-        rev_page = rev_page, 
-    )
+    return RedirectResponse(f"https://fateslist.xyz/bot/{bot_id}", status_code=301)
+    #return await render_bot(
+    #    request, 
+    #    bot_id = bot_id, 
+    #    bt = bt, 
+    #    api = False, 
+    #    rev_page = rev_page, 
+    #)
 
 @router.get("/{bot_id}/reviews_html", dependencies=[Depends(id_check("bot"))])
 async def bot_review_page(request: Request, bot_id: int, page: int = 1):
