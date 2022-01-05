@@ -9,28 +9,11 @@
 	<h3 style="font-weight: bold;">Login</h3>
 	<h4>We're glad to see you again!</h4>
 	{% if context.perm_needed %}
-	<h5><span style="color: red">Whoops!</span><br />You need to login {{context.perm_pretty}}</h5>
+	<h5><span style="color: red">Whoops!</span><br />You need to login (again) {{context.perm_pretty}}</h5>
 	{% endif %}
 </div>
 <div style="text-align: center; display: block;">
 	<button onclick="getLoginLink()" class="btn btn-outline-light btn-lg" style="margin-bottom: 20px;">Login</button>
-</div>
-<small>
-	<div style="text-align: left;">
-		<div style="margin-left: 50px">
-			<div style="padding: 3px; display: inline-block;">
-				<div class="form-group white" style="color: blue; display: block; height: auto;">
-					<div style="display: block;" />
-						<input type="checkbox" tabindex="0" id="join_servers" name="join_servers"
-							aria-label="Join Servers" style="margin-right: 5px;" />
-							<label class="custom-control-label" for="join_servers">Join Servers (Join The Support Server) -> Would you like to be added to the support server? Turn this on if you do</label>
-						</div>	
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-</small>
 </div>
 <script>
 	context = {{context|tojson}}

@@ -71,7 +71,10 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
             query_str = f'?{query_str_raw.decode("utf-8")}'
         else:
             query_str = ""
-            
+        
+        if "jwtparse" in path:
+            return
+
         logger.info(
             f"{request.method} {path}{query_str} | {code} {phrase}"
         )

@@ -94,7 +94,7 @@ class BotActions():
         imgres = None
         
         for banner_key in ("banner_page", "banner_card"):
-            banner = self.__dict__[banner_key]
+            banner = self.__dict__.get(banner_key, "")
             banner_name = banner_key.replace("_", " ")
             if banner:
                 banner = ireplacem((("(", ""), (")", ""), ("http://", "https://")), banner)
@@ -105,7 +105,7 @@ class BotActions():
                         async with sess.head(banner, timeout=30) as res:
                             if res.status != 200:
                                 # Banner URL does not support head, try get
-                                async with sess.get(self.banner, timeout=30) as res_fallback:
+                                async with sess.get(banner, timeout=30) as res_fallback:
                                     if res_fallback.status != 200:
                                         return f"Could not download {banner_name} using either GET or HEAD! Is your URL correct?"
                                     imgres = res_fallback

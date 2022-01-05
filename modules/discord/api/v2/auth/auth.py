@@ -32,6 +32,8 @@ async def get_login_link(request: Request, data: LoginInfo, worker_session = Dep
     # Workaround for sunbeam
     if request.headers.get("Frostpaw"):
         url.url = url.url.replace("https://fateslist.xyz", request.headers.get("Frostpaw-Server", "https://sunbeam.fateslist.xyz")).replace("/static/login-finish.html", "/frostpaw/login", 1)
+    else:
+        url.url = url.url.replace("https://fateslist.xyz", "https://api.fateslist.xyz")
 
     return api_success(url = url.url, state=url.state)
 
@@ -45,7 +47,7 @@ async def login_user(request: Request, response: Response, data: Login, worker_s
         if request.headers.get("Frostpaw"):
             override_redirect_uri = f"{request.headers.get('Origin', 'https://sunbeam.fateslist.xyz')}/frostpaw/login"
         else:
-            override_redirect_uri = None
+            override_redirect_uri = "https://api.fateslist.xyz/static/login-finish.html"
         access_token = await oauth.discord.get_access_token(data.code, data.scopes, override_redirect_uri=override_redirect_uri)
         userjson = await oauth.discord.get_user_json(access_token)
         if not userjson or not userjson.get("id"):

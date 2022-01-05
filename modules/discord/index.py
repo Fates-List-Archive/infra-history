@@ -1,8 +1,8 @@
-from modules.discord.bots import vote_bot_get
-from modules.discord.servers import guild_page
+#from modules.discord.bots import vote_bot_get
+#from modules.discord.servers import guild_page
 
 from ..core import *
-from config import privacy_policy, partners
+#from config import privacy_policy, partners
 router = APIRouter(
     tags = ["Index"],
     include_in_schema = False
@@ -43,7 +43,8 @@ async def csp(request: Request):
 @router.get("/")
 @router.head("/")
 async def index_fend(request: Request):
-    return await render_index(request = request, api = False)
+    return RedirectResponse("https://fateslist.xyz", status_code=301)
+    #return await render_index(request = request, api = False)
 
 @router.get("/servers")
 @router.head("/servers")
@@ -52,35 +53,36 @@ async def index_fend(request: Request):
 @router.get("/guilds")
 @router.head("/guilds")
 async def server_index(request: Request):
-    return await render_index(request = request, api = False, type=enums.ReviewType.server)
+    return RedirectResponse("https://fateslist.xyz/servers", status_code=301)
+    #return await render_index(request = request, api = False, type=enums.ReviewType.server)
 
 @router.get("/servers/{guild_id}/{path:path}")
 @router.get("/servers/{guild_id}")
 def server_redirector(guild_id: int, path: Optional[str] = None):
     return RedirectResponse(f"/server/{guild_id}/{path or ''}")
 
-@router.get("/etest/{code}")
-async def test_error(code: int):
-    if code == 500:
-        b = 1 + thisshoulderror
-        raise TypeError("Test 500")
-    return abort(code)
+#@router.get("/etest/{code}")
+#async def test_error(code: int):
+#    if code == 500:
+#        b = 1 + thisshoulderror
+#        raise TypeError("Test 500")
+#    return abort(code)
 
-@router.get("/none")
-async def nonerouter():
-    return RedirectResponse("/static/assets/img/banner.webp", status_code = 301)
+#@router.get("/none")
+#async def nonerouter():
+#    return RedirectResponse("/static/assets/img/banner.webp", status_code = 301)
 
-@router.get("/{vanity}")
-async def vanity_bot_uri(request: Request, bt: BackgroundTasks, vanity: str, redirect: bool = False):
-    return await vanity_redirector(request, vanity, render_bot, {"bt": bt, "api": False}, guild_page)
+#@router.get("/{vanity}")
+#async def vanity_bot_uri(request: Request, bt: BackgroundTasks, vanity: str, redirect: bool = False):
+#    return await vanity_redirector(request, vanity, render_bot, {"bt": bt, "api": False}, guild_page)
 
-@router.get("/{vanity}/vote")
-async def vanity_vote(request: Request, vanity: str):
-    return await vanity_redirector(request, vanity, vote_bot_get)
+#@router.get("/{vanity}/vote")
+#async def vanity_vote(request: Request, vanity: str):
+#    return await vanity_redirector(request, vanity, vote_bot_get)
 
-@router.get("/{vanity}/invite")
-async def vanity_invite(request: Request, vanity: str):
-    return await vanity_redirector(request, vanity, "invite")
+#@router.get("/{vanity}/invite")
+#async def vanity_invite(request: Request, vanity: str):
+#    return await vanity_redirector(request, vanity, "invite")
 
 @router.get("/feature/{name}")
 async def features_view(request: Request, name: str):
@@ -139,15 +141,17 @@ async def logout(request: Request):
 
 @router.get("/api/docs")
 async def api_docs_view(request: Request):
-    return RedirectResponse("https://apidocs.fateslist.xyz")
+    return RedirectResponse("https://docs.fateslist.xyz", status_code=301)
 
 @router.get("/fates/tos")
 async def tos_page(request: Request):
-    return await templates.TemplateResponse("tos.html", {"request": request, "policy": privacy_policy})
+    return RedirectResponse("https://fateslist.xyz/frostpaw/tos", status_code=301)
+    #return await templates.TemplateResponse("tos.html", {"request": request, "policy": privacy_policy})
 
 @router.get("/fates/rules")
 async def rules_page(request: Request):
-    return await templates.TemplateResponse("rules.html", {"request": request, "policy": rules})
+    return RedirectResponse("https://fateslist.xyz/frostpaw/tos", status_code=301)
+    #return await templates.TemplateResponse("rules.html", {"request": request, "policy": rules})
 
 @router.get("/fates/partners")
 async def fates_partners(request: Request):
