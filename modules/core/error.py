@@ -100,26 +100,6 @@ class WebError():
 
             return HTMLResponse(errmsg, status_code=status_code, headers={"FL-Error-ID": error_id})
 
-        if not api:
-            # Special error messages (some with custom-set status code)
-            if status_code == 404: 
-                if path.startswith("/bot"):
-                    code_str = "Bot Not Found"
-        
-                elif path.startswith("/profile"): 
-                    code_str = "Profile Not Found"
-            
-            elif status_code == 422:
-                if path.startswith("/bot"): 
-                    code_str = "Bot Not Found"
-                    status_code = 404
-            
-                elif path.startswith("/profile"): 
-                    code_str = "Profile Not Found"
-                    status_code = 404
-            
-            return await templates.e(request, code_str, status_code)
-
         # API route handling
         if status_code != 422:
             # Normal handling
