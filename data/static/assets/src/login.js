@@ -1,15 +1,6 @@
 function getLoginLink() {
 	modalShow("Logging you in...", "Please wait...")
 	scopes = ["identify"]
-	scopes_total = {
-		"join_servers": "guilds.join"
-	}
-	$.each(scopes_total, function(k, v){
-		selected = document.querySelector(`#${k}`).checked
-		if(selected) {
-			scopes.push(v)
-		}
-	})
 
 	if(!context.redirect) {
 		context.redirect = localStorage.getItem("current-page")

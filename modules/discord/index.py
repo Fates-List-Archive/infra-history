@@ -119,7 +119,7 @@ async def stats_page(request: Request, full: bool = False):
 @router.get("/fates/login")
 async def login_get(request: Request, redirect: Optional[str] = None, pretty: Optional[str] = "to access this page"):
     if "user_id" in request.session.keys():
-        return RedirectResponse("/", status_code=HTTP_303_SEE_OTHER)
+        return RedirectResponse(redirect or "/", status_code=HTTP_303_SEE_OTHER)
     return await templates.TemplateResponse(
             "login.html", 
             {

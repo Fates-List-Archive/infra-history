@@ -40,6 +40,7 @@ from modules.core.error import WebError
 from modules.core.ipc import redis_ipc_new
 from modules.core.ratelimits import rl_key_func
 from modules.models import enums
+from itsdangerous import URLSafeSerializer
 
 sys.pycache_prefix = "data/pycache"
 reboot_error = "<h1>Fates List is currently rebooting. Please click <a href='/maint/page'>here</a> for more information</h1>"
@@ -109,6 +110,18 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         if request.app.state.worker_session.dying:
             return HTMLResponse("Fates List is going down for a reboot")
         
+        if request.cookies.get("sunbeam-session"):
+            logger.info("Got cookies, trying to parse...")
+            try:
+                auth_s = URLSafeSerializer(request.app.state.rl_key, "auth")
+                data = auth_s.loads(request.cookies.get("sunbeam-session"))
+                request.session["user_id"] = data["user"]["id"]
+                request.session["username"] = data["user"]["username"]
+                request.session["user_token"] = data["token"]
+                logger.debug(request.session)
+            except Exception as exc:
+                logger.warning(exc)
+
         logger.trace(request.headers.get("X-Forwarded-For"))
         
         if path.startswith("/bots/"):
@@ -154,7 +167,7 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         acam = "Access-Control-Allow-Methods"
 
         response.headers[acao] = origin if origin else "*"
-        response.headers["Access-Control-Allow-Headers"] = "Frostpaw, Frostpaw-Server, Content-Type, Set-Cookie, Frostpaw-Auth"
+        response.headers["Access-Control-Allow-Headers"] = "Frostpaw, Frostpaw-Server, Content-Type, Set-Cookie, Frostpaw-Auth, Authorization"
         
         if is_api and origin:
             response.headers[acac] = "true"
