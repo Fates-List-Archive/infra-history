@@ -261,9 +261,10 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
         bot_cache = orjson.loads(bot_cache)
         if bot_cache.get("fl_cache_ver") != BOT_CACHE_VER:
             use_cache = False
+        bot_cache["votes"] = await db.fetchval("SELECT votes FROM bors WHERE bot_id = $1 OR client_id = $1", bot_id)
     
     if not use_cache:
-        logger.info("Using cache for new bot request")
+        logger.debug("Using cache for new bot request")
         bot = await db.fetchrow(
             """SELECT bot_id, prefix, shard_count, user_count, shards, state, description, bot_library AS library, 
             website, votes, guild_count, discord AS support, banner_page AS banner, github, features, 

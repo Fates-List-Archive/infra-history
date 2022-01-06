@@ -93,13 +93,6 @@ async def bot_rdir(request: Request):
 @router.get("/{bot_id}")
 async def bot_index(request: Request, bot_id: int, bt: BackgroundTasks, rev_page: int = 1):
     return RedirectResponse(f"https://fateslist.xyz/bot/{bot_id}", status_code=301)
-    #return await render_bot(
-    #    request, 
-    #    bot_id = bot_id, 
-    #    bt = bt, 
-    #    api = False, 
-    #    rev_page = rev_page, 
-    #)
 
 @router.get("/{bot_id}/reviews_html", dependencies=[Depends(id_check("bot"))])
 async def bot_review_page(request: Request, bot_id: int, page: int = 1):
@@ -130,26 +123,3 @@ async def bot_review_page(request: Request, bot_id: int, page: int = 1):
         return await templates.e(request, "Bot Not Found")
 
     return await templates.TemplateResponse("ext/reviews.html", {"request": request, "data": {"user": user}} | data, context = context)
-
-
-#@router.get("/{bot_id}/invite")
-#async def bot_invite_and_log(request: Request, bot_id: int):
-#    if "user_id" not in request.session.keys():
-#        user_id = 0
-#    else:
-#        user_id = int(request.session.get("user_id"))
-#    invite = await invite_bot(bot_id, user_id = user_id)
-#    if invite is None:
-#        return abort(404)
-#    return RedirectResponse(invite)
-
-#@router.get("/{bot_id}/vote")
-#async def vote_bot_get(request: Request, bot_id: int):
-#    bot = await db.fetchrow("SELECT bot_id, votes, state FROM bots WHERE bot_id = $1", bot_id)
-#    if bot is None:
-#        return abort(404)
-#    bot_obj = await get_bot(bot_id)
-#    if bot_obj is None:
-#        return abort(404)
-#    bot = dict(bot) | bot_obj
-#    return await templates.TemplateResponse("vote.html", {"request": request, "bot": bot}, context={"id": str(bot_id)})

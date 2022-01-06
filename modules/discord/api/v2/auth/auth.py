@@ -123,14 +123,6 @@ async def login_user(request: Request, response: Response, data: Login, worker_s
     if "guilds.join" in data.scopes:
         await oauth.discord.add_user_to_guild(access_token, userjson["id"], main_server, TOKEN_MAIN)
 
-    request.session["scopes"] = orjson.dumps(data.scopes).decode("utf-8")
-    request.session["access_token"] = orjson.dumps(access_token.dict()).decode("utf-8")
-    request.session["user_id"] = str(userjson["id"])
-    request.session["username"], request.session["avatar"] = userjson["username"], avatar
-    request.session["user_token"], request.session["user_css"] = token, css
-    request.session["js_allowed"], request.session["site_lang"] = js_allowed, site_lang
-
-
     user = BaseUser(
         id = userjson["id"],
         username = userjson["username"],
