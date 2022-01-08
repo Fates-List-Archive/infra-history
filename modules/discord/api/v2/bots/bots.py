@@ -2,13 +2,10 @@ import urllib.parse
 
 from modules.core import *
 from lynxfall.utils.string import human_format
-from fastapi.responses import PlainTextResponse, StreamingResponse
-import io, textwrap, aiofiles
-from starlette.concurrency import run_in_threadpool
-from math import floor
+from fastapi.responses import PlainTextResponse
 
 from ..base import API_VERSION
-from .models import APIResponse, Bot, BotRandom, BotStats, BotEvents
+from .models import APIResponse, Bot, BotRandom, BotStats
 
 cleaner = Cleaner(remove_unknown_tags=False)
 

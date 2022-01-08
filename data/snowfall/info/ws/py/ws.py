@@ -3,16 +3,12 @@
 import asyncio
 import json
 import sys
-import time
-import uuid
 
 import websockets
 
 sys.path.append(".")
 sys.path.append("../../../")
 sys.path.append("/home/meow/FatesList")
-
-from modules.models import enums
 
 URL = "wss://api.fateslist.xyz/api/dragon/ws/"
 

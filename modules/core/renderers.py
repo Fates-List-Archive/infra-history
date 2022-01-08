@@ -1,9 +1,6 @@
 """
 Handles rendering of bots, index, search and profile search etc.
 """
-
-import bleach
-import markdown
 from lxml.html.clean import Cleaner
 
 from .events import *
@@ -11,7 +8,6 @@ from .helpers import *
 from .imports import *
 from .permissions import *
 from .templating import *
-from modules.models import constants
 
 cleaner = Cleaner()
 
