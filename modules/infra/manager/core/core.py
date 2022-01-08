@@ -86,10 +86,7 @@ async def request(
 ):
     url = f"http://127.0.0.1:9999{url}"
     logger.info(f"Request init to {url}")
-    if "headers" in kwargs:
-        headers = kwargs["headers"]
-    else:
-        headers = {}
+    headers = kwargs.get("headers", {})
 
     headers["FL-API-Version"] = "2"
     async with aiohttp.ClientSession() as sess:
