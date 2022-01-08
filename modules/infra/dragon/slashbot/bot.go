@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	iResponseMap     map[string]*time.Timer        = make(map[string]*time.Timer, 0) // Interaction response map to check if interaction has been responded to
+	iResponseMap     map[string]*time.Timer        = make(map[string]*time.Timer) // Interaction response map to check if interaction has been responded to
 	commandNameCache map[string]string             = make(map[string]string)
 	commands         map[string]types.SlashCommand = make(map[string]types.SlashCommand)
 	mockGuild        string                        // The guild to mock if set
