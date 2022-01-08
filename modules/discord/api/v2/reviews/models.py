@@ -27,8 +27,13 @@ class BotReviewPartialExt(BotReviewPartial):
     """Partial bot review with extended fields specific for adding reviews such as target_type and target_id"""
 
     target_type: enums.ReviewType
-    target_id: int
+    target_id: str
 
+    @validator("target_id")
+    def validate_tgt_id(cls, v, values, **kwargs):
+        if v.isdigit():
+            return int(v)
+        raise ValueError("Invalid target_id")
 
 BotReviewList = ForwardRef("BotReviewList")
 

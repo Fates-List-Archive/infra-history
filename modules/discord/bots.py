@@ -95,7 +95,7 @@ async def bot_index(request: Request, bot_id: int, bt: BackgroundTasks, rev_page
     return RedirectResponse(f"https://fateslist.xyz/bot/{bot_id}", status_code=301)
 
 @router.get("/{bot_id}/reviews_html", dependencies=[Depends(id_check("bot"))])
-async def bot_review_page(request: Request, bot_id: int, page: int = 1):
+async def bot_review_page(request: Request, bot_id: int, page: int = 1, user_id: int | None = 0):
     page = page if page else 1
     reviews = await parse_reviews(request.app.state.worker_session, bot_id, page=page)
     context = {
@@ -104,6 +104,7 @@ async def bot_review_page(request: Request, bot_id: int, page: int = 1):
         "reviews": {
             "average_rating": float(reviews[1])
         },
+        "user_id": str(user_id)
     }
     data = {
         "bot_reviews": reviews[0], 
