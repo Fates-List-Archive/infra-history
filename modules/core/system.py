@@ -306,13 +306,11 @@ async def init_fates_worker(app, session_id, workers):
             if invalid:  # pylint: disable=no-else-continue
                 logger.info(f"Invalid IPC. Got invalid PONG: {resp} (reason: {reason})")
                 continue
-            
+
             if first_run:
                 return await finish_init(app, session_id, workers, dbs)
-            
-            else:
-                app.state.worker_session.up = True
-                return
+            app.state.worker_session.up = True
+            return
 
     app.state.wait_for_ipc = wait_for_ipc
     await app.state.wait_for_ipc(first_run=True)
