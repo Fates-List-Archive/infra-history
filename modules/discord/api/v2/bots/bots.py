@@ -253,6 +253,19 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
     
     BOT_CACHE_VER = 16
 
+    auth = request.headers.get("Frostpaw-Auth", "")
+    if auth and "|" in auth:
+        user_id, token = auth.split("|")
+        try:
+            user_id = int(user_id)
+        except Exception:
+            user_id = None
+        
+        if user_id:
+            auth = await user_auth_check(user_id, token)
+    else:
+        user_id = None
+
     bot_cache = await redis.get(f"botpagecache-sunbeam:{bot_id}:{lang}")
     use_cache = True
     if not bot_cache:
@@ -261,8 +274,7 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
         bot_cache = orjson.loads(bot_cache)
         if bot_cache.get("fl_cache_ver") != BOT_CACHE_VER:
             use_cache = False
-        bot_cache["votes"] = await db.fetchval("SELECT votes FROM bors WHERE bot_id = $1 OR client_id = $1", bot_id)
-    
+   
     if not use_cache:
         logger.debug("Using cache for new bot request")
         bot = await db.fetchrow(
@@ -348,8 +360,9 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
         if bot["votes"] > 1000:
             await redis.set(f"botpagecache-sunbeam:{bot_id}:{lang}", orjson.dumps(bot_cache), ex=60*60*4)
 
-    bt.add_task(add_ws_event, bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}})
-        
+    bt.add_task(add_ws_event, bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": str(user_id), "widget": False}})
+    
+    bot_cache["data"]["votes"] = await db.fetchval("SELECT votes FROM bots WHERE bot_id = $1", bot_cache["data"]["bot_id"])
     data = bot_cache | {
         "type": "bot", 
         "promos": await get_promotions(bot_id),

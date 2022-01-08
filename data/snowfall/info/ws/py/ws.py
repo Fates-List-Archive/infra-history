@@ -14,7 +14,7 @@ sys.path.append("/home/meow/FatesList")
 
 from modules.models import enums
 
-URL = "wss://fateslist.xyz/api/dragon/ws/"
+URL = "wss://api.fateslist.xyz/api/dragon/ws/"
 
 
 class Bot:

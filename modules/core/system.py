@@ -31,7 +31,6 @@ from lynxfall.utils.string import get_token
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.sessions import SessionMiddleware
 
 from config import (API_VERSION, discord_client_id, discord_client_secret,
                     discord_redirect_uri, sentry_dsn, site)
@@ -109,7 +108,8 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         """Actual middleware"""
         if request.app.state.worker_session.dying:
             return HTMLResponse("Fates List is going down for a reboot")
-        
+       
+        request.scope["session"] = {}
         if request.cookies.get("sunbeam-session"):
             logger.info("Got cookies, trying to parse...")
             try:
@@ -377,15 +377,6 @@ async def finish_init(app, session_id, workers, dbs):
     builtins.TAGS = tags
     builtins.tags_fixed = calc_tags(tags)
 
-    # Setup sessions (one day expiry)
-    app.add_middleware(
-        SessionMiddleware, 
-        secret_key=session_key, 
-        https_only=True,
-        max_age=60 * 60 * 12, 
-        same_site='strict'
-    )  
-    
     # Setup sentry
     sentry_sdk.init(sentry_dsn)  # pylint: disable=abstract-class-instantiated
     app.add_middleware(SentryAsgiMiddleware)

@@ -95,18 +95,19 @@ async def stats_page(request: Request, full: bool = False):
 async def login_get(request: Request, redirect: Optional[str] = None, pretty: Optional[str] = "to access this page"):
     if "user_id" in request.session.keys():
         return RedirectResponse(redirect or "/", status_code=HTTP_303_SEE_OTHER)
-    return await templates.TemplateResponse(
-            "login.html", 
-            {
-                "request": request
-            }, 
-            context = {
-                "perm_needed": redirect is not None, 
-                "perm_pretty": pretty, 
-                "redirect": redirect if redirect else None,
-                "login_page": True
-            }
-    )
+    return RedirectResponse(f"https://fateslist.xyz/frostpaw/herb?redirect={redirect or 'https://api.fateslist.xyz'}")
+    #return await templates.TemplateResponse(
+    #        "login.html", 
+    #        {
+    #            "request": request
+    #        }, 
+    #        context = {
+    #            "perm_needed": redirect is not None, 
+    #            "perm_pretty": pretty, 
+    #            "redirect": redirect if redirect else None,
+    #            "login_page": True
+    #        }
+    #)
 
 @router.get("/fates/logout")
 async def logout(request: Request):
