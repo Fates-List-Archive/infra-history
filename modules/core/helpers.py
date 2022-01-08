@@ -4,15 +4,12 @@ and/or setting bot stats and voting for a bot. Also has replace tuples to be han
 """
 
 import json
-import re
 import typing
 
 import asyncpg
 import bleach
 import markdown
 from modules.models import constants
-
-from fastapi import datastructures
 from lxml.html.clean import Cleaner
 
 from .auth import *

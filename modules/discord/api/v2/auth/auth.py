@@ -1,12 +1,9 @@
-from urllib.parse import unquote
 
 from modules.core import *
 
 from ..base import API_VERSION
-from .models import (APIResponse, BaseUser, Login, LoginBan,
+from .models import (BaseUser, Login, LoginBan,
                      LoginInfo, LoginResponse, OAuthInfo)
-import aiohttp
-from config import auth_namespaces
 from itsdangerous import URLSafeSerializer
 from fastapi import Response
 

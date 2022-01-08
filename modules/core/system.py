@@ -18,7 +18,7 @@ from fastapi.exceptions import (HTTPException, RequestValidationError,
                                 ValidationError)
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import PlainTextResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import PlainTextResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi_cprofile.profiler import CProfileMiddleware
 from fastapi.routing import APIRoute
