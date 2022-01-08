@@ -91,11 +91,13 @@ async def request(
     headers["FL-API-Version"] = "2"
     async with aiohttp.ClientSession() as sess:
         f = getattr(sess, method.lower())
-        async with f(url,
-                     json=kwargs.get("json"),
-                     headers=headers,
-                     timeout=kwargs.get("timeout"),
-                     max_redirects=30) as res:
+        async with f(
+                url,
+                json=kwargs.get("json"),
+                headers=headers,
+                timeout=kwargs.get("timeout"),
+                max_redirects=30,
+        ) as res:
             res_json = await res.json()
             logger.info(
                 f"Request\n\nURL - {url}\nResponse - {res.status}\n{pprint.pformat(res_json)}"
