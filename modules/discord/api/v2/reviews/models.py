@@ -35,6 +35,7 @@ class BotReviewPartialExt(BotReviewPartial):
             return int(v)
         raise ValueError("Invalid target_id")
 
+
 BotReviewList = ForwardRef("BotReviewList")
 
 
