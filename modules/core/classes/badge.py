@@ -24,11 +24,7 @@ class Badge(BaseModel):
         """Make badges from a user given the member, badges and bots"""
         if badges is None:
             badges = []
-        user_flags = {}
-        
-        user_flags["cert_dev"] = cert_dev
-        user_flags["bot_dev"] = bot_dev
-        user_flags["everyone"] = True
+        user_flags = {"cert_dev": cert_dev, "bot_dev": bot_dev, "everyone": True}
         
         badges = badges if badges else []
 
