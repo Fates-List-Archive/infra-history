@@ -60,9 +60,17 @@ async def _user_fetch(
     cmd_id = uuid.uuid4()
     data = await redis_ipc_new(redis, "GETCH", args=[str(user_id)])
     if data is None or data == b'-2':
+        # If the data is in cache in any way, return it if user does not exist.
+        # dragon can be down
+        if cache:
+            return cache 
         return None
 
     if data == b'-1':
+        # If the data is in cache in any way, return it if user does not exist.
+        # dragon can be down
+        if cache:
+            return cache 
         valid = False
 
     else:
@@ -80,6 +88,14 @@ async def _user_fetch(
 
         # Create cache and add to redis hash
         cache |= data
+    else:
+        cache |= {
+            "username": "Unknown User",
+            "id": str(user_id),
+            "avatar": "https://api.fateslist.xyz/static/botlisticon.webp",
+            "disc": "0000",
+            "status": 0
+        }
        
     # Add/Update redis
     await redis_db.hset(

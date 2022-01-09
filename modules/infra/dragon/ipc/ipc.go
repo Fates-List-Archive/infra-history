@@ -218,7 +218,7 @@ func setupCommands() {
 				return err.Error()
 			}
 
-			go common.AddWsEvent(ctx, context.Redis, channel, cmd[3], event)
+			common.AddWsEvent(ctx, context.Redis, channel, cmd[3], event)
 			return "0"
 		},
 		MinArgs: 6,

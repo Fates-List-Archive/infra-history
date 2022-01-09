@@ -36,7 +36,9 @@ class InteractionWrapper:
         while time.time(
         ) - start_time < 15 and not self.interaction.response.is_done():
             await asyncio.sleep(0)
-        await self.interaction.defer(ephemeral=ephemeral)
+        
+        if not self.interaction.response.is_done():
+            await self.interaction.response.defer(ephemeral=ephemeral)
 
     async def send(self, *args, **kwargs):
         return await self.interaction.send(*args, **kwargs)

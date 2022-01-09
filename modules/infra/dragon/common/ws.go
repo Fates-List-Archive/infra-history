@@ -9,7 +9,7 @@ import (
 )
 
 func AddWsEvent(ctx context.Context, redis *redis.Client, channel string, eventId string, event map[string]interface{}) {
-	wsEvent, err := json.Marshal(map[string]interface{}{
+	wsEvent, err := json.Marshal(map[string]map[string]interface{}{
 		eventId: event,
 	})
 	if err != nil {

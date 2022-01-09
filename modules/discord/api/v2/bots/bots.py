@@ -216,7 +216,7 @@ def gen_owner_html(owners_lst: tuple[dict]):
     return owners_html
 
 @router.get("/{bot_id}/_sunbeam")
-async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang: str = "en"):
+async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
     """
     Internally used by sunbeam to render bot pages.
 
@@ -354,10 +354,9 @@ async def get_bot_page(request: Request, bot_id: int, bt: BackgroundTasks, lang:
         }
 
         # Only cache for bots with more than 1000 votes
-        if bot["votes"] > 1000:
-            await redis.set(f"botpagecache-sunbeam:{bot_id}:{lang}", orjson.dumps(bot_cache), ex=60*60*4)
+        await redis.set(f"botpagecache-sunbeam:{bot_id}:{lang}", orjson.dumps(bot_cache), ex=60*60*4)
 
-    bt.add_task(add_ws_event, bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": str(user_id), "widget": False}})
+    await add_ws_event(bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": str(user_id), "widget": False}}, timeout=None)
     
     bot_cache["data"]["votes"] = await db.fetchval("SELECT votes FROM bots WHERE bot_id = $1", bot_cache["data"]["bot_id"])
     data = bot_cache | {

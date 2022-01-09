@@ -178,7 +178,7 @@ async def fetch_server(
     return api_ret
 
 @router.get("/{guild_id}/_sunbeam")
-async def get_server_page(request: Request, guild_id: int, bt: BackgroundTasks, lang: str = "en"):
+async def get_server_page(request: Request, guild_id: int, lang: str = "en"):
     """
     Internally used by sunbeam for server page getting.
     """
@@ -204,7 +204,7 @@ async def get_server_page(request: Request, guild_id: int, bt: BackgroundTasks, 
     data["tags_fixed"] = [(await db.fetchrow("SELECT id, name, iconify_data FROM server_tags WHERE id = $1", id)) for id in data["_tags"]]
     context = {"type": "server", "replace_list": constants.long_desc_replace_tuple, "id": str(guild_id), "index": "/servers"}
     data["type"] = "server"
-    bt.add_task(add_ws_event, guild_id, {"m": {"e": enums.APIEvents.server_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}}, type = "server")
+    await add_ws_event(guild_id, {"m": {"e": enums.APIEvents.server_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}}, type = "server", timeout=None)
     # Ensure server banner_page is disabled if not approved or certified
     if data["state"] not in (enums.BotState.approved, enums.BotState.certified, enums.BotState.private_viewable):
         data["banner"] = None

@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	ginlogrus "github.com/toorop/gin-logrus"
 
@@ -82,12 +84,19 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 	go hub.run()
 
 	r := gin.New()
+
 	r.Use(ginlogrus.Logger(logger), gin.Recovery())
+
+	pprof.Register(r, "api/dragon/pprof")
 
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(404, apiReturn(false, "Not Found", nil))
 	})
 	router := r.Group("/api/dragon")
+
+	router.GET("/__stats", func(c *gin.Context) {
+		c.String(200, spew.Sdump(hub.clients))
+	})
 
 	router.OPTIONS("/bots/:id/votes", func(c *gin.Context) {
 		var origin string = c.GetHeader("Origin")

@@ -1,8 +1,10 @@
 import time
 from http import HTTPStatus
 from typing import Optional
+import asyncpg
+import aiohttp
 
-from core import MiniContext, Status, UserState, blstats, is_staff, profile, request
+from core import MiniContext, Status, UserState, blstats, profile, InteractionWrapper
 from discord import Color, Embed, Member, User
 from discord.ext import commands, tasks
 
@@ -27,20 +29,61 @@ class Users(commands.Cog):
     @commands.slash_command(
         name="catid",
         description="Get the category ID of a channel",
-        guild_ids=[main, staff, testing],
+        guild_ids=[main, staff],
     )
     async def catid(self, inter):
         return await self._catid(inter)
+    
+    @commands.slash_command(
+        name="vote",
+        description="Vote for a bot",
+    )
+    async def _vote_slash(self, inter, bot: User):
+        InteractionWrapper(inter) # This also autodefers
+        await self._vote(inter, bot)
+
+    @commands.command(
+        name="vote",
+        description="Vote for a bot"
+    )
+    async def _vote_normal(self, ctx, bot: User):
+        await self._vote(ctx, bot)
+    
+    async def _vote(self, inter, bot: User):
+        if not bot.bot:
+            return await inter.send(
+                "You can only vote for bots at this time!"
+            )
+        db: asyncpg.Connection = await asyncpg.connect()
+        user_token = await db.fetchval(
+            "SELECT api_token from users WHERE user_id = $1",
+            inter.author.id
+        )
+        await db.close()
+        async with aiohttp.ClientSession() as sess:
+            async with sess.patch(
+                f"https://api.fateslist.xyz/api/dragon/bots/{bot.id}/votes",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": user_token,
+                    "Mistystar": "1"
+                },
+                json={"user_id": str(inter.author.id), "test": False}
+            ) as res:
+                if res.status >= 400:
+                    json = await res.json()
+                    return await inter.send(f'{json["reason"]}\n**Status Code:** {res.status}')
+                return await inter.send("Successfully voted for this bot!")
 
     @commands.slash_command(name="chanid",
                             description="Get channel id",
-                            guild_ids=[main, staff, testing])
+                            guild_ids=[main, staff])
     async def chanid(self, inter):
         return await inter.send(str(inter.channel.id))
 
     @commands.slash_command(name="flstats",
                             description="Show Fates List Stats",
-                            guild_ids=[testing])
+                            guild_ids=[staff])
     async def stats(self, inter):
         return await inter.send(embed=await blstats(inter))
 
