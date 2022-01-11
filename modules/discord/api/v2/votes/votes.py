@@ -24,7 +24,23 @@ router = APIRouter(
     ]
 )
 async def get_user_votes(request: Request, bot_id: int, user_id: int):
-    """Endpoint to check amount of votes a user has."""
+    """
+    Endpoint to check amount of votes a user has.
+
+
+    **votes** - The amount of votes the bot has.
+    
+    **voted** - Whether or not the user has *ever* voted for the bot.
+
+    **vote_epoch** - The redis TTL of the users vote lock. This is not time_to_vote which is the
+    elapsed time the user has waited since their last vote.
+    
+    **vts** - A list of timestamps that the user has voted for the bot on that has been recorded.
+
+    **time_to_vote** - The time the user has waited since they last voted.
+
+    **vote_right_now** - Whether a user can vote right now. Currently equivalent to `vote_epoch < 0`.
+    """
     voter_ts = await db.fetchval(
         "SELECT timestamps FROM bot_voters WHERE bot_id = $1 AND user_id = $2", 
         bot_id, 

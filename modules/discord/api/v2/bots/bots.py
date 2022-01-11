@@ -119,7 +119,6 @@ async def fetch_random_bot(request: Request, bot_id: int, lang: str = "default")
             )
         )
     ],
-    operation_id="get_bot"
 )
 async def fetch_bot(
     request: Request, 

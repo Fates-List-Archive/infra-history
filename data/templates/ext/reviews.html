@@ -1,7 +1,7 @@
 {% if total_reviews %}
 <span style="font-size: 18px;" class="white">Showing reviews {{(review_page-1)*per_page + 1}} to {{(review_page-1)*per_page + bot_reviews.__len__()}} of {{total_reviews}} total reviews</span><br/>
 {% endif %}
-<label for="rating-avg" style="font-size: 18px;" class="white">Average Rating: <i class='iconify' data-icon='fa-solid:star' data-inline='true' style="margin-right: 3px; margin-bottom: 1px;"></i>{{average_rating}}/10.0</label><br/>
+<label for="rating-avg" style="font-size: 18px;" class="white">Average Rating: <i class="material-icons">star</i>{{average_rating}}/10.0</label><br/>
 <span class="white">
 <input disabled id="rating-avg" class='slider' type="range" name="rating" min="0.1" max="10" value='{{average_rating}}' style="width: 100%" step='0.1' tabindex="-1"/>
 <p id="rating-desc-avg"></p>
@@ -16,11 +16,11 @@
                 <span class="white">{{rev.user.username if rev.user.username else "Unknown User"}}</span>
             </a>
             <span style="margin-right: 6px"></span>
-            <span class='iconify white' style="margin-right: 3px;" data-icon='fa-solid:angle-up' onclick="voteReview('{{rev.id}}', true)" data-inline='false'></span>
+	    <i class="material-icons" onclick="voteReview('{{rev.id}}', true)">keyboard_arrow_up</i>
             <span class="white">{{rev.review_upvotes.__len__() - rev.review_downvotes.__len__()}}</span>
-            <span class='iconify white' onclick="voteReview('{{rev.id}}', false)" style="margin-left: 3px; margin-right: 3px;" data-icon='fa-solid:angle-down' data-inline='false'></span>
+	    <i class="material-icons" onclick="voteReview('{{rev.id}}', false)">keyboard_arrow_down</i>
             <span class="white" style="font-weight: bold">
-                <span class='iconify' style="margin-right: 3px; margin-bottom: 1px;" data-icon='fa-solid:star'></span>
+		<i class="material-icons">star</i>
                 <span>{{rev.star_rating}}/10.0</span>
             </span>
             {% if username %}
@@ -118,4 +118,3 @@
         </ul>
     </nav>
 </div>
-<script src="https://code.iconify.design/1/1.0.7/iconify.min.js"></script>
