@@ -125,7 +125,3 @@ async def tos_page(request: Request):
 @router.get("/fates/rules")
 async def rules_page(request: Request):
     return RedirectResponse("https://fateslist.xyz/frostpaw/tos", status_code=301)
-
-@router.get("/fates/partners")
-async def fates_partners(request: Request):
-    return await templates.TemplateResponse("partners.html", {"request": request, "partners": partners})
