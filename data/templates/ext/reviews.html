@@ -12,7 +12,7 @@
        <div class="review-left" style="margin-bottom: 23px">
         <div class="review-header" style="margin-bottom: 7px; font-weight: bold;">
             <a href='/profile/{{rev.user.id}}' class="white">
-                <img style="border-radius: 50%; width: 24px;" src="{{rev.user.avatar.replace('.gif', '.webp').replace('.png', '.webp') if rev.user.avatar else "https://fateslist.xyz/static/botlisticon.webp"}}" class="review-avatar" alt="{{rev.user.username if rev.user.username else "Unknown User"}}'s avatar">
+                <img style="border-radius: 50%; width: 24px;" loading="lazy" src="{{rev.user.avatar.replace('.gif', '.webp').replace('.png', '.webp') if rev.user.avatar else "https://fateslist.xyz/static/botlisticon.webp"}}" class="review-avatar" alt="{{rev.user.username if rev.user.username else "Unknown User"}}'s avatar">
                 <span class="white">{{rev.user.username if rev.user.username else "Unknown User"}}</span>
             </a>
             <span style="margin-right: 6px"></span>

@@ -194,6 +194,10 @@ async def search_by_tag(request: Request, tag: str, target_type: enums.SearchTyp
         "query": tag
     }
 
+@router.get("/partners")
+async def get_partners(request: Request):
+    return partners
+
 
 @router.get("/_sunbeam/redirect")
 async def sunbeam_redirect(request: Request, id: uuid.UUID):
