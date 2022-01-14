@@ -29,7 +29,7 @@ class User(DiscordUser):
         user = dict(user)
 
         if bot_logs:
-            user["bot_logs"] = await self.db.fetch("SELECT bot_id, action, action_time FROM user_bot_logs WHERE user_id = $1", self.id)
+            user["bot_logs"] = await self.db.fetch("SELECT bot_id::text, action, action_time, context FROM user_bot_logs WHERE user_id = $1", self.id)
         else:
             bot_logs = []
 

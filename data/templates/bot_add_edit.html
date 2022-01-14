@@ -9,15 +9,15 @@
 {% endmacro %}
 
 {% block head %}
-	<link rel="stylesheet" href="/static/assets/prod/bot_server.min.css" media="none" onload="if(media!='all')media='all'"/>
-	<link rel="stylesheet" href="/static/assets/prod/common-settings-menu.min.css" media="none" onload="if(media!='all')media='all'"/>
+	<link rel="stylesheet" href="https://api.fateslist.xyz/static/assets/prod/bot_server.min.css" media="none" onload="if(media!='all')media='all'"/>
+	<link rel="stylesheet" href="https://api.fateslist.xyz/static/assets/prod/common-settings-menu.min.css" media="none" onload="if(media!='all')media='all'"/>
 {% endblock %}
 
 {% block content %}
 	{% if context.mode == "edit" %}
 		<img style="border-radius: 50%; width: 120px;" class="lozad" data-src="{{bot.user.avatar}}" id="bot-avatar" alt="{{bot.user.username}}'s avatar">
 	{% else %}
-		<img style="border-radius: 50%; width: 120px;" class="lozad" data-src="/static/botlisticon.webp" id="bot-avatar" alt="Fates List Logo">
+		<img style="border-radius: 50%; width: 120px;" class="lozad" data-src="https://api.fateslist.xyz/static/botlisticon.webp" id="bot-avatar" alt="Fates List Logo">
 	{% endif %}
 	<h4 class="white">{% if context.mode == "add" %}Fates List{% else %}{{bot.user.username}}{% endif %}</h4>
 	<h5 class="white" style="opacity: 0.8; margin-bottom: 30px;">{% if context.mode == "add" %}Welcome!{% else %}Bot Settings{% endif %}</h5>
@@ -390,12 +390,12 @@
 			}, 100)
 		}
 	</script>
-	<script src="/static/assets/prod/bot_add_edit.min.js?v=93"></script>
+	<script src="https://api.fateslist.xyz/static/assets/prod/bot_add_edit.min.js?v=94"></script>
 	{% if context.mode == "edit" %}
-		<script src="/static/assets/prod/ws.min.js?v=4"></script>
-		<script src="https://fateslist.xyz/static/assets/prod/vote.min.js?v=13"></script>
+		<script src="https://api.fateslist.xyz/static/assets/prod/ws.min.js?v=4"></script>
+		<script src="https://api.fateslist.xyz/static/assets/prod/vote.min.js?v=13"></script>
 	{% endif %}
-	<script src="/static/assets/prod/tabs.min.js?v=4" defer></script>
+	<script src="https://api.fateslist.xyz/static/assets/prod/tabs.min.js?v=6"></script>
 	<script src="https://cdn.jsdelivr.net/npm/select-pure@latest/dist/index.js"></script>
 {% endblock %}
 {% block footer %}

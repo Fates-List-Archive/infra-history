@@ -163,6 +163,7 @@ CREATE TABLE user_bot_logs (
     bot_id BIGINT NOT NULL,
     action_time timestamptz NOT NULL DEFAULT NOW(),
     action integer not null, -- 0 = approve
+    context text, -- Optional context field
     CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 

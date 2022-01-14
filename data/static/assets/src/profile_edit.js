@@ -42,7 +42,7 @@ function submitProfile() {
 			200: function() {
 				modalShow("Success", "Your profile has been " + mod + ". You will be redirected to it in a few moments")
 				setTimeout(function(){
-					window.location.replace(`/profile/${context.user_id}`)
+					window.top.location.replace(`/profile/${context.user_id}`)
 				}, 1000);
 			}
 		}
@@ -74,7 +74,7 @@ function regenToken() {
 	   url: `/api/users/${context.user_id}/token`
 	});
 	alert("Regenerated Token Successfully")
-	window.location.reload()
+	window.top.location.reload()
 }
 
 function hideSaveOnAboutTab(id, evt, data) {

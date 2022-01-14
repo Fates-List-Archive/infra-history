@@ -299,6 +299,7 @@ class BotActions():
                         await connection.execute("INSERT INTO vanity (type, vanity_url, redirect) VALUES ($1, $2, $3)", 1, self.vanity, self.bot_id)
                 else:
                     await connection.execute("UPDATE vanity SET vanity_url = $1 WHERE redirect = $2", self.vanity, self.bot_id) # Update the vanity since bot already use it
+                await connection.execute("INSERT INTO user_bot_logs (user_id, bot_id, action) VALUES ($1, $2, $3)", self.user_id, self.bot_id, enums.UserBotAction.edit_bot)
         await bot_add_event(self.bot_id, enums.APIEvents.bot_edit, {"user": str(self.user_id)}) # Send event
         edit_embed = discord.Embed(
             title="Bot Edit!", 

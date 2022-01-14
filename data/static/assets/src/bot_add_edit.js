@@ -54,7 +54,7 @@ function submitBot() {
 			200: function() {
 				modalShow("Success", "Your bot has been " + mod + ". You will be redirected to it in a few moments")
 				setTimeout(function(){
-					window.location.replace(`/bot/${json.bot_id}`)
+					window.top.location.replace(`/bot/${json.bot_id}`)
 				}, 1000);
 			}
 		}
@@ -86,7 +86,7 @@ function deleteBot() {
 					method: "GET",
 					statusCode: {
 						404: function(data){
-							window.location.replace(`/`)
+							window.top.location.replace(`/`)
 						}
 					}
 				})
@@ -104,7 +104,7 @@ function showToken(but) {
 		token.setAttribute("show", "true")
 	}
 	else {
-                token.innerHTML = "Click 'Show' to see your bots token";
+        token.innerHTML = "Click 'Show' to see your bots token";
 		but.innerHTML = "Show"
 		token.removeAttribute('show')
 	}
@@ -127,7 +127,7 @@ function showToken(but) {
 	   url: `/api/bots/${context.bot_id}/token`
 	});
 	alert("Regenerated Token Successfully")
-	window.location.reload()
+	window.top.location.reload()
   }
 
 

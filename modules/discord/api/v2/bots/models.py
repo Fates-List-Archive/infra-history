@@ -74,6 +74,7 @@ class Bot(BaseModel):
     keep_banner_decor: bool | None = None
     client_id: str | None = None
     flags: list[int] | None = []
+    action_logs: list[dict] | None = None
 
 class BotStats(BaseModel):
     guild_count: int

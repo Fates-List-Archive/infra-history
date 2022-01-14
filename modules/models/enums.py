@@ -122,6 +122,8 @@ class UserBotAction(IntEnum):
     ban = 3, "Ban"
     claim = 4, "Claim"
     unclaim = 5, "Unclaim"
+    transfer_ownership = 6, "Transfer Bot Ownership"
+    edit_bot = 7, "Edit Bot"
 
 class LongDescType(IntEnum):
     _init_ = 'value __doc__'

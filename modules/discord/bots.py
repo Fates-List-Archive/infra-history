@@ -6,7 +6,9 @@ allowed_file_ext = [".gif", ".png", ".jpeg", ".jpg", ".webm", ".webp"]
 
 
 @router.get("/admin/add")
-async def add_bot(request: Request):
+async def add_bot(request: Request, iframe: bool = False):
+    if not iframe:
+        return RedirectResponse("https://fateslist.xyz/frostpaw/add-bot")
     if "user_id" in request.session.keys():
         fn = "bot_add_edit.html"
         context = {
@@ -28,6 +30,7 @@ async def add_bot(request: Request):
                 "tags_fixed": tags_fixed,
                 "features": features,
                 "bot": {},
+                "iframe": iframe
             },
             context=context,
             compact=False,
@@ -37,7 +40,9 @@ async def add_bot(request: Request):
 
 
 @router.get("/{bot_id}/settings")
-async def bot_settings(request: Request, bot_id: int):
+async def bot_settings(request: Request, bot_id: int, iframe: bool = False):
+    if not iframe:
+        return RedirectResponse(f"https://fateslist.xyz/bot/{bot_id}/settings")
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
     if "user_id" not in request.session.keys():
@@ -131,6 +136,7 @@ async def bot_settings(request: Request, bot_id: int):
             "bot": bot,
             "vanity": vanity,
             "features": features,
+            "iframe": iframe
         },
         context=context,
         compact=False,

@@ -229,7 +229,8 @@ async def transfer_bot_ownership(request: Request, user_id: int, bot_id: int, tr
         async with conn.transaction() as tr:
             await conn.execute("UPDATE bot_owner SET main = false WHERE main = true AND bot_id = $1", bot_id)
             await conn.execute("INSERT INTO bot_owner (bot_id, owner, main) VALUES ($1, $2, $3)", bot_id, transfer.new_owner, True)
-    
+            await conn.execute("INSERT INTO user_bot_logs (user_id, bot_id, action, context) VALUES ($1, $2, $3, $4)", user_id, bot_id, enums.UserBotAction.transfer_ownership, str(transfer.new_owner))
+
     embed = discord.Embed(title="Bot Ownership Transfer", description=f"<@{user_id}> has transferred ownership of bot <@{bot_id}> to <@{transfer.new_owner}>!", color=discord.Color.green())
     msg = {"content": "", "embed": embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": []}
     await redis_ipc_new(redis_db, "SENDMSG", msg=msg, timeout=None)

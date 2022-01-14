@@ -16,8 +16,11 @@ async def profile_of_user_generic(
 @router.get("/{user_id}/edit")
 async def profile_editor(
     request: Request,
-    user_id: int
+    user_id: int,
+    iframe: bool = False
 ):
+    if not iframe:
+        return RedirectResponse(f"https://fateslist.xyz/profile/{user_id}/settings")
     viewer = int(request.session.get("user_id", -1))
     admin = (await is_staff(staff_roles, viewer, 4))[0] if viewer else False
     personal = user_id == int(request.session.get("user_id", -1))
@@ -34,5 +37,5 @@ async def profile_editor(
         "bot": dict(profile) | profile["profile"],
         "langs": [{"value": lang.value, "text": lang.__doc__} for lang in list(enums.SiteLang)]
     }
-    return await templates.TemplateResponse("profile_edit.html", {"request": request} | context, context=context)
+    return await templates.TemplateResponse("profile_edit.html", {"request": request, "iframe": iframe} | context, context=context)
 

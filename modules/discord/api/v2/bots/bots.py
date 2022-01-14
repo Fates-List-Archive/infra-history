@@ -148,7 +148,9 @@ async def fetch_bot(
     if not no_cache:
         cache = await redis_db.get(f"botcache-{bot_id}-{compact}")
         if cache:
-            return orjson.loads(cache)
+            data = orjson.loads(cache)
+            data["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
+            return data
 
     api_ret = await db.fetchrow(
         "SELECT bot_id, last_stats_post, description, flags, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id FROM bots WHERE bot_id = $1 OR client_id = $1", 
@@ -206,6 +208,8 @@ async def fetch_bot(
 
     await redis_db.set(f"botcache-{bot_id}-{compact}", orjson.dumps(api_ret), ex=60*60*8)
 
+    api_ret["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
+
     return api_ret
 
 def gen_owner_html(owners_lst: tuple[dict]):
@@ -262,7 +266,7 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
     else:
         user_id = None
 
-    bot_cache = await redis.get(f"botpagecache-sunbeam:{bot_id}:{lang}")
+    bot_cache = None # await redis.get(f"botpagecache-sunbeam:{bot_id}:{lang}")
     use_cache = True
     if not bot_cache:
         use_cache = False
@@ -358,6 +362,7 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
     await add_ws_event(bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": str(user_id), "widget": False}}, timeout=None)
     
     bot_cache["data"]["votes"] = await db.fetchval("SELECT votes FROM bots WHERE bot_id = $1", bot_cache["data"]["bot_id"])
+    bot_cache["data"]["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
     data = bot_cache | {
         "type": "bot", 
         "promos": await get_promotions(bot_id),
