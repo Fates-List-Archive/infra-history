@@ -651,7 +651,7 @@ func CmdInit() map[string]types.SlashCommand {
 
 			_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", types.BotStateUnderReview.Int(), context.User.ID, context.Bot.ID)
 
-			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.UserBotApprove)
+			go UpdateBotLogs(context.Context, context.Postgres, context.User.ID, context.Bot.ID, types.UserBotClaim)
 
 			if err != nil {
 				log.Error(err)

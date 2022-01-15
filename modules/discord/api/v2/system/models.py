@@ -47,7 +47,7 @@ class BotQueueGet(BaseModel):
 
 
 class BotVanity(BaseModel):
-    type: enums.SearchType
+    type: enums.VanityType
     redirect: str
 
 

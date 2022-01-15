@@ -245,6 +245,8 @@ async def vanity_bot(vanity: str) -> Optional[list]:
     if cache:
         data = cache.decode("utf-8").split(" ")
         type = enums.Vanity(int(data[0])).name
+        if type == "server":
+            type = "guild"
         return int(data[1]), type
 
     t = await db.fetchrow(
@@ -256,6 +258,8 @@ async def vanity_bot(vanity: str) -> Optional[list]:
     await redis_db.set(vanity, f"{t['type']} {t['redirect']}", ex=60 * 4)
 
     type = enums.Vanity(t["type"]).name  # Get type using Vanity enum
+    if type == "server":
+        type = "guild"
     return int(t["redirect"]), type
 
 

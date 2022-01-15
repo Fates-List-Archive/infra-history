@@ -143,6 +143,11 @@ class SearchType(Enum):
     server = "server", "Server"
     profile = "profile", "Profile"
 
+class VanityType(Enum):
+    _init_ = "value __doc__"
+    bot = "bot", "Bot"
+    guild = "guild", "Server"
+
 class CommandType(IntEnum):
     """
     0 - Regular (Prefix) Command
