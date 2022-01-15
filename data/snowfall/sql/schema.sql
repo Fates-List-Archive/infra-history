@@ -256,6 +256,7 @@ CREATE TABLE servers (
     deleted boolean default false,
     js_allowed boolean default true,
     flags integer[] default '{}'
+    autorole_votes bigint[] default '{}';
 );
 
 -- In server tags, owner_guild is the first guild a tag was given to

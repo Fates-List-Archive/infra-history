@@ -12,12 +12,11 @@ from ..core import *
 cleaner = Cleaner()
 
 router = APIRouter(
-    prefix = "/server",
     tags = ["Servers"],
     include_in_schema = False
 )
 
-@router.get("/{guild_id}/reviews_html")
+@router.get("/_sunbeam/pub/server/{guild_id}/reviews_html")
 async def guild_review_page(request: Request, guild_id: int, page: int = 1):
     page = page if page else 1
     reviews = await parse_reviews(request.app.state.worker_session, guild_id, page=page, target_type=enums.ReviewType.server)

@@ -25,32 +25,17 @@ async def exp1(request: Request):
 
     return PrettyJSONResponse({"message": "Please send a screenshot of this page and send it", "data": data})
 
-
-@router.get("/fates/banappeal")
-async def ban_appeal(request: Request, token: str):
-    redis = request.app.state.worker_session.redis
-    data = await redis.get(token)
-    if not data:
-        return await templates.e(request, "Invalid ban token, try logging in again!")
-    return "Coming soon"
-
 @router.post("/fates/csp")
 async def csp(request: Request):
     logger.info((await request.json()))
 
-# We want to handle any request method to index page.
-# cert = certified bots
 @router.get("/")
-@router.head("/")
 async def index_fend(request: Request):
     return RedirectResponse("https://fateslist.xyz", status_code=301)
 
 @router.get("/servers")
-@router.head("/servers")
 @router.get("/server")
-@router.head("/server")
 @router.get("/guilds")
-@router.head("/guilds")
 async def server_index(request: Request):
     return RedirectResponse("https://fateslist.xyz/servers", status_code=301)
 
@@ -58,15 +43,6 @@ async def server_index(request: Request):
 @router.get("/servers/{guild_id}")
 def server_redirector(guild_id: int, path: Optional[str] = None):
     return RedirectResponse(f"/server/{guild_id}/{path or ''}")
-
-#@router.get("/feature/{name}")
-#async def features_view(request: Request, name: str):
-#    if name not in features.keys():
-#        return abort(404)
-#    bots = await db.fetch("SELECT description, banner_card AS banner, votes, guild_count, bot_id, invite, state FROM bots, unnest(features) feature WHERE feature = $1 and (state = 0 or state = 6) ORDER BY votes DESC LIMIT 12", name)
-#    bot_obj = await parse_index_query(request.app.state.worker_session, bots)
-#    return await templates.TemplateResponse("feature.html", {"request": request, "name": name, "feature": features[name], "bots": bot_obj})
-
 
 @router.get("/fates/stats")
 async def stats_page(request: Request, full: bool = False):
@@ -96,32 +72,7 @@ async def login_get(request: Request, redirect: Optional[str] = None, pretty: Op
     if "user_id" in request.session.keys():
         return RedirectResponse(redirect or "/", status_code=HTTP_303_SEE_OTHER)
     return RedirectResponse(f"https://fateslist.xyz/frostpaw/herb?redirect={redirect or 'https://api.fateslist.xyz'}")
-    #return await templates.TemplateResponse(
-    #        "login.html", 
-    #        {
-    #            "request": request
-    #        }, 
-    #        context = {
-    #            "perm_needed": redirect is not None, 
-    #            "perm_pretty": pretty, 
-    #            "redirect": redirect if redirect else None,
-    #            "login_page": True
-    #        }
-    #)
-
-@router.get("/fates/logout")
-async def logout(request: Request):
-    return RedirectResponse("https://fateslist.xyz/frostpaw/logout")
-
 
 @router.get("/api/docs")
 async def api_docs_view(request: Request):
     return RedirectResponse("https://docs.fateslist.xyz", status_code=301)
-
-@router.get("/fates/tos")
-async def tos_page(request: Request):
-    return RedirectResponse("https://fateslist.xyz/frostpaw/tos", status_code=301)
-
-@router.get("/fates/rules")
-async def rules_page(request: Request):
-    return RedirectResponse("https://fateslist.xyz/frostpaw/tos", status_code=301)

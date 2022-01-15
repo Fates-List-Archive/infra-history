@@ -66,7 +66,6 @@ func SetupSlash(discord *discordgo.Session, cmdInit types.SlashFunction) {
 					}
 					if err != nil {
 						panic(err.Error())
-						return
 					}
 				}
 			}()

@@ -2,30 +2,12 @@
 {% block html %}
 <!-- Begin HTML -->
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
-<noscript>
-	<div style="position: fixed; top: 0px; left: 0px; z-index: 30000000; height: 10%; width: 100%; background-color: #FFFFFF">
-		<p>This site needs JavaScript enabled in order to work properly. Please disable NoScript before trying to use this site</p>
-	</div>
-</noscript>
 <script src="https://code.iconify.design/1/1.0.7/iconify.min.js"></script>
 <!-- Primary Meta Tags -->
-<title>Fates List | Discord Bot List</title>
-<meta name="title" content="Fates List | Discord Bot List">
-<meta name="description" content="Find, invite and discover the best Discord bots, now on Fates List.">
-
-<meta name="keywords" content="discord bot, discord bot list, fateslist, fates list, bot list, discord list, list of bost, discord bots, fateslist bots, fates list">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="language" content="English">
-
-<!-- Open Graph / Facebook -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://fateslist.xyz/">
-<meta property="og:title" content="Fates List">
-<meta property="og:description" content="Find, invite and discover the best bots & servers now on FatesList">
-<meta property="og:image" content="https://fateslist.xyz/static/botlisticon.webp">
-<link rel="canonical" href="https://fateslist.xyz{{path}}"/>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lozad/dist/lozad.min.js"></script>
     {% block head %}
       
@@ -36,7 +18,6 @@
     <!-- Add Material font (Roboto) and Material icon as needed -->
     <link href="https://api.fateslist.xyz/static/assets/prod/lexend-deca.min.css" rel="stylesheet" />
     <link href="https://api.fateslist.xyz/static/assets/prod/material-icons.min.css" rel="stylesheet" />
-    <link rel="shortcut icon" href="https://api.fateslist.xyz/static/favicon.ico"/>
     <!-- Material CSS -->
     <link href="https://api.fateslist.xyz/static/assets/prod/material-slim.min.css?v=10" rel="stylesheet"/>
     <!-- Base Styles -->
@@ -63,12 +44,10 @@
 	</div>
 </div>
     <!-- jQuery, Bootstrap Bundle (includes Popper) and Material -->
-    <div style="padding: 2px;">
-	    <div class="text-center" id="site-content" style="margin-top: 5px;">
-		    <main>{% block icontent %}{%endblock%}{% block content %}{% endblock %}</main>
-	    </div>
+    <div class="text-center" id="site-content">
+	<main>{% block icontent %}{%endblock%}{% block content %}{% endblock %}</main>
     </div>
-    <div style="margin-top: 100px !important"></div>
+    <div style="margin-top: 200px !important"></div>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" crossorigin></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" crossorigin></script>
     <script src="https://cdn.jsdelivr.net/gh/djibe/material@4.6.0-rc.2/js/material.min.js" crossorigin></script>

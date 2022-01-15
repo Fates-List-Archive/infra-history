@@ -197,6 +197,10 @@ func CmdInit() map[string]types.SlashCommand {
 						Name:  "Requires Login",
 						Value: "login_required",
 					},
+					{
+						Name:  "Vote Roles",
+						Value: "autorole_votes",
+					},
 				},
 				Required: true,
 			},
@@ -216,7 +220,7 @@ func CmdInit() map[string]types.SlashCommand {
 			valueVal := slashbot.GetArg(context.Discord, context.Interaction, "value", true)
 			value, ok := valueVal.(string)
 			if !ok || value == "" || value == "none" {
-				if field == "recache" || field == "invite_url" || field == "invite_channel" || field == "banner_card" || field == "banner_page" || field == "webhook" || field == "website" {
+				if field == "recache" || field == "invite_url" || field == "invite_channel" || field == "banner_card" || field == "banner_page" || field == "webhook" || field == "website" || field == "autorole_votes" {
 					value = ""
 				} else {
 					return "A value must be provided for this field"
@@ -371,7 +375,7 @@ func CmdInit() map[string]types.SlashCommand {
 				return dbErr
 			}
 
-			if field != "recache" && field != "vanity" {
+			if field != "recache" && field != "vanity" && field != "autorole_votes" {
 				context.Postgres.Exec(context.Context, "UPDATE servers SET "+field+" = $1 WHERE guild_id = $2", value, context.Interaction.GuildID)
 			} else if field == "vanity" {
 				value = strings.ToLower(strings.Replace(value, " ", "", -1))
@@ -390,6 +394,30 @@ func CmdInit() map[string]types.SlashCommand {
 				if err != nil {
 					return "An error occurred while we were updating our database: " + err.Error()
 				}
+			}
+
+			// Handle vote roles and other autoroles here
+			if field == "autorole_votes" {
+				roleList := strings.Split(value, "|")
+				validRoles := []string{}
+				guildRoles, err := context.Discord.GuildRoles(context.Interaction.GuildID)
+
+				if err != nil {
+					return err.Error()
+				}
+
+				for _, grole := range guildRoles {
+					for _, role := range roleList {
+						if role == grole.ID {
+							validRoles = append(validRoles, role)
+						}
+					}
+				}
+
+				if len(validRoles) == 0 && value != "" {
+					return "No valid roles to autorole found!"
+				}
+				context.Postgres.Exec(context.Context, "UPDATE servers SET "+field+" = $1 WHERE guild_id = $2", validRoles, context.Interaction.GuildID)
 			}
 
 			// Update server audit log here
@@ -491,6 +519,10 @@ func CmdInit() map[string]types.SlashCommand {
 						Name:  "Server Tags (ID form)",
 						Value: "tags",
 					},
+					{
+						Name:  "Vote Roles",
+						Value: "autorole_votes",
+					},
 				},
 				Required: true,
 			},
@@ -571,11 +603,12 @@ func CmdInit() map[string]types.SlashCommand {
 			var voteMsg string // The message that will be shown to the use on a successful vote
 
 			if check.Milliseconds() == 0 || test {
-				var userId string
+				var userId string = context.Interaction.Member.User.ID
 				if test {
-					userId = "519850436899897346"
-				} else {
-					userId = context.Interaction.Member.User.ID
+					// TODO: Check if test votes are currently enabled. For now use perm 2
+					if !slashbot.CheckServerPerms(context.Discord, context.Interaction, 2) {
+						return ""
+					}
 				}
 
 				var votesDb pgtype.Int8
@@ -625,6 +658,25 @@ func CmdInit() map[string]types.SlashCommand {
 					log.Debug("Got webhook type of " + strconv.Itoa(int(webhookType)))
 				}
 
+				// Handle vote autoroles
+				var roles pgtype.Int8Array
+
+				verr := context.Postgres.QueryRow(context.Context, "SELECT autorole_votes FROM servers WHERE guild_id = $1", context.Interaction.GuildID).Scan(&roles)
+
+				if verr != nil {
+					voteMsg += "\nVote role error: " + dbError(err)
+				}
+
+				if roles.Status == pgtype.Present {
+					for _, role := range roles.Elements {
+						roleID := strconv.FormatInt(role.Int, 10)
+						err := context.Discord.GuildMemberRoleAddWithReason(context.Interaction.GuildID, userId, roleID, "Autorole for user "+userId)
+						if err != nil {
+							voteMsg += "\nVote role error when giving role " + roleID + ": " + err.Error()
+						}
+					}
+				}
+
 				if !test {
 					context.Postgres.Exec(context.Context, "UPDATE servers SET votes = votes + 1, total_votes = total_votes + 1 WHERE guild_id = $1", context.Interaction.GuildID)
 					context.Redis.Set(context.Context, key, 0, 8*time.Hour)
@@ -655,7 +707,8 @@ func CmdInit() map[string]types.SlashCommand {
 				"If you're reading this, you probably already know what server listing (and slash commands) are. This guide will not go over that"
 
 			syntax := "**Slash command syntax**\n" +
-				"This guide will use the following syntax for slash commands: `/command option:foo anotheroption:bar`"
+				"This guide will use the following syntax for slash commands: `/command option:foo anotheroption:bar`. " +
+				"To specify a list of values (where supported), use |. Currently only Vote Roles supports this"
 
 			faqBasics := "**How do I add my server?**+\n" +
 				"Good question. Your server should usually be automatically added for you once you add the bot to your server. " +
