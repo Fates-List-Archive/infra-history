@@ -17,6 +17,7 @@ import (
 	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-redis/redis/v8"
+	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
 )
@@ -27,6 +28,10 @@ var (
 	discordServerBot *discordgo.Session
 	rdb              *redis.Client
 	ctx              context.Context = context.Background()
+	uptimeFirstRun   bool
+	errBots          []string = []string{} // List of bots that actually don't exist on main server
+	errBotOffline    []string = []string{} // List of bots that are offline
+	uptimeRunning    bool
 )
 
 func DragonServer() {
@@ -70,8 +75,67 @@ func DragonServer() {
 	discordServerBot.AddHandler(func(s *discordgo.Session, m *discordgo.GuildMemberRemove) { memberHandler(s, m.Member) })
 	// End of potentially dangerous (priv code)
 
+	// https://gist.github.com/ryanfitz/4191392
+	doEvery := func(d time.Duration, f func(time.Time)) {
+		f(time.Now())
+		for x := range time.Tick(d) {
+			f(x)
+		}
+	}
+
+	uptimeFunc := func(t time.Time) {
+		uptimeRunning = true
+		log.Info("Called uptime function at time: ", t)
+		bots, err := db.Query(ctx, "SELECT bot_id::text FROM bots WHERE state = $1 OR state = $2", types.BotStateApproved.Int(), types.BotStateCertified.Int())
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		defer bots.Close()
+		i := 0
+		errBots = []string{}
+		errBotOffline = []string{}
+		for bots.Next() {
+			var botId pgtype.Text
+			bots.Scan(&botId)
+			if botId.Status != pgtype.Present {
+				log.Error("Bot ID is not present during uptime checks...: ", i)
+				continue
+			}
+			status, err := discord.State.Presence(common.MainServer, botId.String)
+			if err != nil {
+				_, err := discord.State.Member(common.MainServer, botId.String)
+				if err != nil {
+					// Bot doesn't actually exist!
+					errBots = append(errBots, botId.String)
+					continue
+				}
+			}
+			if status == nil || status.Status == discordgo.StatusOffline {
+				log.Warning(botId.String, " is offline right now!")
+				_, err := db.Exec(ctx, "UPDATE bots SET uptime_checks_failed = uptime_checks_failed + 1, uptime_checks_total = uptime_checks_total + 1 WHERE bot_id = $1", botId.String)
+				if err != nil {
+					log.Error(err)
+				}
+				errBotOffline = append(errBotOffline, botId.String)
+				continue
+			}
+			_, err = db.Exec(ctx, "UPDATE bots SET uptime_checks_total = uptime_checks_total + 1 WHERE bot_id = $1", botId.String)
+			if err != nil {
+				log.Error(err)
+			}
+			i += 1
+		}
+		log.Info("Finished uptime checks at time: ", time.Now(), ".\nBots Not Found: ", len(errBots))
+		uptimeRunning = false
+	}
+
 	onReady := func(s *discordgo.Session, m *discordgo.Ready) {
 		log.Info("Logged in as ", m.User.Username)
+		if !uptimeFirstRun {
+			uptimeFirstRun = true
+			go doEvery(5*time.Minute, uptimeFunc)
+		}
 	}
 
 	discord.AddHandler(func(s *discordgo.Session, m *discordgo.GuildMemberAdd) {

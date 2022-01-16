@@ -153,7 +153,7 @@ async def fetch_bot(
             return data
 
     api_ret = await db.fetchrow(
-        "SELECT bot_id, last_stats_post, description, flags, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id FROM bots WHERE bot_id = $1 OR client_id = $1", 
+        "SELECT bot_id, last_stats_post, description, flags, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id, uptime_checks_total, uptime_checks_failed FROM bots WHERE bot_id = $1 OR client_id = $1", 
         bot_id
     )
     if api_ret is None:
@@ -281,7 +281,8 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
             """SELECT bot_id, prefix, shard_count, user_count, shards, state, description, bot_library AS library, 
             website, votes, guild_count, discord AS support, banner_page AS banner, github, features, 
             invite_amount, css, long_description_type, long_description, donate, privacy_policy, 
-            nsfw, keep_banner_decor, flags, last_stats_post, created_at FROM bots WHERE bot_id = $1 OR client_id = $1""", 
+            nsfw, keep_banner_decor, flags, last_stats_post, created_at, uptime_checks_total, uptime_checks_failed 
+            FROM bots WHERE bot_id = $1 OR client_id = $1""", 
             bot_id
         )
         if not bot:

@@ -8,8 +8,10 @@ router = APIRouter(
     include_in_schema = False
 )
 
-@router.get("/dm/help")
-async def exp1(request: Request):
+@router.get("/_sunbeam/dm/help")
+async def internal_dm_help(request: Request):
+    if not request.headers.get("Frostpaw"):
+        return abort(404)
     data = {
         "user_id": request.session.get("user_id"), 
         "logged_in": "user_id" in request.session.keys(),
@@ -23,7 +25,7 @@ async def exp1(request: Request):
     if data["logged_in"]:
         data["user"] = await get_user(data["user_id"], worker_session=request.app.state.worker_session)
 
-    return PrettyJSONResponse({"message": "Please send a screenshot of this page and send it", "data": data})
+    return {"message": "Please send a screenshot of this page and send it to staff (or our support server)", "data": data}
 
 @router.post("/fates/csp")
 async def csp(request: Request):

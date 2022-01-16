@@ -48,7 +48,9 @@ CREATE TABLE bots (
     nsfw boolean DEFAULT false,
     verifier bigint,
     js_allowed BOOLEAN DEFAULT TRUE,
-    system boolean default false
+    system boolean default false,
+    uptime_checks_total integer default 0,
+    uptime_checks_failed integer default 0
 );
 
 CREATE TABLE resources (

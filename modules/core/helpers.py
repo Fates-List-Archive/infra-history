@@ -18,21 +18,6 @@ from .events import *
 from .imports import *
 from .templating import *
 
-
-class PrettyJSONResponse(Response):
-    media_type = "application/json"
-
-    @staticmethod
-    def render(content: typing.Any) -> bytes:
-        return json.dumps(
-            content,
-            ensure_ascii=False,
-            allow_nan=False,
-            indent=4,
-            separators=(", ", ": "),
-        ).encode("utf-8")
-
-
 # Some replace tuples
 # TODO: Move this elsewhere
 js_rem_tuple = (("onclick", ""), ("onhover", ""), ("script", ""), ("onload", ""))
