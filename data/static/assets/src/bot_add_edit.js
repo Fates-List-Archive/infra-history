@@ -1,20 +1,21 @@
 function submitBot() {
-    context.error = null
-    modalShow("Saving", "Please wait for a few moments while we save your bot")
     try {
 	json = {}
+	errorFields = []
 	context.form_values.text.forEach(function (key) {
 	    el = document.querySelector(`#${key}`)
 	    json[key] = el.value
 	    if(el.getAttribute("required") != null && !el.value){
-		modalShow("Error", `You must enter a ${key.replaceAll("_", " ")} for your bot!`)
-		context.error = key
+		errorFields.push(key.replaceAll("_", " "))
 		return
 	    }
 	})
-	if(context.error) {
+
+	if(errorFields.length > 0) {
+		modalShow("Error", `You must enter a ${errorFields.join(', ')} for your bot!`)
 		return
 	}
+
 	context.form_values.select_single.forEach(function (key) {
 	    json[key] = document.querySelector(`#${key}`).value
 	})
@@ -52,10 +53,8 @@ function submitBot() {
 		json: json,
 		statusCode: {
 			200: function() {
-				modalShow("Success", "Your bot has been " + mod + ". You will be redirected to it in a few moments")
-				setTimeout(function(){
-					window.top.location.replace(`/bot/${json.bot_id}`)
-				}, 1000);
+				modalShow("Success", "Your bot has been " + mod + ". You will be redirected to it once you dismiss this alert")
+				window.top.location.replace(`https://fateslist.xyz/bot/${json.bot_id}`)
 			}
 		}
 	})

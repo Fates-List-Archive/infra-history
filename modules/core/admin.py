@@ -36,7 +36,8 @@ class BotActions():
         if not check or mode == "add":
             async with aiohttp.ClientSession() as sess:
                 async with sess.get(f"https://japi.rest/discord/v1/application/{self.bot_id}") as resp:
-                    if resp.status != 200:
+                    if resp.status != 200 and resp.status != 400:
+                        logger.info(f"Got japi status code: {resp.status}")
                         return "japi.rest seems to be down right now. Please contact Fates List Support if you keep getting this error!"
                     self.japi_json = await resp.json()
                     if self.japi_json["data"].get("code") and not self.client_id:
@@ -44,7 +45,7 @@ class BotActions():
                     self.client_id = self.bot_id if not self.client_id else self.client_id
                 if self.client_id and self.client_id != self.bot_id:
                     async with sess.get(f"https://japi.rest/discord/v1/application/{self.client_id}") as resp:
-                        if resp.status != 200:
+                        if resp.status != 200 and resp.status != 400:
                             return "japi.rest seems to be down right now. Please contact Fates List Support if you keep getting this error!"
                         self.japi_json = await resp.json()
                         if self.japi_json["data"].get("code"):

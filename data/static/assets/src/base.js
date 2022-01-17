@@ -16,9 +16,7 @@ function topFunction() {
 }
 
 function modalShow(title, body) {
-	document.querySelector("#base-modal-label").innerHTML = title;
-	document.querySelector("#base-modal-body").innerHTML = body;
-	jQuery("#base-modal").modal();
+	alert(`${title}: ${body}`)
 }
 
 
