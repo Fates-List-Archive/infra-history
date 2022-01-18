@@ -14,43 +14,33 @@ with open("config/data/discord.json") as f:
     discord_client_id: int = int(_oauth_data["client_id"])
     owner: int = int(_discord_data["owner"])  # Owner of fates list
     server_bot_invite: str = _discord_data[
-        "server_bot_invite"
-    ]  # Ensure that it uses 67649 for perms
+        "server_bot_invite"]  # Ensure that it uses 67649 for perms
     support_url: str = _discord_data["support_server"]  # Support server URL
     bot_logs: int = int(_channel_data["bot_logs"])  # Bot logs
     server_logs: int = int(_channel_data["server_logs"])  # Server logs
     appeals_channel: int = int(
-        _channel_data["appeals_channel"]
-    )  # Appeal/resubmission channel
+        _channel_data["appeals_channel"])  # Appeal/resubmission channel
     site_errors_channel: int = int(
-        _channel_data["site_errors_channel"]
-    )  # Site error logging
+        _channel_data["site_errors_channel"])  # Site error logging
     test_server: int = int(_server_data["testing"])  # Test server
     main_server: int = int(_server_data["main"])  # Main server
     staff_server: int = int(_server_data["staff"])  # Staff server
     staff_ping_add_role: int = int(
-        _role_data["staff_ping_add_role"]
-    )  # Staff ping role on bot add
+        _role_data["staff_ping_add_role"])  # Staff ping role on bot add
     bot_dev_role: int = int(_role_data["bot_dev_role"])  # Bot developer role
     bots_role: int = int(_role_data["bots_role"])  # Bots role on main server
     certified_bots_role: int = int(
-        _role_data["certified_bots_role"]
-    )  # Certified bots role
+        _role_data["certified_bots_role"])  # Certified bots role
     certified_dev_role: int = int(
-        _role_data["certified_dev_role"]
-    )  # Certified developers role
+        _role_data["certified_dev_role"])  # Certified developers role
     bronze_user_role: int = int(
-        _role_data["bronze_user_role"]
-    )  # Bronze user role in main server
+        _role_data["bronze_user_role"])  # Bronze user role in main server
     test_botsrole: int = int(
-        _role_data["test_server_bots_role"]
-    )  # Test server bots role
+        _role_data["test_server_bots_role"])  # Test server bots role
     test_staffrole: int = int(
-        _role_data["test_server_staff_role"]
-    )  # Test server staff role
+        _role_data["test_server_staff_role"])  # Test server staff role
     staff_ag: int = int(
-        _role_data["staff_server_access_granted_role"]
-    )  # self-explanatory
+        _role_data["staff_server_access_granted_role"])  # self-explanatory
 
 with open("config/data/extra_data.json") as f:
     _config_data = json.load(f)
@@ -59,19 +49,17 @@ with open("config/data/extra_data.json") as f:
     # Banned in vanity
     reserved_vanity: List[str] = _config_data["reserved_vanity"]
     md_extensions: List[str] = _config_data[
-        "md_extensions"
-    ]  # Markdown extension settings
+        "md_extensions"]  # Markdown extension settings
     auth_namespaces: Dict[str, str] = _config_data[
-        "auth_namespaces"
-    ]  # Deprecated. To remove
+        "auth_namespaces"]  # Deprecated. To remove
     # Badge info.
     special_badges: List[Dict[str, str]] = _config_data["special_badges"]
-    features: Dict[str, Dict[str, str]
-        ] = _config_data["features"]  # Supported features
+    features: Dict[str,
+                   Dict[str,
+                        str]] = _config_data["features"]  # Supported features
     langs: Dict[str, str] = _config_data["langs"]  # Supported langs
     pg_user: str = _config_data[
-        "pg_user"
-    ]  # Unused (I think) but there for compatibility
+        "pg_user"]  # Unused (I think) but there for compatibility
     site: str = _config_data["site"]  # Site URL
     sentry_dsn: str = _config_data["sentry_dsn"]
 
@@ -84,9 +72,10 @@ with open("config/data/staff_roles.json") as fp:
 with open("config/data/policy.json") as fp:
     _policy_data = json.load(fp)
     rules: Dict[str, List[str]] = _policy_data["rules"]
-    privacy_policy: Dict[str, Union[List[str], Dict[str, str]]] = _policy_data[
-        "privacy_policy"
-    ]
+    privacy_policy: Dict[str,
+                         Union[List[str],
+                               Dict[str,
+                                    str]]] = _policy_data["privacy_policy"]
     policies = _policy_data
 
 with open("config/data/secrets.json") as fp:
