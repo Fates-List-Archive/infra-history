@@ -61,7 +61,8 @@ def get_top_spots(request: Request):
 
 
 @router.get("/blstats", response_model=BotListStats, operation_id="blstats")
-async def get_botlist_stats(request: Request, worker_session=Depends(worker_session)):
+async def get_botlist_stats(request: Request,
+                            worker_session=Depends(worker_session)):
     """
     Returns uptime and stats about the list.
 
@@ -83,11 +84,9 @@ async def get_botlist_stats(request: Request, worker_session=Depends(worker_sess
     db = worker_session.postgres
     bot_count_total = await db.fetchval("SELECT COUNT(1) FROM bots")
     bot_count = await db.fetchval(
-        "SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6"
-    )
+        "SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
     if not worker_session.workers or worker_session.worker_count != len(
-        worker_session.workers
-    ):
+            worker_session.workers):
         workers = await redis_ipc_new(worker_session.redis, "WORKERS")
         if not workers:
             return abort(503)
@@ -118,24 +117,25 @@ def get_tags(request: Request):
 
 
 @router.get("/is_staff", operation_id="check_staff_member")
-async def check_staff_member(request: Request, user_id: int, min_perm: int = 2):
+async def check_staff_member(request: Request,
+                             user_id: int,
+                             min_perm: int = 2):
     """Admin route to check if a user is staff or not"""
     staff = await is_staff(staff_roles, user_id, min_perm, json=True)
     return {"staff": staff[0], "perm": staff[1], "sm": staff[2]}
 
 
-@router.get(
-    "/bots/filter", response_model=BotQueueGet, operation_id="get_bots_filtered"
-)
+@router.get("/bots/filter",
+            response_model=BotQueueGet,
+            operation_id="get_bots_filtered")
 async def get_bots_filtered(
-    request: Request,
-    state: List[enums.BotState] = Query(
-        ..., description="Bot states like ?state=0&state=6"
-    ),
-    verifier: int = None,
-    limit: int = 100,
-    offset: int = 0,
-    worker_session=Depends(worker_session),
+        request: Request,
+        state: List[enums.BotState] = Query(
+            ..., description="Bot states like ?state=0&state=6"),
+        verifier: int = None,
+        limit: int = 100,
+        offset: int = 0,
+        worker_session=Depends(worker_session),
 ):
     """
     API to get all bots filtered by its state
@@ -165,28 +165,36 @@ async def get_bots_filtered(
         bots += _bots
 
     return {
-        "bots": [
-            {
-                "user": await get_bot(bot["bot_id"]),
-                "prefix": bot["prefix"],
-                "invite": await invite_bot(bot["bot_id"], api=True),
-                "description": bot["description"],
-                "state": bot["state"],
-                "guild_count": bot["guild_count"],
-                "votes": bot["votes"],
-                "long_description": bot["long_description"],
-                "website": bot["website"],
-                "support": bot["support"],
-                "owners": await db.fetch(
-                    "SELECT owner AS user_id, main FROM bot_owner WHERE bot_id = $1",
-                    bot["bot_id"],
-                ),
-                "tags": await db.fetch(
-                    "SELECT tag FROM bot_tags WHERE bot_id = $1", bot["bot_id"]
-                ),
-            }
-            for bot in bots
-        ]
+        "bots": [{
+            "user":
+            await get_bot(bot["bot_id"]),
+            "prefix":
+            bot["prefix"],
+            "invite":
+            await invite_bot(bot["bot_id"], api=True),
+            "description":
+            bot["description"],
+            "state":
+            bot["state"],
+            "guild_count":
+            bot["guild_count"],
+            "votes":
+            bot["votes"],
+            "long_description":
+            bot["long_description"],
+            "website":
+            bot["website"],
+            "support":
+            bot["support"],
+            "owners":
+            await db.fetch(
+                "SELECT owner AS user_id, main FROM bot_owner WHERE bot_id = $1",
+                bot["bot_id"],
+            ),
+            "tags":
+            await db.fetch("SELECT tag FROM bot_tags WHERE bot_id = $1",
+                           bot["bot_id"]),
+        } for bot in bots]
     }
 
 
@@ -207,7 +215,8 @@ async def get_vanity(request: Request, vanity: str):
 
 
 @router.get("/index", response_model=BotIndex)
-async def get_index(request: Request, type: enums.ReviewType = enums.ReviewType.bot):
+async def get_index(request: Request,
+                    type: enums.ReviewType = enums.ReviewType.bot):
     """For any potential Android/iOS app, crawlers etc."""
     return await render_index(request=request, api=True, type=type)
 
@@ -219,11 +228,15 @@ async def get_index(request: Request, type: enums.ReviewType = enums.ReviewType.
 )
 async def search_list(request: Request, q: str, target_type: enums.SearchType):
     """For any potential Android/iOS app, crawlers etc. Q is the query to search for. Target type is the type to search for"""
-    return await render_search(request=request, q=q, api=True, target_type=target_type)
+    return await render_search(request=request,
+                               q=q,
+                               api=True,
+                               target_type=target_type)
 
 
 @router.get("/search/tags", response_model=BotSearch, dependencies=[])
-async def search_by_tag(request: Request, tag: str, target_type: enums.SearchType):
+async def search_by_tag(request: Request, tag: str,
+                        target_type: enums.SearchType):
     if target_type == enums.SearchType.bot:
         fetch = await db.fetch(
             "SELECT DISTINCT bots.bot_id, bots.description, bots.state, bots.banner_card AS banner, bots.votes, bots.guild_count FROM bots INNER JOIN bot_tags ON bot_tags.bot_id = bots.bot_id WHERE bot_tags.tag = $1 AND (bots.state = 0 OR bots.state = 6) ORDER BY bots.votes DESC LIMIT 15",
@@ -235,13 +248,13 @@ async def search_by_tag(request: Request, tag: str, target_type: enums.SearchTyp
             "SELECT DISTINCT guild_id, description, state, banner_card AS banner, votes, guild_count FROM servers WHERE state = 0 AND tags && $1",
             [tag],
         )
-        tags = await db.fetch("SELECT DISTINCT id, name, iconify_data FROM server_tags")
+        tags = await db.fetch(
+            "SELECT DISTINCT id, name, iconify_data FROM server_tags")
     search_bots = await parse_index_query(
         request.app.state.worker_session,
         fetch,
         type=enums.ReviewType.bot
-        if target_type == enums.SearchType.bot
-        else enums.ReviewType.server,
+        if target_type == enums.SearchType.bot else enums.ReviewType.server,
     )
     return {
         "search_res": search_bots,
