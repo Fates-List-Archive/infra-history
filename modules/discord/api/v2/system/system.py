@@ -1,6 +1,8 @@
 from typing import Optional
 
 from modules.core import *
+from hashlib import md5
+import hmac
 
 from ..base import API_VERSION
 from .models import BotIndex, BotListStats, BotQueueGet, BotSearch, BotVanity
@@ -16,6 +18,48 @@ def get_uptime():
     with open("/proc/uptime") as f:
         uptime_seconds = float(f.readline().split()[0])
     return uptime_seconds
+
+@router.post("/patreon-webhook")
+async def patreon_webhook(request: Request):
+    """
+    **Warning**: Only documented for internal use. This requires
+    properly signed patreon events.
+    """
+    body: bytes = await request.body()
+    hash = hmac.new(
+        patreon_secret.encode(),
+        body,
+        md5
+    )
+
+    if hash.hexdigest() != request.headers.get("X-Patreon-Signature"):
+        return api_error("Not a valid patreon signature", status_code=401)
+    json = orjson.loads(body)
+    data = json["included"]
+    user_id = data[1]["attributes"]["social_connections"]["discord"]
+
+    # Get the event
+    event = request.headers["X-Patreon-Event"]
+    if event == "members:create":
+        ...
+    elif event == "members:pledge:create":
+        ...
+    elif event == "members:pledge:update":
+        ...
+    elif event == "members:delete":
+        ...
+    elif event == "members:pledge:delete":
+        ...
+
+    logger.info(user_id)
+    return api_success("WIP")
+
+@router.get("/top-spots")
+def get_top_spots(request: Request):
+    bots_top = []
+    servers_top = []
+
+    return {"bots": bots_top, "servers": servers_top}
 
 
 @router.get("/blstats", response_model=BotListStats, operation_id="blstats")
