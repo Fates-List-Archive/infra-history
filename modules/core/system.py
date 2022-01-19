@@ -33,7 +33,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from config import (API_VERSION, discord_client_id, discord_client_secret,
-                    discord_redirect_uri, sentry_dsn, site)
+                    discord_redirect_uri, sentry_dsn, site, session_key,
+                    rl_key)
 from config._logger import logger
 from modules.core.error import WebError
 from modules.core.ipc import redis_ipc_new
@@ -346,20 +347,7 @@ async def finish_init(app, session_id, workers, dbs):
     # Set the session for use in startup
     session = app.state.worker_session
    
-    # Get or create session key
-    async def gen_common_secret(key: str):
-        dat = await session.redis.get(key)
-        if not dat:
-            dat = get_token(196)
-            await session.redis.set(key, dat, ex=60*60*3*24, nx=True)
-            signal.raise_signal(signal.SIGINT)
-            os._exit(0)
-
-        dat = dat.decode("utf-8")
-        return dat
-
-    session_key = await gen_common_secret("fl:sessionkey")
-    app.state.rl_key = await gen_common_secret("fl:rlkey")
+    app.state.rl_key = rl_key
 
     # Set bot tags
     def _tags(tag_db):

@@ -8,8 +8,8 @@ allowed_file_ext = [".gif", ".png", ".jpeg", ".jpg", ".webm", ".webp"]
 @router.get("/_sunbeam/pub/add-bot")
 async def add_bot(request: Request):
     if "user_id" not in request.session.keys():
-        return RedirectResponse("/fates/login?redirect=/bot/admin/add&pretty=to add a bot")
-        
+        return abort(404)
+
     context = {
         "mode": "add",
         "tags": [{

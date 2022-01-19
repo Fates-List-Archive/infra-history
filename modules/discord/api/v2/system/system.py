@@ -1,7 +1,7 @@
 from typing import Optional
 
 from modules.core import *
-from hashlib import md5
+from hashlib import sha512
 import hmac
 
 from ..base import API_VERSION
@@ -19,40 +19,52 @@ def get_uptime():
         uptime_seconds = float(f.readline().split()[0])
     return uptime_seconds
 
-@router.post("/patreon-webhook")
-async def patreon_webhook(request: Request):
+@router.post("/sellix-webhook")
+async def sellix_webhook(request: Request):
     """
-    **Warning**: Only documented for internal use. This requires
-    properly signed patreon events.
+    **Warning**: Only documented for internal use
+
+    Can be used by staff in case you didn't get the actual order
     """
     body: bytes = await request.body()
     hash = hmac.new(
-        patreon_secret.encode(),
+        sellix_secret.encode(),
         body,
-        md5
+        sha512
     )
 
-    if hash.hexdigest() != request.headers.get("X-Patreon-Signature"):
-        return api_error("Not a valid patreon signature", status_code=401)
-    json = orjson.loads(body)
-    data = json["included"]
-    user_id = data[1]["attributes"]["social_connections"]["discord"]
+    try:
+        data = orjson.loads(body)
+    except:
+        return abort(400)
 
-    # Get the event
-    event = request.headers["X-Patreon-Event"]
-    if event == "members:create":
-        ...
-    elif event == "members:pledge:create":
-        ...
-    elif event == "members:pledge:update":
-        ...
-    elif event == "members:delete":
-        ...
-    elif event == "members:pledge:delete":
-        ...
+    valid_webhook = True
+    if hash.hexdigest() != request.headers.get("X-Sellix-Signature"):
+        print(hash.hexdigest(), request.headers.get("X-Sellix-Signature"), "Sig Mismatch")
+        valid_webhook = False
+        # Check if the order is valid first before returning a 401
+        try:
+            id = data["uniqid"]
+            async with aiohttp.ClientSession() as sess:
+                async with sess.get(
+                    f"https://dev.sellix.io/v1/orders/{id}", 
+                    headers={
+                        "Authorization": f"Bearer {sellix_api_key}"
+                    }
+                ) as res:
+                    if res.status > 400:
+                        return api_error(f"Got status code {res.status} for this order")
+                    else:
+                        data = await res.json()
+        except:
+            return api_error("Not a valid webhook", status_code=401)
 
-    logger.info(user_id)
-    return api_success("WIP")
+    event = request.headers.get("X-Sellix-Event", "")
+
+    if event == "order:created":
+        user_id = data["custom_fields"]["Discord ID"]
+        
+    return api_success("WIP", valid_webhook=valid_webhook)
 
 @router.get("/top-spots")
 def get_top_spots(request: Request):

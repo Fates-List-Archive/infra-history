@@ -167,31 +167,6 @@ def site_manager():
     from modules.infra.manager.main import run
     run()
 
-def site_buildenums():
-    """Build enums from go"""
-    import aioredis
-    import orjson
-
-    from config._logger import logger
-    from modules.core.ipc import redis_ipc_new
-
-    async def _run():
-        redis = aioredis.from_url("redis://localhost:1001", db=1)
-        data = await redis_ipc_new(redis, "GETADMINOPS")
-        try:
-            data = orjson.loads(data)
-        except Exception:
-            data = None
-        if not data:
-            logger.error("Error getting data")
-            return
-        logger.info(data)
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(_run())
-
-
 def site_enum2html():
     """Converts the enums in modules/models/enums.py into markdown. Mainly for apidocs creation"""
     enums = importlib.import_module("modules.models.enums")

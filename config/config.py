@@ -63,7 +63,10 @@ with open("config/data/secrets.json") as fp:
     _secret_data = json.load(fp)
     TOKEN_SERVER: str = _secret_data["token_server"]
     TOKEN_MANAGER: str = _secret_data["token_manager"]
-    patreon_secret: str = _secret_data["patreon_secret"]
+    sellix_secret: str = _secret_data["sellix_secret"]
+    sellix_api_key: str = _secret_data["sellix_api_key"]
+    session_key: str = _secret_data["session_key"]
+    rl_key: str = _secret_data["rl_key"]
 
 with open("config/data/partners.json") as fp:
     partners = json.load(fp)
