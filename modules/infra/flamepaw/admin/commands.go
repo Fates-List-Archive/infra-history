@@ -18,8 +18,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const good = 0x00ff00
-const bad = 0xe74c3c
+const embedColorGood = 0x00ff00
+const embedColorBad = 0xe74c3c
 const perMessageQueueCount = 4 // 4 bots per message
 
 var (
@@ -347,7 +347,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz",
 				Title:       "All Bot Votes Reset",
 				Description: "All bots have had its votes reset!",
-				Color:       good,
+				Color:       embedColorGood,
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:  "Reason",
@@ -549,7 +549,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Bot Vote Reset",
 				Description: context.Bot.Mention() + " has had its votes reset!",
-				Color:       bad,
+				Color:       embedColorBad,
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:  "Reason",
@@ -598,7 +598,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Bot Requeued",
 				Description: context.Bot.Mention() + " has been requeued (removed from the deny list)!",
-				Color:       good,
+				Color:       embedColorGood,
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:  "Reason",
@@ -638,7 +638,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Bot Under Review",
 				Description: context.Bot.Mention() + " is now under review by " + context.User.Mention() + " and should be approved or denied soon!",
-				Color:       good,
+				Color:       embedColorGood,
 			}
 			_, err := common.DiscordMain.ChannelMessageSendComplex(common.SiteLogs, &discordgo.MessageSend{
 				Content: "<@" + context.Owner + ">",
@@ -681,7 +681,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Bot Unclaimed",
 				Description: context.Bot.Mention() + " has been unclaimed by " + context.User.Mention() + ". It is no longer under review right now but it should be approved or denied when another reviewer comes in! Don't worry, this is completely normal!",
-				Color:       good,
+				Color:       embedColorGood,
 			}
 			_, err := common.DiscordMain.ChannelMessageSendComplex(common.SiteLogs, &discordgo.MessageSend{
 				Embed: &embed,
@@ -731,7 +731,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Bot Banned",
 				Description: context.Bot.Mention() + " has been banned by " + context.User.Mention() + ".",
-				Color:       bad,
+				Color:       embedColorBad,
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:  "Reason",
@@ -788,7 +788,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Bot Unbanned",
 				Description: context.Bot.Mention() + " has been unbanned by " + context.User.Mention() + ".",
-				Color:       good,
+				Color:       embedColorGood,
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:  "Extra Info/Reason",
@@ -838,7 +838,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Bot Certified",
 				Description: context.Bot.Mention() + " has been certified by " + context.User.Mention() + ". Congratulations on your accompishment :heart:",
-				Color:       good,
+				Color:       embedColorGood,
 			}
 			_, err := common.DiscordMain.ChannelMessageSendComplex(common.SiteLogs, &discordgo.MessageSend{
 				Content: "<@" + context.Owner + ">",
@@ -928,7 +928,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Bot Uncertified",
 				Description: context.Bot.Mention() + " has been uncertified by " + context.User.Mention() + ".",
-				Color:       bad,
+				Color:       embedColorBad,
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:  "Reason",
@@ -1028,7 +1028,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Bot Approved",
 				Description: context.Bot.Mention() + " has been approved by " + context.User.Mention() + ". Congratulations on your accompishment :heart:",
-				Color:       good,
+				Color:       embedColorGood,
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:  "Feedback",
@@ -1118,7 +1118,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Bot Denied",
 				Description: context.Bot.Mention() + " has been denied by " + context.User.Mention() + ".",
-				Color:       bad,
+				Color:       embedColorBad,
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:  "Reason",
@@ -1175,7 +1175,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Bot Unverified",
 				Description: context.Bot.Mention() + " has been unverified by " + context.User.Mention() + ".",
-				Color:       bad,
+				Color:       embedColorBad,
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:  "Reason",
@@ -1234,7 +1234,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Staff Lock",
 				Description: context.Bot.Mention() + " has been locked by " + context.User.Mention() + ". This is perfectly normal and is a safety measure against hacking and exploits",
-				Color:       good,
+				Color:       embedColorGood,
 			}
 
 			_, err = common.DiscordMain.ChannelMessageSendComplex(common.SiteLogs, &discordgo.MessageSend{
@@ -1296,7 +1296,7 @@ func CmdInit() map[string]types.SlashCommand {
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
 				Title:       "Staff Unlock",
 				Description: context.Bot.Mention() + " has been unlocked by " + context.User.Mention() + ". This is perfectly normal This is normal but if it happens too much, open a ticket or otherwise contact any online or offline staff immediately",
-				Color:       good,
+				Color:       embedColorGood,
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:  "Reason",
