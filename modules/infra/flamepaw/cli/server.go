@@ -178,7 +178,7 @@ func Server() {
 			if time.Now().UnixMicro()-ts.UnixMicro() >= 3000000 {
 				return
 			}
-			//admin.SilverpeltStaffServerProtect(s, m.Member.User.ID)
+			admin.SilverpeltStaffServerProtect(s, m.Member.User.ID)
 		}
 	})
 

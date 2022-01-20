@@ -8,8 +8,6 @@ github.com/Fates-List/discordgo v0.23.3-0.20220107184152-51779be85414/go.mod h1:
 github.com/Fates-List/discordgo v0.23.3-0.20220115075615-77a5c7e0250d h1:lr8JAm6fUBBqp7qcV6dm+r/sQcOStuYPD/oqUnokQNA=
 github.com/Fates-List/discordgo v0.23.3-0.20220115075615-77a5c7e0250d/go.mod h1:NaBnozVWKf+EK/DegeYnMiQKN6LFqIAmwjciwGdReLU=
 github.com/Masterminds/semver/v3 v3.1.1/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
-github.com/bwmarrin/discordgo v0.23.2 h1:BzrtTktixGHIu9Tt7dEE6diysEF9HWnXeHuoJEt2fH4=
-github.com/bwmarrin/discordgo v0.23.2/go.mod h1:c1WtWUGN6nREDmzIpyTp/iD3VYt4Fpx+bVyfBG7JE+M=
 github.com/cespare/xxhash/v2 v2.1.2 h1:YRXhKfTDauu4ajMg1TPgFO5jnlC2HCbmLXMcTG5cbYE=
 github.com/cespare/xxhash/v2 v2.1.2/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/cockroachdb/apd v1.1.0 h1:3LFP3629v+1aKXU5Q37mxmRxX/pIu1nijXydLShEq5I=
