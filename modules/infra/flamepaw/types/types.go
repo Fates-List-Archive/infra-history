@@ -124,24 +124,28 @@ type StaffPerms struct {
 	Perm    int  `json:"perm"`
 }
 
-type AdminRedisContext struct {
-	Reason string `json:"reason"`
-}
+type ActionTargetType int
+
+const (
+	ActionTargetTypeBot    ActionTargetType = 1
+	ActionTargetTypeServer ActionTargetType = 2
+)
 
 type SlashContext struct {
-	Context     context.Context
-	Interaction *discordgo.Interaction
-	Postgres    *pgxpool.Pool
-	Redis       *redis.Client
-	User        *discordgo.User
-	StaffPerm   float32
-	ServerPerm  int
-	MockMode    bool
-	Bot         *discordgo.User // This is filled out/only given by admin bot IR
-	BotState    BotState        // This is filled out/only given by admin bot IR
-	Reason      string          // This is filled out/only given by admin bot IR
-	Owner       string          // This is filled out/only given by admin bot IR
-	AppCmdData  *discordgo.ApplicationCommandInteractionData
+	Context          context.Context
+	Interaction      *discordgo.Interaction
+	Postgres         *pgxpool.Pool
+	Redis            *redis.Client
+	User             *discordgo.User
+	StaffPerm        float32
+	ServerPerm       int
+	MockMode         bool
+	Bot              *discordgo.User  // This is filled out/only given by admin bot IR
+	BotState         BotState         // This is filled out/only given by admin bot IR
+	Reason           string           // This is filled out/only given by admin bot IR | This is reason for an admin action
+	Owner            string           // This is filled out/only given by admin bot IR
+	ActionTargetType ActionTargetType // This is filled out/only given by admin bot IR | This is either bot or server
+	AppCmdData       *discordgo.ApplicationCommandInteractionData
 }
 
 type SlashFunction func() map[string]SlashCommand

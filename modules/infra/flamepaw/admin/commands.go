@@ -221,7 +221,7 @@ func CmdInit() map[string]types.SlashCommand {
 
 			var flagFinal []int
 
-			for k, _ := range flagSet {
+			for k := range flagSet {
 				flagFinal = append(flagFinal, int(k))
 			}
 

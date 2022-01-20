@@ -68,16 +68,28 @@ func slashIr() map[string]types.SlashCommand {
 				// Now for the admin checks and other code
 				adminOp, ok := commands[op]
 				if !ok {
-					return "This bot operation does not exist (" + op + ")."
+					return "This admin operation does not exist (" + op + ")."
 				}
 
+				context.ActionTargetType = types.ActionTargetTypeBot
+
 				botVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "bot", false)
+
 				botId, ok := botVal.(string)
 
 				if !ok && !adminOp.SlashRaw {
 					botUser, ok := botVal.(*discordgo.User)
 					if !ok {
-						return "No Bot ID provided"
+						serverVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "server", false)
+						botId, ok = serverVal.(string)
+						if !ok {
+							return "No Bot Or Server ID provided"
+						} else {
+							if !adminOp.SupportsGuilds {
+								return "This command does not support guilds right now / *yet*"
+							}
+							context.ActionTargetType = types.ActionTargetTypeServer
+						}
 					}
 					botId = botUser.ID
 				}
