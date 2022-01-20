@@ -3,6 +3,9 @@ config/config_secrets.py
 __pycache__
 logs/*
 */logs/*
+data/static/assets/prod/*
+data/static/assets/prod
+data/static/assets/prod/
 data/logs/*
 util/utilbot/logs
 util/utilbot/logs/*
