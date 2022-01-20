@@ -261,7 +261,7 @@ func Server() {
 
 	// Start IPC code
 	if !common.RegisterCommands {
-		go ipc.StartIPC(db, discord, discordServerBot, rdb)
+		go ipc.StartIPC(db, rdb)
 		if !common.IPCOnly {
 			go webserver.StartWebserver(db, rdb)
 		}

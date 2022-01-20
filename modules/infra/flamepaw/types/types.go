@@ -30,10 +30,8 @@ const (
 type StaffRoles map[string]StaffRole
 
 type IPCContext struct {
-	Discord    *discordgo.Session
-	ServerList *discordgo.Session
-	Postgres   *pgxpool.Pool
-	Redis      *redis.Client
+	Postgres *pgxpool.Pool
+	Redis    *redis.Client
 }
 
 type IPCCommand struct {

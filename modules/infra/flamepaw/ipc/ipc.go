@@ -132,12 +132,12 @@ func setupCommands() {
 	ipcActions["GETCH"] = types.IPCCommand{
 		Handler: func(cmd []string, context types.IPCContext) string {
 			var user *discordgo.User
-			member, err := context.Discord.State.Member(common.MainServer, cmd[2])
+			member, err := common.DiscordMain.State.Member(common.MainServer, cmd[2])
 			if err == nil {
 				log.Debug("Using user from member cache")
 				user = member.User
 			} else {
-				user, err = context.Discord.User(cmd[2])
+				user, err = common.DiscordMain.User(cmd[2])
 				if err != nil {
 					log.Warn(err)
 					return "-1"
@@ -159,7 +159,7 @@ func setupCommands() {
 					break
 				}
 				log.Debug("Looking at guild: ", guild)
-				p, err := context.Discord.State.Presence(guild, user.ID)
+				p, err := common.DiscordMain.State.Presence(guild, user.ID)
 				if err != nil {
 					log.Warn(err)
 				}
@@ -231,7 +231,7 @@ func setupCommands() {
 			// Try to get from cache
 			res := context.Redis.Get(ctx, "roles-"+cmd[2]).Val()
 			if res == "" {
-				member, err := context.Discord.State.Member(common.MainServer, cmd[2])
+				member, err := common.DiscordMain.State.Member(common.MainServer, cmd[2])
 				if err != nil {
 					log.Warn(err)
 					res = "-1"
@@ -249,7 +249,7 @@ func setupCommands() {
 	// GETPERM <COMMAND ID> <USER ID>
 	ipcActions["GETPERM"] = types.IPCCommand{
 		Handler: func(cmd []string, context types.IPCContext) string {
-			perms, _, _ := common.GetPerms(context.Discord, cmd[2], 0)
+			perms, _, _ := common.GetPerms(common.DiscordMain, cmd[2], 0)
 			res, err := json.Marshal(perms)
 			if err != nil {
 				log.Warn(err)
@@ -296,7 +296,7 @@ func setupCommands() {
 				},
 			}
 
-			_, err = context.Discord.ChannelMessageSendComplex(message.ChannelId, &messageSend)
+			_, err = common.DiscordMain.ChannelMessageSendComplex(message.ChannelId, &messageSend)
 			if err != nil {
 				log.Error(err)
 				return "0"
@@ -311,8 +311,8 @@ func setupCommands() {
 	ipcActions["SUPPORT"] = types.IPCCommand{
 		Handler: func(cmd []string, context types.IPCContext) string {
 			userId := cmd[2]
-			mainGuild, err := context.Discord.State.Guild(common.MainServer)
-			user, err := context.Discord.State.Member(common.MainServer, userId)
+			mainGuild, err := common.DiscordMain.State.Guild(common.MainServer)
+			user, err := common.DiscordMain.State.Member(common.MainServer, userId)
 
 			if err != nil {
 				log.Warn(err)
@@ -343,7 +343,7 @@ func setupCommands() {
 				username = user.User.Username
 			}
 
-			threadList, err := context.Discord.ThreadsListActive(common.MainServer)
+			threadList, err := common.DiscordMain.ThreadsListActive(common.MainServer)
 			if err != nil {
 				return err.Error()
 			}
@@ -359,7 +359,7 @@ func setupCommands() {
 				}
 			}
 
-			thread, err := context.Discord.ThreadStartWithoutMessage(common.MainSupportChannel, &discordgo.ThreadCreateData{
+			thread, err := common.DiscordMain.ThreadStartWithoutMessage(common.MainSupportChannel, &discordgo.ThreadCreateData{
 				Name:                "Support for " + username + "-" + user.User.Discriminator + " (" + user.User.ID + ")",
 				AutoArchiveDuration: discordgo.ArchiveDuration3Days,
 				Type:                discordgo.ChannelTypeGuildPrivateThread,
@@ -373,7 +373,7 @@ func setupCommands() {
 				Content: "@everyone <@&836349482340843572>\n\n" + user.User.Mention() + " has started a support thread.\n\n**Please kindly wait for staff to arrive!**",
 			}
 
-			_, err = context.Discord.ChannelMessageSendComplex(thread.ID, &msg)
+			_, err = common.DiscordMain.ChannelMessageSendComplex(thread.ID, &msg)
 
 			return "0"
 		},
@@ -423,7 +423,7 @@ func setupCommands() {
 					// Staff server exception, only need permlevel of 2 for staff server
 					perm = 2
 				}
-				_, isStaff, _ := common.GetPerms(context.Discord, userId, perm)
+				_, isStaff, _ := common.GetPerms(common.DiscordMain, userId, perm)
 				if !isStaff {
 					return "This server is only open to Fates List Staff Members at this time."
 				}
@@ -447,7 +447,7 @@ func setupCommands() {
 
 			if inviteUrl.Status != pgtype.Present || inviteUrl.String == "" {
 				// Create invite using serverlist bot
-				guild, err := context.ServerList.State.Guild(guildId)
+				guild, err := common.DiscordServerList.State.Guild(guildId)
 				if err != nil {
 					log.Error(err)
 					return "Something went wrong: " + err.Error()
@@ -469,7 +469,7 @@ func setupCommands() {
 					}
 				}
 
-				invite, err := context.ServerList.ChannelInviteCreateWithReason(channelId, "Created invite for user: "+userId, discordgo.Invite{
+				invite, err := common.DiscordServerList.ChannelInviteCreateWithReason(channelId, "Created invite for user: "+userId, discordgo.Invite{
 					MaxAge:    60 * 15,
 					MaxUses:   1,
 					Temporary: false,
@@ -491,9 +491,9 @@ func setupCommands() {
 	}
 }
 
-func StartIPC(dbpool *pgxpool.Pool, discord *discordgo.Session, serverlist *discordgo.Session, rdb *redis.Client) {
+func StartIPC(postgres *pgxpool.Pool, redisClient *redis.Client) {
 	setupCommands()
-	u_guilds, err := discord.UserGuilds(100, "", "")
+	u_guilds, err := common.DiscordMain.UserGuilds(100, "", "")
 	if err != nil {
 		panic(err)
 	}
@@ -503,7 +503,7 @@ func StartIPC(dbpool *pgxpool.Pool, discord *discordgo.Session, serverlist *disc
 		guilds = append(guilds, u_guild.ID)
 	}
 
-	pubsub = rdb.Subscribe(ctx, workerChannel)
+	pubsub = redisClient.Subscribe(ctx, workerChannel)
 	defer pubsub.Close()
 	_, err = pubsub.Receive(ctx)
 	if err != nil {
@@ -512,23 +512,21 @@ func StartIPC(dbpool *pgxpool.Pool, discord *discordgo.Session, serverlist *disc
 
 	ch := pubsub.Channel()
 
-	send_err := rdb.Publish(ctx, workerChannel, "PREPARE IPC").Err()
+	send_err := redisClient.Publish(ctx, workerChannel, "PREPARE IPC").Err()
 	if send_err != nil {
 		panic(send_err)
 	}
 
 	ipcContext := types.IPCContext{
-		Discord:    discord,
-		Redis:      rdb,
-		Postgres:   dbpool,
-		ServerList: serverlist,
+		Redis:    redisClient,
+		Postgres: postgres,
 	}
 
 	handleMsg := func(msg redis.Message) {
 		if !connected {
 			connected = true
 			log.Debug("Announcing that we are up")
-			err = rdb.Publish(ctx, workerChannel, "REGET 2").Err()
+			err = redisClient.Publish(ctx, workerChannel, "REGET 2").Err()
 			if err != nil {
 				log.Warn(err)
 				connected = false
@@ -540,10 +538,10 @@ func StartIPC(dbpool *pgxpool.Pool, discord *discordgo.Session, serverlist *disc
 		}
 
 		log.WithFields(log.Fields{
-			"command_name": op[0],
-			"args":         op[1:],
-			"pids":         pids,
-		}).Info("Got command ", op[0])
+			"name": op[0],
+			"args": op[1:],
+			"pids": pids,
+		}).Info("Got IPC Command ", op[0])
 
 		cmd_id := op[1]
 
@@ -559,7 +557,7 @@ func StartIPC(dbpool *pgxpool.Pool, discord *discordgo.Session, serverlist *disc
 			}
 
 			res := val.Handler(op, ipcContext)
-			rdb.Set(ctx, cmd_id, res, commandExpiryTime)
+			redisClient.Set(ctx, cmd_id, res, commandExpiryTime)
 		}
 	}
 
