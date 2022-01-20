@@ -11,7 +11,6 @@ type AdminOp struct {
 	Cooldown      types.CooldownBucket                  `json:"cooldown"`
 	Description   string                                `json:"description"`
 	MinimumPerm   float32                               `json:"min_perm"`
-	BotNeeded     bool                                  `json:"bot_needed"`
 	ReasonNeeded  bool                                  `json:"reason_needed"`
 	Event         types.APIEvent                        `json:"event"`
 	Autocompleter types.Autocompleter                   `json:"-"` // Autocompleter

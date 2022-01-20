@@ -39,7 +39,6 @@ func slashIr() map[string]types.SlashCommand {
 	var commandsToRet map[string]types.SlashCommand = make(map[string]types.SlashCommand)
 	for cmdName, v := range commands {
 		if !v.SlashRaw {
-			v.BotNeeded = true
 			var add discordgo.ApplicationCommandOption
 			if v.Autocompleter != nil {
 				// Assume bot id option is being autocompleted
@@ -75,8 +74,12 @@ func slashIr() map[string]types.SlashCommand {
 				botVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "bot", false)
 				botId, ok := botVal.(string)
 
-				if !ok && adminOp.BotNeeded {
-					return "No Bot ID provided"
+				if !ok && !adminOp.SlashRaw {
+					botUser, ok := botVal.(*discordgo.User)
+					if !ok {
+						return "No Bot ID provided"
+					}
+					botId = botUser.ID
 				}
 
 				reasonVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "reason", true)
@@ -112,10 +115,6 @@ func slashIr() map[string]types.SlashCommand {
 
 				// These checks do not apply for slashRaw
 				if !adminOp.SlashRaw {
-					if botId == "" && !adminOp.BotNeeded {
-						state = pgtype.Int4{Status: pgtype.Present}
-					}
-
 					if state.Status != pgtype.Present {
 						return "This bot does not exist!"
 					}
@@ -144,22 +143,14 @@ func slashIr() map[string]types.SlashCommand {
 				var bot *discordgo.User
 				var errm error
 
-				if botId != "" {
-					botMember, errm = common.DiscordMain.State.Member(common.MainServer, botId)
-				}
+				botMember, errm = common.DiscordMain.State.Member(common.MainServer, botId)
 
 				if errm != nil {
+					bot = botMember.User
+				} else {
 					bot, errm = common.DiscordMain.User(botId)
 					if errm != nil {
 						return "This bot could not be found anywhere..."
-					}
-				} else if botMember != nil {
-					bot = botMember.User
-				} else {
-					if adminOp.BotNeeded {
-						return "This bot could not be found anywhere..."
-					} else {
-						bot = nil
 					}
 				}
 
