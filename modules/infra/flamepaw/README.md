@@ -1,5 +1,4 @@
-# Dragon
-Fates List Dragon
+# Flamepaw
 
 ## What is this for?
 
@@ -7,11 +6,13 @@ Fates List Dragon
 - Websockets
 - IPC for discord
 - Bot Admin Operations for staff
-- Server Listing Bot (WIP)
-- More stuff flying in soon!
+- Server Listing Bot
+- Uptime checks
 
-Use `dragon --help` for more information on how to use Dragon
+Use `flamepaw --help` for more information on how to use Dragon
 
-Creating a backup dragon ipc instance using --ipc-only is highly recommended when killing dragon for extended time periods
+Creating a backup dragon/flamepaw ipc instance using --ipc-only is highly recommended when killing dragon/flamepse for extended time periods
+
+This deprecates/replaces dragon which is *no longer maintained*
 
 **When contributing, always increment version constant in common/env.go**
