@@ -25,8 +25,9 @@ const good = 0x00ff00
 const bad = 0xe74c3c
 
 var (
-	commands     = make(map[string]ServerListCommand)
-	numericRegex *regexp.Regexp
+	commands      = make(map[string]ServerListCommand)
+	commandsCache = make(map[string]string)
+	numericRegex  *regexp.Regexp
 )
 
 func tagCheck(tag string) bool {
@@ -692,7 +693,9 @@ func CmdInit() map[string]types.SlashCommand {
 
 	commands["BUMP"] = ServerListCommand{
 		InternalName: "bump",
-		AliasTo:      "VOTE",
+		Handler: func(context types.SlashContext) string {
+			return commands["VOTE"].Handler(context)
+		},
 	}
 
 	commands["HELP"] = ServerListCommand{
@@ -1103,12 +1106,7 @@ func CmdInit() map[string]types.SlashCommand {
 	// Load command name cache to map internal name to the command
 	var commandsToRet map[string]types.SlashCommand = make(map[string]types.SlashCommand)
 	for cmdName, v := range commands {
-		if v.AliasTo != "" {
-			cmd := commands[v.AliasTo]
-			v.Description = cmd.Description + ". Alias to /" + cmd.InternalName
-			v.SlashOptions = cmd.SlashOptions
-		}
-
+		commandsCache[v.InternalName] = cmdName
 		commandsToRet[cmdName] = types.SlashCommand{
 			CmdName:     cmdName,
 			Name:        v.InternalName,
@@ -1119,15 +1117,20 @@ func CmdInit() map[string]types.SlashCommand {
 			Handler: func(context types.SlashContext) string {
 				// Prehandler that runs our server list handler
 				var ok bool
-				v, ok := commands[context.AppCmdData.Name]
 
-				if v.AliasTo != "" {
-					v, ok = commands[v.AliasTo]
-				}
+				cmdName, ok := commandsCache[context.AppCmdData.Name]
 
 				if !ok {
-					return "Command not found..."
+					return "Command " + context.AppCmdData.Name + " not found..."
 				}
+
+				v, ok := commands[cmdName]
+
+				if !ok {
+					return "Command " + context.AppCmdData.Name + " not found..."
+				}
+
+				log.Info(context.ServerPerm, v.Perm)
 
 				if context.ServerPerm < v.Perm {
 					return slashbot.ServerPermsString(v.Perm, true)

@@ -267,7 +267,7 @@ func getTopServerPerm(discord *discordgo.Session, i *discordgo.Interaction) int 
 		if i.Member.Permissions&int64(v) == 0 {
 			continue
 		}
-		if topPerm > k {
+		if topPerm < k {
 			topPerm = k
 		}
 	}
