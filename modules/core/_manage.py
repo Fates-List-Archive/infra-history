@@ -55,11 +55,12 @@ def _fappgen(session_id, workers, static_assets):
         description="""
             Current API: v2 beta 3
             Default API: v{API_VERSION}
+            API URL: https://api.fateslist.xyz
             API Docs: https://apidocs.fateslist.xyz
             Enum Reference: https://apidocs.fateslist.xyz/structures/enums.autogen
         """,
-        version="0.3.0",
-        terms_of_service="https://fateslist.xyz/fates/tos",
+        version="0.4.0",
+        terms_of_service="https://fateslist.xyz/frostpaw/tos",
         license_info={
             "name": "MIT",
             "url": "https://github.com/Fates-List/FatesList/blob/main/LICENSE",
@@ -69,8 +70,8 @@ def _fappgen(session_id, workers, static_assets):
         docs_url=f"/api/v{API_VERSION}/docs/swagger",
         openapi_url=f"/api/v{API_VERSION}/docs/openapi",
         servers=[{
-            "url": "https://fateslist.xyz",
-            "description": "Fates List Main Server"
+            "url": "https://api.fateslist.xyz",
+            "description": "Fates List API"
         }],
     )
 

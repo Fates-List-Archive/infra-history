@@ -1,8 +1,64 @@
 from ..core import *
 
-router = APIRouter(tags=["Bots"], include_in_schema=False)
+router = APIRouter(tags=["Sunbeam - Internal HTML Routes"])
 
 allowed_file_ext = [".gif", ".png", ".jpeg", ".jpg", ".webm", ".webp"]
+
+@router.get("/_sunbeam/dm/help")
+async def internal_dm_help(request: Request):
+    if not request.headers.get("Frostpaw"):
+        return abort(404)
+    data = {
+        "user_id": request.session.get("user_id"), 
+        "logged_in": "user_id" in request.session.keys(),
+        "vote_epoch": None,
+        "user_agent": request.headers.get("User-Agent"),
+        "user": None,
+        "pid": os.getpid(),
+        "ip": request.headers.get("X-Forwarded-For")
+    }
+
+    if data["logged_in"]:
+        data["user"] = await get_user(data["user_id"], worker_session=request.app.state.worker_session)
+
+    return {"message": "Please send a screenshot of this page and send it to staff (or our support server)", "data": data}
+
+@router.post("/fates/csp")
+async def csp(request: Request):
+    logger.info((await request.json()))
+
+@router.get("/fates/stats")
+async def stats_page(request: Request, full: bool = False):
+    worker_session = request.app.state.worker_session
+    certified = await do_index_query(state = [enums.BotState.certified], limit = None, worker_session = worker_session) 
+    bot_amount = await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
+    queue = await do_index_query(state = [enums.BotState.pending], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
+    under_review = await do_index_query(state = [enums.BotState.under_review], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
+    if full:
+        denied = await do_index_query(state = [enums.BotState.denied], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
+        banned = await do_index_query(state = [enums.BotState.banned], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
+    data = {
+        "certified": certified,
+        "bot_amount": bot_amount,
+        "queue": queue,
+        "denied": denied if full else [],
+        "denied_amt": await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = $1", enums.BotState.denied),
+        "banned": banned if full else [],
+        "banned_amt": await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = $1", enums.BotState.banned),
+        "under_review": under_review,
+        "full": full
+    }
+    return await templates.TemplateResponse("admin.html", {"request": request} | data) # Otherwise, render the template
+
+@router.get("/fates/login")
+async def login_get(request: Request, redirect: Optional[str] = None, pretty: Optional[str] = "to access this page"):
+    if "user_id" in request.session.keys():
+        return RedirectResponse(redirect or "/", status_code=303)
+    return RedirectResponse(f"https://fateslist.xyz/frostpaw/herb?redirect={redirect or 'https://api.fateslist.xyz'}")
+
+@router.get("/api/docs")
+async def api_docs_view(request: Request):
+    return RedirectResponse("https://docs.fateslist.xyz", status_code=301)
 
 
 @router.get("/_sunbeam/pub/add-bot")
@@ -172,3 +228,52 @@ async def bot_review_page(request: Request,
         } | data,
         context=context,
     )
+
+@router.get("/_sunbeam/pub/server/{guild_id}/reviews_html")
+async def guild_review_page(request: Request, guild_id: int, page: int = 1):
+    page = page if page else 1
+    reviews = await parse_reviews(request.app.state.worker_session, guild_id, page=page, target_type=enums.ReviewType.server)
+    context = {
+        "id": str(guild_id),
+        "type": "server",
+        "reviews": {
+            "average_rating": float(reviews[1])
+        },
+        "index": "/servers"
+    }
+    data = {
+        "bot_reviews": reviews[0], 
+        "average_rating": reviews[1], 
+        "total_reviews": reviews[2], 
+        "review_page": page, 
+        "total_review_pages": reviews[3], 
+        "per_page": reviews[4],
+    }
+
+    user = {}
+    
+    return await templates.TemplateResponse("ext/reviews.html", {"request": request, "data": {"user": user}} | data, context = context)
+
+@router.get("/_sunbeam/pub/profile/{user_id}/settings")
+async def profile_editor(
+    request: Request,
+    user_id: int,
+):
+    viewer = int(request.session.get("user_id", -1))
+    admin = (await is_staff(staff_roles, viewer, 4))[0] if viewer else False
+    personal = user_id == int(request.session.get("user_id", -1))
+    personal = personal or admin
+
+    if not personal:
+        return abort(403)
+
+    # To profile editor, all users are bots due to prior design choices
+    profile = await core_classes.User(id = user_id, db = db).profile(bot_logs = False)
+    context = {
+        "real_user_token": await db.fetchval("SELECT api_token FROM users WHERE user_id = $1", user_id),
+        "mode": "edit",
+        "bot": dict(profile) | profile["profile"],
+        "langs": [{"value": lang.value, "text": lang.__doc__} for lang in list(enums.SiteLang)]
+    }
+    return await templates.TemplateResponse("profile_edit.html", {"request": request, "iframe": True} | context, context=context)
+
