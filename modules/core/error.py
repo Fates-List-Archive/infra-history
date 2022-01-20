@@ -62,20 +62,10 @@ class WebError():
         path = str(request.url.path)
         
         code_str = HTTPStatus(status_code).phrase
-        api = path.startswith("/api/")
+        api = True # This is always true
         if status_code == 500:
-            # Log the error
             asyncio.create_task(WebError.log(request, exc, error_id, curr_time)) 
             
-            if api:
-                return api_error(
-                    "Internal Server Error", 
-                    error_id=error_id, 
-                    status_code=500,
-                    traceback=etrace(exc),
-                    headers={"FL-Error-ID": error_id}
-                )
-           
             try:
                 tb_full = "".join(traceback.format_exception(exc))
             except Exception:

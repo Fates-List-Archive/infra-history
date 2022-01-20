@@ -5,7 +5,14 @@ router = APIRouter(tags=["Sunbeam - Internal HTML Routes"])
 allowed_file_ext = [".gif", ".png", ".jpeg", ".jpg", ".webm", ".webp"]
 
 @router.get("/_sunbeam/dm/help")
-async def internal_dm_help(request: Request):
+async def troubleshoot_api(request: Request):
+    """
+    Internal API used by sunbeam for troubleshooting issues
+
+    Used in https://fateslist.xyz/frostpaw/troubleshoot
+
+    This requires a Frostpaw header to be properly set
+    """
     if not request.headers.get("Frostpaw"):
         return abort(404)
     data = {
@@ -24,11 +31,23 @@ async def internal_dm_help(request: Request):
     return {"message": "Please send a screenshot of this page and send it to staff (or our support server)", "data": data}
 
 @router.post("/fates/csp")
-async def csp(request: Request):
-    logger.info((await request.json()))
+async def csp_report(request: Request):
+    """
+    This is where CSP reports should be sent to.
 
-@router.get("/fates/stats")
+    CSP reports should not happen in practice.
+
+    **These requests are logged to loguru**
+    """
+    try:
+        logger.warning("CSP Report: ", (await request.json()))
+    except:
+        pass
+    return api_success()
+
+@router.get("/_sunbeam/pub/stats")
 async def stats_page(request: Request, full: bool = False):
+    """Our statistics page"""
     worker_session = request.app.state.worker_session
     certified = await do_index_query(state = [enums.BotState.certified], limit = None, worker_session = worker_session) 
     bot_amount = await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
@@ -49,17 +68,6 @@ async def stats_page(request: Request, full: bool = False):
         "full": full
     }
     return await templates.TemplateResponse("admin.html", {"request": request} | data) # Otherwise, render the template
-
-@router.get("/fates/login")
-async def login_get(request: Request, redirect: Optional[str] = None, pretty: Optional[str] = "to access this page"):
-    if "user_id" in request.session.keys():
-        return RedirectResponse(redirect or "/", status_code=303)
-    return RedirectResponse(f"https://fateslist.xyz/frostpaw/herb?redirect={redirect or 'https://api.fateslist.xyz'}")
-
-@router.get("/api/docs")
-async def api_docs_view(request: Request):
-    return RedirectResponse("https://docs.fateslist.xyz", status_code=301)
-
 
 @router.get("/_sunbeam/pub/add-bot")
 async def add_bot(request: Request):
@@ -95,9 +103,7 @@ async def bot_settings(request: Request, bot_id: int):
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
     if "user_id" not in request.session.keys():
-        return RedirectResponse(
-            f"/fates/login?redirect=/bot/{bot_id}/settings&pretty=to edit this bot"
-        )
+        return abort(400)
 
     check = await is_bot_admin(bot_id, int(request.session["user_id"]))
     if (not check and bot_id !=
