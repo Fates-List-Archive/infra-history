@@ -6,13 +6,6 @@ router = APIRouter(
     include_in_schema = False
 )
 
-@router.get("/{user_id}")
-async def profile_of_user_generic(
-    request: Request,
-    user_id: int, 
-):
-    return RedirectResponse(f"https://fateslist.xyz/profile/{user_id}")
-
 @router.get("/{user_id}/edit")
 async def profile_editor(
     request: Request,

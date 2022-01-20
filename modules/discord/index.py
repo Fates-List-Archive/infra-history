@@ -31,21 +31,6 @@ async def internal_dm_help(request: Request):
 async def csp(request: Request):
     logger.info((await request.json()))
 
-@router.get("/")
-async def index_fend(request: Request):
-    return RedirectResponse("https://fateslist.xyz", status_code=301)
-
-@router.get("/servers")
-@router.get("/server")
-@router.get("/guilds")
-async def server_index(request: Request):
-    return RedirectResponse("https://fateslist.xyz/servers", status_code=301)
-
-@router.get("/servers/{guild_id}/{path:path}")
-@router.get("/servers/{guild_id}")
-def server_redirector(guild_id: int, path: Optional[str] = None):
-    return RedirectResponse(f"/server/{guild_id}/{path or ''}")
-
 @router.get("/fates/stats")
 async def stats_page(request: Request, full: bool = False):
     worker_session = request.app.state.worker_session
