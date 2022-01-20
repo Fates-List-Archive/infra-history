@@ -4,9 +4,7 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/DisgoOrg/disgo/core"
-	"github.com/DisgoOrg/disgo/core/events"
-	"github.com/DisgoOrg/disgo/discord"
+	"github.com/Fates-List/discordgo"
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
@@ -32,9 +30,10 @@ const (
 type StaffRoles map[string]StaffRole
 
 type IPCContext struct {
-	Me       *core.Bot
-	Postgres *pgxpool.Pool
-	Redis    *redis.Client
+	Discord    *discordgo.Session
+	ServerList *discordgo.Session
+	Postgres   *pgxpool.Pool
+	Redis      *redis.Client
 }
 
 type IPCCommand struct {
@@ -70,12 +69,12 @@ type WebhookData struct {
 }
 
 type DiscordMessage struct {
-	Content      string         `json:"content"`
-	Embed        *discord.Embed `json:"embed,omitempty"`
-	FileContent  string         `json:"file_content"`
-	FileName     string         `json:"file_name"`
-	ChannelId    string         `json:"channel_id"`
-	MentionRoles []string       `json:"mention_roles,omitempty"`
+	Content      string                  `json:"content"`
+	Embed        *discordgo.MessageEmbed `json:"embed,omitempty"`
+	FileContent  string                  `json:"file_content"`
+	FileName     string                  `json:"file_name"`
+	ChannelId    string                  `json:"channel_id"`
+	MentionRoles []string                `json:"mention_roles,omitempty"`
 }
 
 type FatesVote struct {
@@ -129,72 +128,37 @@ type AdminRedisContext struct {
 	Reason string `json:"reason"`
 }
 
-type CmdContext struct {
+type SlashContext struct {
 	Context     context.Context
-	Me          *core.Bot
-	Interaction *events.InteractionEvent
+	Interaction *discordgo.Interaction
 	Postgres    *pgxpool.Pool
 	Redis       *redis.Client
-	User        *core.User
+	User        *discordgo.User
 	StaffPerm   float32
-	ServerPerm  float32
-	Bot         *core.User
-	BotState    BotState
-	ExtraInfo   map[string]string // This contains reason and owner etc etc
+	ServerPerm  int
+	MockMode    bool
+	Bot         *discordgo.User // This is filled out/only given by admin bot IR
+	BotState    BotState        // This is filled out/only given by admin bot IR
+	Reason      string          // This is filled out/only given by admin bot IR
+	Owner       string          // This is filled out/only given by admin bot IR
+	AppCmdData  *discordgo.ApplicationCommandInteractionData
 }
 
-type HandlerData struct {
-	Context     context.Context
-	Me          *core.Bot
-	Postgres    *pgxpool.Pool
-	Redis       *redis.Client
-	Interaction *events.InteractionEvent
-	Index       string
-}
-
-type SlashCreator func() map[string]SlashCommand
-type SlashHandler func(handler HandlerData) string
-type Autocompleter func(handler HandlerData) []discord.ApplicationCommandOptionChoiceString
+type SlashFunction func() map[string]SlashCommand
+type SlashHandler func(context SlashContext) string
+type Autocompleter func(context SlashContext) []*discordgo.ApplicationCommandOptionChoice
 
 // Intermediate slash command representation
 type SlashCommand struct {
-	Index         string
+	CmdName       string
 	Name          string
 	Description   string
 	Server        string
 	Cooldown      CooldownBucket
 	Handler       SlashHandler
-	Options       []discord.ApplicationCommandOption
+	Options       []*discordgo.ApplicationCommandOption
 	Autocompleter Autocompleter
 	Disabled      bool
-}
-
-type AdminOp struct {
-	InternalName  string                             `json:"internal_name"` // Internal name for enums
-	Cooldown      CooldownBucket                     `json:"cooldown"`
-	Description   string                             `json:"description"`
-	MinimumPerm   int                                `json:"min_perm"`
-	ReasonNeeded  bool                               `json:"reason_needed"`
-	Event         APIEvent                           `json:"event"`
-	Autocompleter Autocompleter                      `json:"-"` // Autocompleter
-	Handler       SlashHandler                       `json:"-"`
-	Server        string                             `json:"server"`        // Slash command server
-	SlashOptions  []discord.ApplicationCommandOption `json:"slash_options"` // Slash command options
-	SlashRaw      bool                               `json:"slash_raw"`     // Whether or not to add the bot option
-	Critical      bool                               `json:"critical"`      // Whether or not a command is critical and should be usable without a verification code set
-}
-
-type ServerListCommand struct {
-	InternalName string                             `json:"internal_name"` // Internal name for enums
-	AliasTo      string                             `json:"alias_to"`      // What should this command alias to
-	Description  string                             `json:"description"`
-	Cooldown     CooldownBucket                     `json:"cooldown"`
-	Perm         int                                `json:"perm"`
-	Event        APIEvent                           `json:"event"`
-	Handler      SlashHandler                       `json:"-"`
-	SlashOptions []discord.ApplicationCommandOption `json:"slash_options"` // Slash command options
-	Disabled     bool                               `json:"disabled"`
-	Server       string                             `json:"server"`
 }
 
 type CooldownBucket struct {
@@ -301,9 +265,9 @@ func (s BotState) GetRegistered() []StateInterface {
 	return botStateRegister
 }
 
-func GetStateChoices(s StateInterface) (ch []discord.ApplicationCommandOptionChoice) {
+func GetStateChoices(s StateInterface) (ch []*discordgo.ApplicationCommandOptionChoice) {
 	for _, v := range s.GetRegistered() {
-		ch = append(ch, discord.ApplicationCommandOptionChoiceInt{Name: v.Str() + "(" + v.ValStr() + ")", Value: v.Int()})
+		ch = append(ch, &discordgo.ApplicationCommandOptionChoice{Name: v.Str() + "(" + v.ValStr() + ")", Value: v.Int()})
 	}
 	return
 }

@@ -2,15 +2,14 @@ package ipc
 
 import (
 	"context"
-	"dragon/common"
-	"dragon/types"
 	"encoding/json"
+	"flamepaw/common"
+	"flamepaw/types"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/DisgoOrg/disgo/core"
 	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-redis/redis/v8"
@@ -132,13 +131,13 @@ func setupCommands() {
 	// GETCH <COMMAND ID> <USER ID>
 	ipcActions["GETCH"] = types.IPCCommand{
 		Handler: func(cmd []string, context types.IPCContext) string {
-			var user *core.User
-			member, err := context.Me.Caches.Members().Get(common.MainServer, cmd[2])
+			var user *discordgo.User
+			member, err := context.Discord.State.Member(common.MainServer, cmd[2])
 			if err == nil {
 				log.Debug("Using user from member cache")
 				user = member.User
 			} else {
-				user, err = context.Me.RestServices.UserService().GetUser(cmd[2])
+				user, err = context.Discord.User(cmd[2])
 				if err != nil {
 					log.Warn(err)
 					return "-1"
