@@ -15,11 +15,16 @@ router = APIRouter(
     tags=[f"API v{API_VERSION} - System"],
 )
 
-
 def get_uptime():
     with open("/proc/uptime") as f:
         uptime_seconds = float(f.readline().split()[0])
     return uptime_seconds
+
+@router.get("/bot-settings-form")
+def bot_settings_form(request: Request):
+    return {
+        
+    }
 
 @router.post("/sellix-webhook")
 async def sellix_webhook(request: Request):
