@@ -81,7 +81,7 @@ async def get_cache_user(request: Request, user_id: int):
     user = await get_any(user_id)
     if not user:
         return abort(404)
-    return user
+    return user    
 
 @router.put(
     "/{user_id}/bots/{bot_id}", 

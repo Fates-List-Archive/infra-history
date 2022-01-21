@@ -144,29 +144,29 @@ func slashIr() map[string]types.SlashCommand {
 
 						return "This bot does not have a main owner. You have temporarily been given main owner as a result"
 					}
-				}
 
-				log.Warn("Bot owner: ", owner.Int)
+					log.Warn("Bot owner: ", owner.Int)
 
-				context.Owner = strconv.FormatInt(owner.Int, 10)
-				context.BotState = types.GetBotState(int(state.Int))
+					context.Owner = strconv.FormatInt(owner.Int, 10)
+					context.BotState = types.GetBotState(int(state.Int))
 
-				var botMember *discordgo.Member
-				var bot *discordgo.User
-				var errm error
+					var botMember *discordgo.Member
+					var bot *discordgo.User
+					var errm error
 
-				botMember, errm = common.DiscordMain.State.Member(common.MainServer, botId)
+					botMember, errm = common.DiscordMain.State.Member(common.MainServer, botId)
 
-				if errm != nil {
-					bot = botMember.User
-				} else {
-					bot, errm = common.DiscordMain.User(botId)
-					if errm != nil {
-						return "This bot could not be found anywhere..."
+					if errm == nil {
+						bot = botMember.User
+					} else {
+						bot, errm = common.DiscordMain.User(botId)
+						if errm != nil {
+							return "This bot could not be found anywhere..."
+						}
 					}
-				}
 
-				context.Bot = bot
+					context.Bot = bot
+				}
 
 				if context.Reason == "" && !adminOp.SlashRaw {
 					context.Reason = "No reason specified"
@@ -174,7 +174,7 @@ func slashIr() map[string]types.SlashCommand {
 
 				opRes := adminOp.Handler(context)
 
-				if (opRes == "" || strings.HasPrefix(opRes, "OK.")) && adminOp.Event != types.EventNone {
+				if !adminOp.SlashRaw && (opRes == "" || strings.HasPrefix(opRes, "OK.")) && adminOp.Event != types.EventNone {
 					eventId := common.CreateUUID()
 					event := map[string]interface{}{
 						"ctx": map[string]interface{}{

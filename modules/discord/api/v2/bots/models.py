@@ -77,6 +77,7 @@ class Bot(BaseModel):
     action_logs: list[dict] | None = None
     uptime_checks_total: int | None = None
     uptime_checks_failed: int | None = None
+    token: str | None = None
 
 class BotStats(BaseModel):
     guild_count: int

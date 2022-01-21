@@ -125,28 +125,34 @@ async def fetch_bot(
     bot_id: int, 
     compact: Optional[bool] = True, 
     no_cache: Optional[bool] = False,
+    sensitive: Optional[bool] = False
 ):
     """
     Fetches bot information given a bot ID. If not found, 404 will be returned. 
 
     This endpoint handles both bot IDs and client IDs
 
-    - **compact** (default: `true`) -> `long_description`, `long_description_type`, `keep_banner_decor` and `css` will be null if true. To disable compact mode, 
-    you must provide a user token to avoid abuse and to allow auditing of sensitive data usage (compact mode can be forced for malicious users)
-
     - **no_cache** (default: `false`) -> cached responses will not be served (may be temp disabled in the case of a DDOS or temp disabled for specific 
     bots as required). **Uncached requests may take up to 100-200 times longer or possibly more**
     
-    **Important note: the first owner may or may not be the main owner. Use the `main` key instead of object order**
+    **Important note: the first owner may or may not be the main owner. 
+    Use the `main` key instead of object order**
+
+    **Providing a user token that is associated with a owner of a bot
+    will return the bots token as well if sensitive is set to true**
 
     """
-    if not compact:
-        auth = request.headers.get("Authorization", "")
+    if sensitive:
+        auth = request.headers.get("Authorization", "").replace("User ", "")
         user_id = await db.fetchval("SELECT user_id FROM users WHERE api_token = $1", auth)
+        if not user_id:
+            return abort(401)
         await user_auth_check(user_id, auth)
+        if not user_id or not (await is_bot_admin(bot_id, user_id)):
+            return abort(401)
 
     if not no_cache:
-        cache = await redis_db.get(f"botcache-{bot_id}-{compact}")
+        cache = await redis_db.get(f"botcache-{bot_id}-{compact}-{sensitive}")
         if cache:
             data = orjson.loads(cache)
             data["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
@@ -162,6 +168,9 @@ async def fetch_bot(
     bot_id = api_ret["bot_id"]
 
     api_ret = dict(api_ret)
+
+    if sensitive:
+        api_ret["token"] = await db.fetchval("SELECT api_token AS token FROM bots WHERE bot_id = $1", bot_id)
 
     if not compact:
         extra = await db.fetchrow(
@@ -206,7 +215,7 @@ async def fetch_bot(
         bot_id
     )
 
-    await redis_db.set(f"botcache-{bot_id}-{compact}", orjson.dumps(api_ret), ex=60*60*8)
+    await redis_db.set(f"botcache-{bot_id}-{compact}-{sensitive}", orjson.dumps(api_ret), ex=60*60*8)
 
     api_ret["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
 

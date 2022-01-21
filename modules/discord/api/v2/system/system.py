@@ -20,12 +20,6 @@ def get_uptime():
         uptime_seconds = float(f.readline().split()[0])
     return uptime_seconds
 
-@router.get("/bot-settings-form")
-def bot_settings_form(request: Request):
-    return {
-        
-    }
-
 @router.post("/sellix-webhook")
 async def sellix_webhook(request: Request):
     """
