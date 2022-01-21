@@ -30,7 +30,7 @@ async def troubleshoot_api(request: Request):
 
     return {"message": "Please send a screenshot of this page and send it to staff (or our support server)", "data": data}
 
-@router.post("/fates/csp")
+@router.post("/_sunbeam/pub/csp")
 async def csp_report(request: Request):
     """
     This is where CSP reports should be sent to.
@@ -134,8 +134,9 @@ async def bot_settings(request: Request, bot_id: int):
     owners = await db.fetch(
         "SELECT owner, main FROM bot_owner WHERE bot_id = $1", bot_id)
     if not owners:
-        return "This bot has no found owners.\nPlease contact Fates List support"
-
+        return await templates.e(request,
+            "Invalid owners set. Contact Fates List Support",
+            status_code=400)
     owners_lst = [(await get_user(obj["owner"],
                                   user_only=True,
                                   worker_session=worker_session))

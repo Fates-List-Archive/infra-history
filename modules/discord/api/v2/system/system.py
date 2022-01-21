@@ -157,7 +157,11 @@ async def get_bots_filtered(
     """
     API to get all bots filtered by its state
 
-    **Warning: This api does not guarantee you will get the same number of bots as what you put in limit and may add more but not less. If you don't like this, specify only one state**
+    **Warning: This api does not guarantee you will get the same 
+    number of bots as what you put in limit and may add more 
+    but not less. If you don't want this, specify only one state
+    to ensure you are not requesting bots paginated commonly
+    across multiple set states**
     """
     db = worker_session.postgres
 
