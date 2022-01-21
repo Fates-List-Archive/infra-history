@@ -90,4 +90,38 @@ class BaseSearch(BaseModel):
 
 class BotSearch(BaseSearch):
     search_res: list
-    profile_search: bool
+
+class PartnerLinks(BaseModel):
+    discord: str
+    website: str
+
+class Partner(BaseModel):
+    id: str
+    name: str
+    owner: str
+    image: str
+    description: str
+    links: PartnerLinks
+
+class Partners(BaseModel):
+    partners: list[Partner]
+    icons: PartnerLinks
+
+class StaffRole(BaseModel):
+    """
+    **Either fname (friendly name) or name may be defined.
+    Check for both**
+    """
+    id: str
+    staff_id: str
+    perm: int
+    name: str | None = ""
+    fname: str | None = ""
+
+class StaffRoles(BaseModel):
+    __root__: dict[str, StaffRole]
+
+class IsStaff(BaseModel):
+    staff: bool
+    perm: int
+    sm: StaffRole

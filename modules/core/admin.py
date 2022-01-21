@@ -8,7 +8,6 @@ from .imports import *
 from .ipc import redis_ipc_new
 from .permissions import *
 
-
 class BotActions():
     def __init__(self, db, bot):
         self.db = db
@@ -311,5 +310,3 @@ class BotActions():
         msg = {"content": "", "embed": edit_embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": []}
         if not self.system_bot:
             await redis_ipc_new(redis_db, "SENDMSG", msg=msg, timeout=None)
-
-
