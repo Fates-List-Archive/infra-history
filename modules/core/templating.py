@@ -21,7 +21,7 @@ class templates():
             state, arg_dict["user_css"], arg_dict["user_token"], arg_dict["site_lang"] = user_data["state"], user_data["user_css"], user_data["api_token"], user_data["site_lang"]
             if (state == enums.UserState.global_ban) and not_error:
                 ban_type = enums.UserState(state).__doc__
-                return await templates.e(request, f"You have been {ban_type} banned from Fates List<br/>", status_code = 403)
+                return await templates.e(request, f"You have been {ban_type} banned from Fates List", status_code = 403)
             if not compact:
                 arg_dict["staff"] = (await is_staff(None, int(request.session["user_id"]), 2))[2]
             arg_dict["avatar"] = request.session.get("avatar")
@@ -37,8 +37,6 @@ class templates():
         arg_dict["len"] = len
         arg_dict["ireplace"] = ireplace
         arg_dict["ireplacem"] = ireplacem
-        arg_dict["human_format"] = human_format
-        arg_dict["server_bot_invite"] = server_bot_invite
         arg_dict["intl_text"] = intl_text # This comes from lynxfall.utils.string
         base_context = {
             "user_id": str(arg_dict["user_id"]) if "user_id" in arg_dict.keys() else None,

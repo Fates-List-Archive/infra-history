@@ -130,6 +130,7 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         
         # These are checks path should not start with
         is_api = path.startswith("/api")
+
         request.scope["path"] = path
         
         if is_api:
