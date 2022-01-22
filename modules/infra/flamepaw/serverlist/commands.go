@@ -824,6 +824,9 @@ func CmdInit() map[string]types.SlashCommand {
 			},
 		},
 		Handler: func(context types.SlashContext) string {
+			if context.Interaction.Token == "prefixCmd" {
+				return "This is a slash command only command"
+			}
 			actionVal := slashbot.GetArg(common.DiscordServerList, context.Interaction, "action", false)
 			action, ok := actionVal.(string)
 			if !ok {
