@@ -28,6 +28,7 @@ var (
 	commands      = make(map[string]ServerListCommand)
 	commandsCache = make(map[string]string)
 	numericRegex  *regexp.Regexp
+	sanityRegex   *regexp.Regexp
 )
 
 func tagCheck(tag string) bool {
@@ -113,9 +114,13 @@ func AddRecacheGuild(context context.Context, postgres *pgxpool.Pool, guild *dis
 
 func init() {
 	var err error
+	var err2 error
 	numericRegex, err = regexp.Compile("[^0-9]+")
+	sanityRegex, err2 = regexp.Compile("[^a-zA-Z0-9]+")
 	if err != nil {
 		panic(err.Error())
+	} else if err2 != nil {
+		panic(err2.Error())
 	}
 }
 
@@ -213,12 +218,14 @@ func CmdInit() map[string]types.SlashCommand {
 			},
 		},
 		Handler: func(context types.SlashContext) string {
+			if context.Interaction.Token == "prefixCmd" {
+				return "This is a slash command only command"
+			}
 			fieldVal := slashbot.GetArg(common.DiscordServerList, context.Interaction, "field", false)
 			field, ok := fieldVal.(string)
 			if !ok {
 				return "Field must be provided"
 			}
-			field = strings.ToLower(field)
 			valueVal := slashbot.GetArg(common.DiscordServerList, context.Interaction, "value", true)
 			value, ok := valueVal.(string)
 			if !ok || value == "" || value == "none" {
@@ -528,12 +535,14 @@ func CmdInit() map[string]types.SlashCommand {
 			},
 		},
 		Handler: func(context types.SlashContext) string {
+			if context.Interaction.Token == "prefixCmd" {
+				return "This is a slash command only command"
+			}
 			fieldVal := slashbot.GetArg(common.DiscordServerList, context.Interaction, "field", false)
 			field, ok := fieldVal.(string)
 			if !ok {
 				return "Field must be provided"
 			}
-			field = strings.ToLower(field)
 			if (field == "api_token" || field == "webhook_secret") && context.ServerPerm < 3 {
 				return slashbot.ServerPermsString(3, true)
 			}
@@ -1031,6 +1040,9 @@ func CmdInit() map[string]types.SlashCommand {
 			},
 		},
 		Handler: func(context types.SlashContext) string {
+			if context.Interaction.Token == "prefixCmd" {
+				return "This is a slash command only command"
+			}
 			fieldVal := slashbot.GetArg(common.DiscordServerList, context.Interaction, "field", false)
 			field, ok := fieldVal.(string)
 			if !ok {
