@@ -586,6 +586,7 @@ func CmdInit() map[string]types.SlashCommand {
 			},
 		},
 		Handler: func(context types.SlashContext) string {
+			log.Info("Running test")
 			testVal := slashbot.GetArg(common.DiscordServerList, context.Interaction, "test", false)
 			test, ok := testVal.(bool)
 			if !ok {
@@ -748,11 +749,18 @@ func CmdInit() map[string]types.SlashCommand {
 				strings.Join([]string{faqVoteRewards, faqAllowlist, faqTags}, "\n\n"),
 			}
 
+			var sender func(discord *discordgo.Session, i *discordgo.Interaction, content string, clean bool, largeContent ...string)
+			if context.Interaction.Token == "prefixCmd" {
+				sender = slashbot.SendIResponse
+			} else {
+				sender = slashbot.SendIResponseEphemeral
+			}
+
 			for i, v := range helpPages {
 				if i == 0 {
-					slashbot.SendIResponseEphemeral(common.DiscordServerList, context.Interaction, "Start of message", false)
+					sender(common.DiscordServerList, context.Interaction, "Start of message", false)
 				}
-				slashbot.SendIResponseEphemeral(common.DiscordServerList, context.Interaction, v, false)
+				sender(common.DiscordServerList, context.Interaction, v, false)
 			}
 			return ""
 		},
@@ -1143,5 +1151,5 @@ func CmdInit() map[string]types.SlashCommand {
 }
 
 func GetCommandSpew() string {
-	return spew.Sdump("Admin commands loaded: ", commands)
+	return spew.Sdump(commands)
 }

@@ -57,7 +57,7 @@ func Server() {
 	common.DiscordServerList = discordServerBot
 
 	// For now, if we don't get the guild members intent in the future, this will be replaced with approx guild count
-	discordServerBot.Identify.Intents = discordgo.IntentsGuilds
+	discordServerBot.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages
 
 	// Be prepared to remove this handler if we don't get priv intents
 	memberHandler := func(s *discordgo.Session, m *discordgo.Member) {
@@ -203,14 +203,20 @@ func Server() {
 		)
 	}
 
-	discord.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+	prefixSupport := func(s *discordgo.Session, m *discordgo.MessageCreate, n int) {
 		// We handle a messageCreate as a interaction
-		log.Info("Got message: ", spew.Sdump(m))
 		if m.Message.Member == nil {
 			log.Info("No user set")
 			return
 		}
 		m.Member.User = m.Author
+		for _, roleID := range m.Member.Roles {
+			role, err := s.State.Role(m.Message.GuildID, roleID)
+			if err != nil {
+				continue
+			}
+			m.Member.Permissions |= role.Permissions
+		}
 
 		// Parse the interaction
 		var name string
@@ -256,6 +262,13 @@ func Server() {
 			Token:     "prefixCmd",
 		}
 		iHandle(s, spoofInteraction, 0)
+	}
+
+	discord.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		prefixSupport(s, m, 0)
+	})
+	discordServerBot.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		prefixSupport(s, m, 1)
 	})
 
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i.Interaction, 0) })

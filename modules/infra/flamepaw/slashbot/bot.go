@@ -198,7 +198,9 @@ func SlashHandler(
 		}
 
 		if cmd.Handler == nil {
-			SendIResponse(discord, i, "Command not found?", false)
+			if i.Token != "prefixCmd" {
+				SendIResponse(discord, i, "Command not found?", false)
+			}
 			return
 		}
 		res := cmd.Handler(contextData)
@@ -331,11 +333,13 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 		content += "\n**It is highly recommended to use slash commands instead**"
 		// If ephemeral, send as a DM
 		var chanId string
+		var ref *discordgo.MessageReference
 		if flags == 1<<6 {
+			log.Info("Attempting to create dm channel for: ", i.Member.User.ID)
 			channel, err := discord.UserChannelCreate(i.Member.User.ID)
 			if err != nil {
 				log.Error(err)
-				discord.ChannelMessageSendComplex(chanId, &discordgo.MessageSend{
+				discord.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
 					Content: "An error has occured:" + err.Error(),
 					Reference: &discordgo.MessageReference{
 						MessageID: i.ID,
@@ -347,17 +351,21 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 			chanId = channel.ID
 		} else {
 			chanId = i.ChannelID
-		}
-		discord.ChannelMessageSendComplex(chanId, &discordgo.MessageSend{
-			Content: content,
-			Files:   files,
-			Embeds:  embeds,
-			Reference: &discordgo.MessageReference{
+			ref = &discordgo.MessageReference{
 				MessageID: i.ID,
 				ChannelID: i.ChannelID,
 				GuildID:   i.GuildID,
-			},
+			}
+		}
+		_, err := discord.ChannelMessageSendComplex(chanId, &discordgo.MessageSend{
+			Content:   content,
+			Files:     files,
+			Embeds:    embeds,
+			Reference: ref,
 		})
+		if err != nil {
+			log.Error(err)
+		}
 		return
 	}
 
