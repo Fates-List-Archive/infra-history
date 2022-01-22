@@ -1,66 +1,8 @@
-{% macro flCard(data, rand, type) %}
-    <!--Get type of card and parse it-->
-    {% if not rand %}
-        {% set id = data.bot_id or data.id or data.user.id %}
-    {% endif %}
-    <section class="bot-card">
-	    <div class="lozad bot-card-banner" data-background-image="{% if not rand %}{{data.banner or '/static/assets/prod/banner.webp?v=1'}}{% endif %}">
-            {% if (type == 'bot' or type == 'server') and (data.state == enums.BotState.certified or rand) %}
-	            <span class="iconify bot-card-cert" data-icon="fa-solid:certificate" data-inline="false" data-height="3em"></span>
-            {% endif %}
-            <a href="/{{type}}/{{id}}" class="bot-card-view-link">
-		    <img alt="Bot Avatar" class="lozad bot-card-avatar" data-placeholder-background="black" data-src="{% if not rand %}{{data.user.avatar.replace('.png', '.webp')}}{% endif %}" width="30%" height="65%"/>
-            </a>
-        </div>
-        <div>
-		<a href="/{{type}}/{{id}}" class="bot-card-view-link">
-                <div class="bot-card-username">
-			<p class="text-nowrap text-break text-center bot-card-username-txt white-bold">{% if rand %}Fetching random bot{% else %}{{data.user.username}}{% endif %}</p>
-                </div>
-		</a>
-        </div>
-        <p class="bot-card-description">
-		<strong class="bot-card-description-txt" style="overflow-wrap: anywhere;">{% if not rand %}{{data.description}}{% endif %}</strong>
-        </p>
-        {% if type == 'bot' or type == 'server' %}
-            <div class="d-flex bot-card-footer">
-            	<div class="bot-card-footer-stats">
-                    <p class="text-center white-bold">
-			<span class="iconify i-m3" data-icon="fa-solid:server" data-inline="false"></span><span style="margin-left: 3px;" class="bot-servers">{% if rand %}N/A{% else %}{{human_format(data.guild_count)}}{% endif %}</span>
-		     </p>
-                </div>
-                <div class="bot-card-footer-stats">
-                    <p class="text-center white-bold">
-			    <span class="iconify i-m3" data-icon="fa-solid:thumbs-up" data-inline="false"></span><span style="margin-left: 3px;" class="bot-votes">{% if rand %}N/A{% else %}{{human_format(data.votes)}}{% endif %}</span>
-		    </p>
-                </div>
-            </div>
-        {% endif %}
-        <div class="bot-card-actions">
-            <a role="button" aria-label="View" href="/{{type}}/{{id}}" class="btn btn-outline-light bot-card-actions-link bot-card-view-link">View</a>
-            {% if type != 'profile' %}
-                <a role="button" aria-label="Invite" href="/{{type}}/{{id}}/invite" class="btn btn-outline-light bot-card-actions-link bot-card-invite-link" style="margin-left: 6.5%;" target="_blank">Invite</a>
-            {% endif %}
-        </div>
-    </section>
-{% endmacro %}
-{% macro tags(tags_fixed) %}
-	{% for tag in tags_fixed %}
-		<button id="tags-{{tag.id}}" class="tag-item btn btn-sm btn-outline-light" onclick="location.href='/search/tags?tag={{tag.id}}&target_type={{type}}'" title="{{tag.name}}">
-			<span class="iconify" data-icon="{{tag.iconify_data}}" data-inline="false" aria-hidden="true"></span>
-			<span style="font-size: 13px;">
-				<strong>{{tag.name}}</strong>
-			</span>
-		</button>
-	{% endfor %}
-{% endmacro %}
-
 {# Set some global variables for the form handling in js to easily serialize it #}
 {% set form_values_text = [] %}
 {% set form_values_select_single = [] %}
 {% set form_values_select_multiple = [] %}
 {% set actions = False %}
-
 
 {% macro tip(text, alert_class="alert-info tip-blue", icon="foundation:lightbulb") %}
 	<div class="d-inline-block white alert {{alert_class}} tip" role="alert">
