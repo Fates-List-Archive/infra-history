@@ -218,6 +218,7 @@ func CmdInit() map[string]types.SlashCommand {
 			if !ok {
 				return "Field must be provided"
 			}
+			field = strings.ToLower(field)
 			valueVal := slashbot.GetArg(common.DiscordServerList, context.Interaction, "value", true)
 			value, ok := valueVal.(string)
 			if !ok || value == "" || value == "none" {
@@ -532,6 +533,7 @@ func CmdInit() map[string]types.SlashCommand {
 			if !ok {
 				return "Field must be provided"
 			}
+			field = strings.ToLower(field)
 			if (field == "api_token" || field == "webhook_secret") && context.ServerPerm < 3 {
 				return slashbot.ServerPermsString(3, true)
 			}
