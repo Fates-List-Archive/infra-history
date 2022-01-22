@@ -1,3 +1,9 @@
 [submodule "modules/infra/admin-piccolo"]
 	path = modules/infra/admin-piccolo
 	url = https://github.com/Fates-List/admin
+[submodule "static"]
+	path = static
+	url = https://github.com/Fates-List/static
+[submodule "data/static"]
+	path = data/static
+	url = https://github.com/Fates-List/static

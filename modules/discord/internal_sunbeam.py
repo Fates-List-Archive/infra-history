@@ -4,6 +4,11 @@ router = APIRouter(tags=["Sunbeam - Internal HTML Routes"])
 
 allowed_file_ext = [".gif", ".png", ".jpeg", ".jpg", ".webm", ".webp"]
 
+def gen_owner_html(owners_lst: tuple):
+    owners_html = '<span class="iconify" data-icon="mdi-crown" data-inline="false" data-height="1.5em" style="margin-right: 3px"></span>'
+    owners_html += "<br/>".join([f"<a class='long-desc-link' href='/profile/{owner[0]}'>{owner[1]}</a>" for owner in owners_lst if owner])
+    return owners_html
+
 @router.get("/_sunbeam/dm/help")
 async def troubleshoot_api(request: Request):
     """

@@ -1,3 +1,0 @@
-User-agent: *
-Disallow: /static/tos.txt
-Sitemap: https://fateslist.xyz/sitemap.xml
