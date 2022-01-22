@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../sunbeam"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "modules/infra/flamepaw"
+		}
+	],
+	"settings": {}
+}

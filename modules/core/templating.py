@@ -38,6 +38,7 @@ class templates():
         arg_dict["ireplace"] = ireplace
         arg_dict["ireplacem"] = ireplacem
         arg_dict["intl_text"] = intl_text # This comes from lynxfall.utils.string
+        arg_dict["human_format"] = human_format # This comes from lynxfall.utils.string
         base_context = {
             "user_id": str(arg_dict["user_id"]) if "user_id" in arg_dict.keys() else None,
             "user_token": arg_dict.get("user_token"),

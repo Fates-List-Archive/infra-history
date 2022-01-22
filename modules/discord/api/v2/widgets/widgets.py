@@ -17,6 +17,11 @@ router = APIRouter(
 
 from colour import Color
 
+def hex_to_rgb(value):
+    value = value.lstrip('H')
+    lv = len(value)
+    return tuple(int(value[i:i+lv//3], 16) for i in range(0, lv, lv//3))
+
 def is_color_like(c):
     try:
         # Converting 'deep sky blue' to 'deepskyblue'
@@ -29,26 +34,58 @@ def is_color_like(c):
 
 
 @router.get("/{target_id}", operation_id="get_widget")
-async def get_widget(request: Request, bt: BackgroundTasks, target_id: int, target_type: enums.ReviewType, format: enums.WidgetFormat, bgcolor: Union[int, str] ='black', textcolor: Union[int, str] ='white', no_cache: Optional[bool] = False, cd: Optional[str] = None, full_desc: Optional[bool] = False):
+async def get_widget(
+    request: Request, 
+    response: Response,
+    bt: BackgroundTasks, 
+    target_id: int, 
+    target_type: enums.ReviewType, 
+    format: enums.WidgetFormat,
+    bgcolor: str  = 'black', 
+    textcolor: str ='white', 
+    no_cache: Optional[bool] = False, 
+    cd: Optional[str] = None, 
+    desc_length: int = 25
+):
     """
     Returns a widget
 
+    **For colors (bgcolor, textcolor), use H for html hex instead of #**
+
     cd - A custom description you wish to set for the widget
 
-    full_desc - If this is set to true, the full description will be used, otherwise, only the first 25 characters will be used
+    desc_length - Set this to anything less than 0 to try and use full length (may 500), otherwise this sets the length of description to usr
 
     no_cache - If this is set to true, cache will not be used but will still be updated. If using cd, set this option to true and cache the image yourself
     Note that no_cache is slow and may lead to ratelimits and/or your got being banned if used excessively
     """
-    if not is_color_like(str(bgcolor)) or not is_color_like(str(textcolor)):
-        return abort(404)
-    if isinstance(bgcolor, str):
-        bgcolor=bgcolor.split('.')[0]
-        bgcolor = floor(int(bgcolor)) if bgcolor.isdigit() or bgcolor.isdecimal() else bgcolor
-    if isinstance(textcolor, str):
-        textcolor=textcolor.split('.')[0]
-        textcolor = floor(int(textcolor)) if textcolor.isdigit() or textcolor.isdecimal() else textcolor
+    if not bgcolor:
+        bgcolor = "black"
+    elif not textcolor:
+        textcolor = "black"
+
+    if format != enums.WidgetFormat.html:
+        if bgcolor.startswith("H"):
+            bgcolor = hex_to_rgb(bgcolor)
+        else:
+            if not is_color_like(str(bgcolor)):
+                return api_error("Invalid bgcolor")
+            if isinstance(bgcolor, str):
+                bgcolor=bgcolor.split('.')[0]
+                bgcolor = floor(int(bgcolor)) if bgcolor.isdigit() or bgcolor.isdecimal() else bgcolor
         
+        if textcolor.startswith("H"):
+            textcolor = hex_to_rgb(textcolor)
+        else:
+            if not is_color_like(str(textcolor)):
+                return api_error("Invalid textcolor")
+            if isinstance(textcolor, str):
+                textcolor=textcolor.split('.')[0]
+                textcolor = floor(int(textcolor)) if textcolor.isdigit() or textcolor.isdecimal() else textcolor
+    
+    cache_key = f"widget-{target_id}-{target_type}-{format.name}-{textcolor}-{bgcolor}-{desc_length}"
+    response.headers["ETag"] = f"W/{cache_key}"
+
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
    
@@ -67,6 +104,8 @@ async def get_widget(request: Request, bt: BackgroundTasks, target_id: int, targ
     if not bot:
         return abort(404)
     
+    bot = dict(bot)
+    
     bt.add_task(add_ws_event, target_id, {"m": {"e": event}, "ctx": {"user": request.session.get('user_id'), "widget": True}}, type=_type)
     if target_type == enums.ReviewType.bot:
         data = {"bot": bot, "user": await get_bot(target_id, worker_session = request.app.state.worker_session)}
@@ -81,11 +120,11 @@ async def get_widget(request: Request, bt: BackgroundTasks, target_id: int, targ
         return data
 
     if format == enums.WidgetFormat.html:
-        return await templates.TemplateResponse("widget.html", {"request": request} | data)
+        return await templates.TemplateResponse("widget.html", {"request": request, "textcolor": textcolor, "bgcolor": bgcolor} | data)
 
     if format in (enums.WidgetFormat.png, enums.WidgetFormat.webp):
         # Check if in cache
-        cache = await redis_db.get(f"widget-{target_id}-{target_type}-{format.name}-{textcolor}")
+        cache = await redis_db.get(cache_key)
         if cache and not no_cache:
             def _stream():
                 with io.BytesIO(cache) as output:
@@ -193,9 +232,11 @@ async def get_widget(request: Request, bt: BackgroundTasks, target_id: int, targ
                 )
             )
     
+        bot["description"] = bot["description"].encode("ascii", "ignore").decode()
+
         #description
         wrapper = textwrap.TextWrapper(width=15)
-        text = cd or (bot["description"][:25] if not full_desc else bot["description"])
+        text = cd or (bot["description"][:desc_length] if desc_length > 0 else bot["description"])
         word_list = wrapper.wrap(text=str(text))
         d.text(
             (120,30), 
@@ -223,7 +264,7 @@ async def get_widget(request: Request, bt: BackgroundTasks, target_id: int, targ
         output = io.BytesIO()
         widget_img.save(output, format=format.name.upper())
         output.seek(0)
-        await redis_db.set(f"widget-{target_id}-{target_type}-{format.name}-{textcolor}", output.read(), ex=60*3)
+        await redis_db.set(cache_key, output.read(), ex=60*3)
         output.seek(0)
 
         def _stream():    
