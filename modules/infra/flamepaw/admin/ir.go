@@ -71,6 +71,10 @@ func slashIr() map[string]types.SlashCommand {
 					return "This admin operation does not exist (" + op + ")."
 				}
 
+				if adminOp.Server != "" && context.Interaction.GuildID != adminOp.Server {
+					return "This command can only be run on server with id: " + adminOp.Server
+				}
+
 				context.ActionTargetType = types.ActionTargetTypeBot
 
 				botVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "bot", false)

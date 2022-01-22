@@ -103,37 +103,37 @@ func SlashHandler(
 	discord *discordgo.Session,
 	rdb *redis.Client,
 	db *pgxpool.Pool,
-	i *discordgo.InteractionCreate,
+	i *discordgo.Interaction,
 ) {
 	if i.Type != discordgo.InteractionApplicationCommand && i.Type != discordgo.InteractionApplicationCommandAutocomplete {
 		// Not yet supported
 		return
 	}
 
-	if i.Interaction.Member == nil {
-		SendIResponse(discord, i.Interaction, "This bot may only be used in a server!", true)
+	if i.Member == nil {
+		SendIResponse(discord, i, "This bot may only be used in a server!", true)
 		return
 	}
 
 	var mockMode bool
 
-	_, _, staffPerm := common.GetPerms(discord, i.Interaction.Member.User.ID, 2)
+	_, _, staffPerm := common.GetPerms(discord, i.Member.User.ID, 2)
 
-	serverPerm := getTopServerPerm(discord, i.Interaction)
+	serverPerm := getTopServerPerm(discord, i)
 
 	var appCmdData = i.ApplicationCommandData()
 
 	if appCmdData.Name == "mock" && i.Type == discordgo.InteractionApplicationCommand {
 		// Special command to mock all other commands
-		if i.Interaction.GuildID != common.StaffServer {
+		if i.GuildID != common.StaffServer {
 			return
 		}
 
 		if staffPerm < 4 {
-			SendIResponse(discord, i.Interaction, "You are not a Fates List Admin+. If you think this is a mistake, please report this on FL Kremlin!", true)
+			SendIResponse(discord, i, "You are not a Fates List Admin+. If you think this is a mistake, please report this on FL Kremlin!", true)
 			return
 		}
-		guildVal := GetArg(discord, i.Interaction, "guild", true)
+		guildVal := GetArg(discord, i, "guild", true)
 		guildIdVal, ok := guildVal.(string)
 		var msg string
 		if !ok || guildIdVal == "" {
@@ -142,13 +142,13 @@ func SlashHandler(
 			msg = "Mock mode disabled"
 		} else {
 			mockGuild = guildIdVal
-			mockUser = i.Interaction.Member.User.ID
+			mockUser = i.Member.User.ID
 			msg = "Mock mode enabled and set to " + guildIdVal
 		}
-		SendIResponse(discord, i.Interaction, msg, true)
+		SendIResponse(discord, i, msg, true)
 		return
-	} else if mockGuild != "" && mockUser == i.Interaction.Member.User.ID {
-		i.Interaction.GuildID = mockGuild
+	} else if mockGuild != "" && mockUser == i.Member.User.ID {
+		i.GuildID = mockGuild
 		mockMode = true
 	}
 
@@ -160,8 +160,8 @@ func SlashHandler(
 
 	cmd := commands[discord.State.User.ID+op]
 
-	if cmd.Server != "" && cmd.Server != i.Interaction.GuildID {
-		SendIResponse(discord, i.Interaction, "This command may not be run on this server", true)
+	if cmd.Server != "" && cmd.Server != i.GuildID {
+		SendIResponse(discord, i, "This command may not be run on this server", true)
 		return
 	}
 
@@ -169,9 +169,9 @@ func SlashHandler(
 		Context:     context.Background(),
 		Postgres:    db,
 		Redis:       rdb,
-		Interaction: i.Interaction,
+		Interaction: i,
 		AppCmdData:  &appCmdData,
-		User:        i.Interaction.Member.User,
+		User:        i.Member.User,
 		StaffPerm:   staffPerm,
 		ServerPerm:  serverPerm,
 		MockMode:    mockMode,
@@ -181,42 +181,42 @@ func SlashHandler(
 	case discordgo.InteractionApplicationCommand:
 		// Deferring only works for application commands
 		timeout := time.AfterFunc(time.Second*2, func() {
-			SendIResponse(discord, i.Interaction, "defer", false)
+			SendIResponse(discord, i, "defer", false)
 		})
 
 		defer timeout.Stop()
 
 		// Handle cooldown
 		if cmd.Cooldown != types.CooldownNone {
-			key := "cooldown-" + cmd.Cooldown.InternalName + "-" + i.Interaction.Member.User.ID
+			key := "cooldown-" + cmd.Cooldown.InternalName + "-" + i.Member.User.ID
 			cooldown, err := rdb.TTL(ctx, key).Result() // Format: cooldown-BUCKET-MOD
 			if err == nil && cooldown.Seconds() > 0 {
-				SendIResponse(discord, i.Interaction, "Please wait "+cooldown.String()+" before retrying this command!", true)
+				SendIResponse(discord, i, "Please wait "+cooldown.String()+" before retrying this command!", true)
 				return
 			}
 			rdb.Set(ctx, key, "0", time.Duration(cmd.Cooldown.Time)*time.Second)
 		}
 
 		if cmd.Handler == nil {
-			SendIResponse(discord, i.Interaction, "Command not found?", false)
+			SendIResponse(discord, i, "Command not found?", false)
 			return
 		}
 		res := cmd.Handler(contextData)
 
 		if res != "" && !strings.HasPrefix(res, "nop") {
-			SendIResponse(discord, i.Interaction, res, true)
+			SendIResponse(discord, i, res, true)
 		}
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		// Simple autocompletion code
 		if cmd.Autocompleter == nil {
-			SendIResponse(discord, i.Interaction, "nop", true)
+			SendIResponse(discord, i, "nop", true)
 			return
 		}
 		choices := cmd.Autocompleter(contextData)
 		if len(choices) <= 0 {
 			choices = []*discordgo.ApplicationCommandOptionChoice{}
 		}
-		err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := discord.InteractionRespond(i, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
 			Data: &discordgo.InteractionResponseData{
 				Choices: choices,
@@ -227,10 +227,10 @@ func SlashHandler(
 		}
 	}
 	go func() {
-		if iResponseMap[i.Interaction.Token] != nil {
-			iResponseMap[i.Interaction.Token].Stop()
+		if iResponseMap[i.Token] != nil {
+			iResponseMap[i.Token].Stop()
 		}
-		delete(iResponseMap, i.Interaction.Token)
+		delete(iResponseMap, i.Token)
 	}() // This tends to be a bit slow
 }
 
@@ -318,6 +318,47 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 			ContentType: "application/text",
 			Reader:      strings.NewReader(data),
 		})
+	}
+
+	// Handle prefix commands
+	if i.Token == "prefixCmd" {
+		if content == "nop" {
+			// Early return
+			return
+		} else if content == "defer" {
+			content = "This command is taking longer than usual to run. Working on it..."
+		}
+		content += "\n**It is highly recommended to use slash commands instead**"
+		// If ephemeral, send as a DM
+		var chanId string
+		if flags == 1<<6 {
+			channel, err := discord.UserChannelCreate(i.Member.User.ID)
+			if err != nil {
+				log.Error(err)
+				discord.ChannelMessageSendComplex(chanId, &discordgo.MessageSend{
+					Content: "An error has occured:" + err.Error(),
+					Reference: &discordgo.MessageReference{
+						MessageID: i.ID,
+						ChannelID: i.ChannelID,
+						GuildID:   i.GuildID,
+					},
+				})
+			}
+			chanId = channel.ID
+		} else {
+			chanId = i.ChannelID
+		}
+		discord.ChannelMessageSendComplex(chanId, &discordgo.MessageSend{
+			Content: content,
+			Files:   files,
+			Embeds:  embeds,
+			Reference: &discordgo.MessageReference{
+				MessageID: i.ID,
+				ChannelID: i.ChannelID,
+				GuildID:   i.GuildID,
+			},
+		})
+		return
 	}
 
 	t, ok := iResponseMap[i.Token]

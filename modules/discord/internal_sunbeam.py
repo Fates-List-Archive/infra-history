@@ -288,4 +288,3 @@ async def profile_editor(
         "langs": [{"value": lang.value, "text": lang.__doc__} for lang in list(enums.SiteLang)]
     }
     return await templates.TemplateResponse("profile_edit.html", {"request": request, "iframe": True} | context, context=context)
-

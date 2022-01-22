@@ -93,6 +93,33 @@ func UpdateBotLogs(ctx context.Context, postgres *pgxpool.Pool, userId string, b
 // Admin OP Getter
 func CmdInit() map[string]types.SlashCommand {
 	// Mock is only here for registration, actual code is on slashbot
+
+	commands["GIVECOINS"] = AdminOp{
+		InternalName: "givecoins",
+		Cooldown:     types.CooldownNone,
+		Description:  "Give coins to a user",
+		Event:        types.EventNone,
+		MinimumPerm:  4,
+		SlashRaw:     true,
+		SlashOptions: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionUser,
+				Name:        "user",
+				Description: "The user to give coins to",
+				Required:    true,
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionInteger,
+				Name:        "coins",
+				Description: "The amount of coins to give",
+				Required:    true,
+			},
+		},
+		Handler: func(context types.SlashContext) string {
+			return "Work in progress"
+		},
+	}
+
 	commands["QUEUE"] = AdminOp{
 		InternalName: "queue",
 		Cooldown:     types.CooldownNone,
