@@ -76,6 +76,30 @@ def get_top_spots(request: Request):
     return {"bots": bots_top, "servers": servers_top}
 
 
+@router.get("/blstats-full")
+async def stats_page(request: Request, full: bool = False):
+    """Returns the full set of botlist stats"""
+    worker_session = request.app.state.worker_session
+    certified = await do_index_query(state = [enums.BotState.certified], limit = None, worker_session = worker_session) 
+    bot_amount = await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
+    queue = await do_index_query(state = [enums.BotState.pending], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
+    under_review = await do_index_query(state = [enums.BotState.under_review], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
+    if full:
+        denied = await do_index_query(state = [enums.BotState.denied], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
+        banned = await do_index_query(state = [enums.BotState.banned], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
+    data = {
+        "certified": certified,
+        "bot_amount": bot_amount,
+        "queue": queue,
+        "denied": denied if full else [],
+        "denied_amount": await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = $1", enums.BotState.denied),
+        "banned": banned if full else [],
+        "banned_amount": await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = $1", enums.BotState.banned),
+        "under_review": under_review,
+        "full": full
+    }
+    return data
+
 @router.get("/blstats", response_model=BotListStats, operation_id="blstats")
 async def get_botlist_stats(request: Request,
                             worker_session=Depends(worker_session)):
