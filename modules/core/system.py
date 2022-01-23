@@ -86,6 +86,10 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
             request.scope["method"] = request.headers.get("method", "GET")
         request.state.error_id = str(uuid.uuid4())
         request.state.curr_time = str(datetime.datetime.now())
+
+        if not request.scope["path"].startswith("/api"):
+            request.scope["path"] = request.scope["path"].replace("/", "/api/v2/", 1)
+
         path = request.scope["path"]
         
         if not request.app.state.worker_session.up:
@@ -114,12 +118,12 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
 
         logger.trace(request.headers.get("X-Forwarded-For"))
         
-        if path.startswith("/bots/"):
-            path = path.replace("/bots", "/bot", 1)
-        
         # These are checks path should not start with
         is_api = path.startswith("/api")
 
+        if path.startswith("/bots/"):
+            path = path.replace("/bots", "/bot", 1)
+        
         request.scope["path"] = path
         
         if is_api:
