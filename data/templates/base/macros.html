@@ -41,21 +41,23 @@
 		{% endif %}
 	{% endif %}
 	<label for="{{id}}">{{label}} {% if required %}<span style="color: red; font-weight: bold" aria-hidden="true">*</span>{% endif %}</label>
-	<div class="fform fform-select">
-		<select-pure class="select-pure-fl" id="{{id}}" name="{{id}}" default-label="{{help_text}}" {% if multiple %}multiple{% endif %} {% if required %} required {% endif %}>
-		<option-pure value="" disabled="" hidden="">{{help_text}}</option-pure>
-		{% for choice in choices %}
-			{% if choice.value in ("true", "false") %}
-				{% set value = (choice.value == "true") %}
-			{% else %}
-				{% set value = choice.value %}
-			{% endif %}
-			<option-pure 
-			  value="{{choice.value}}"
-			  {% if (context.mode == "add" and choice.default) or ((context.mode == "edit" and id in bot.keys()) and ((not multiple and bot[id] == value) or (multiple and value in bot[id]))) %}selected{% endif %}
-			>{{choice.text}}</option-pure>
-		{% endfor %}
-	</select-pure>
+	<div style="border: solid thin !important; border-color: white !important; border-radius: 4px 4px 4px 4px; max-width: 94%; margin-top: 7px !important; margin-bottom: 30px !important;">
+		<div class="fform-select-2">
+			<select-pure style="z-index: 0 !important;" class="z-index: -1; fform-select-2 special-fform" id="{{id}}" name="{{id}}" default-label="{{help_text}}" {% if multiple %}multiple{% endif %} {% if required %} required {% endif %}>
+			<option-pure value="" disabled="" hidden="">{{help_text}}</option-pure>
+			{% for choice in choices %}
+				{% if choice.value in ("true", "false") %}
+					{% set value = (choice.value == "true") %}
+				{% else %}
+					{% set value = choice.value %}
+				{% endif %}
+				<option-pure 
+				value="{{choice.value}}"
+				{% if (context.mode == "add" and choice.default) or ((context.mode == "edit" and id in bot.keys()) and ((not multiple and bot[id] == value) or (multiple and value in bot[id]))) %}selected{% endif %}
+				>{{choice.text}}</option-pure>
+			{% endfor %}
+		</select-pure>
+		</div>
 	</div>
 {% endmacro %}
 {% macro tab(id, default=False, name=None) %}

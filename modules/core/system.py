@@ -111,17 +111,6 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
             return HTMLResponse("Fates List is going down for a reboot")
        
         request.scope["session"] = {}
-        if request.cookies.get("sunbeam-session"):
-            logger.info("Got cookies, trying to parse...")
-            try:
-                auth_s = URLSafeSerializer(request.app.state.rl_key, "auth")
-                data = auth_s.loads(request.cookies.get("sunbeam-session"))
-                request.session["user_id"] = data["user"]["id"]
-                request.session["username"] = data["user"]["username"]
-                request.session["user_token"] = data["token"]
-                logger.debug(request.session)
-            except Exception as exc:
-                logger.warning(exc)
 
         logger.trace(request.headers.get("X-Forwarded-For"))
         
