@@ -221,6 +221,13 @@ async def fetch_bot(
 
     return api_ret
 
+@router.head("/{bot_id}")
+async def bot_exists(request: Request, bot_id: int):
+    check = await db.fetchval("SELECT bot_id FROM bots WHERE bot_id = $1", bot_id)
+    if not check:
+        return PlainTextResponse("", status_code=404)
+    return PlainTextResponse("", status_code=200)
+
 def gen_owner_html(owners_lst: tuple[dict]):
     """Generate the owner html"""
     # First owner will always be main and hence should have the crown, set initial state to crown for that
@@ -531,10 +538,11 @@ async def _set_bot_stats(request: Request, bot_id: int, api: dict, no_abuse_chec
         return await api_error(f"User count cannot be greater than {INT64_MAX}")
 
     # Anti abuse checks
+    headers = {"Authorization": japi_key} # Lets hope this doesnt break shit
     try:
         if state != enums.BotState.certified and not no_abuse_checks:
             async with aiohttp.ClientSession() as sess:
-                async with sess.get(f"https://japi.rest/discord/v1/application/{app_id}", timeout=15) as resp:
+                async with sess.get(f"https://japi.rest/discord/v1/application/{app_id}", timeout=15, headers=headers) as resp:
                     if resp.status != 200:
                         return api_error("Our anti-abuse provider is down right now. Please contact Fates List Support if this happens when you try again!")
                     app = await resp.json()

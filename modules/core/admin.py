@@ -16,6 +16,13 @@ class BotActions():
 
     async def base_check(self, mode: str) -> Optional[str]:
         """Perform basic checks for adding/editting bots. A check returning None means success, otherwise error should be returned to client"""
+        if mode == "add":
+            state = await self.db.fetchval("SELECT state FROM bots WHERE bot_id = $1", self.bot_id)
+            if state is not None:
+                if state in (enums.BotState.denied, enums.BotState.banned):
+                    return f"This bot has been banned or denied from Fates List.<br/><br/>If you own this bot and wish to appeal this, click <a href='/bot/{self.bot_id}/settings#actions-button-fl'>here</a>"
+                return "This bot already exists on Fates List" # Dont add bots which already exist
+        
         if self.system_bot:
             if not (await is_staff(None, self.user_id, 5))[0]:
                 if mode == "edit":
@@ -32,9 +39,12 @@ class BotActions():
         if check and self.client_id != str(check):
             return "Client ID cannot change once set"
         self.japi_json = {}
+
+
         if not check or mode == "add":
+            headers = {"Authorization": japi_key} # Lets hope this doesnt break shit
             async with aiohttp.ClientSession() as sess:
-                async with sess.get(f"https://japi.rest/discord/v1/application/{self.bot_id}") as resp:
+                async with sess.get(f"https://japi.rest/discord/v1/application/{self.bot_id}", headers=headers) as resp:
                     if resp.status != 200 and resp.status != 400:
                         logger.info(f"Got japi status code: {resp.status}")
                         return "japi.rest seems to be down right now. Please contact Fates List Support if you keep getting this error!"
@@ -43,7 +53,7 @@ class BotActions():
                         return "You need to input a client ID for this bot! You can find this in the Discord Developer Portal"
                     self.client_id = self.bot_id if not self.client_id else self.client_id
                 if self.client_id and self.client_id != self.bot_id:
-                    async with sess.get(f"https://japi.rest/discord/v1/application/{self.client_id}") as resp:
+                    async with sess.get(f"https://japi.rest/discord/v1/application/{self.client_id}", headers=headers) as resp:
                         if resp.status != 200 and resp.status != 400:
                             return "japi.rest seems to be down right now. Please contact Fates List Support if you keep getting this error!"
                         self.japi_json = await resp.json()
@@ -65,10 +75,10 @@ class BotActions():
                     perm_num = int(perm_num)
                 except ValueError:
                     return "Invalid Bot Invite: Your permission number must be a integer", 4 # Invalid Invite
-            elif not self.invite.startswith("https://discord.com") or "oauth" not in self.invite:
-                state = await db.fetchval("SELECT state FROM bots WHERE bot_id = $1", self.bot_id)
-                if not self.system_bot and state != enums.BotState.certified:
-                    return "Invalid Bot Invite: Your bot invite must be in the format of https://discord.com/api/oauth2... or https://discord.com/oauth2..." # Invalid Invite
+            #elif not self.invite.startswith("https://discord.com") or "oauth" not in self.invite:
+            #    state = await db.fetchval("SELECT state FROM bots WHERE bot_id = $1", self.bot_id)
+            #    if not self.system_bot and state != enums.BotState.certified:
+            #        return "Invalid Bot Invite: Your bot invite must be in the format of https://discord.com/api/oauth2... or https://discord.com/oauth2..." # Invalid Invite
 
         if len(self.description) > 110 and not self.system_bot:
             return "Your short description must be shorter than 110 characters" # Short Description Check
@@ -84,9 +94,14 @@ class BotActions():
         if not bot_obj:
             return "According to Discord's API and our cache, your bot does not exist. Please try again after 2 hours."
         
+        tags_fixed = []
+
         for tag in self.tags:
             if tag not in TAGS:
-                return "One of your tags doesn't exist internally. Please check your tags again" # Check tags internally
+                # Merely ignore the tag, autocomplete exists
+                continue
+            tags_fixed.append(tag)
+        self.tags = tags_fixed
 
         if not self.tags:
             return "You must select tags for your bot" # No tags found
@@ -164,12 +179,6 @@ class BotActions():
         check = await self.base_check("add") # Initial base checks
         if check is not None:
             return check # Base check erroring means return base check without continuing as string return means error
-
-        state = await self.db.fetchval("SELECT state FROM bots WHERE bot_id = $1", self.bot_id)
-        if state is not None:
-            if state in (enums.BotState.denied, enums.BotState.banned):
-                return f"This bot has been banned or denied from Fates List.<br/><br/>If you own this bot and wish to appeal this, click <a href='/bot/{self.bot_id}/settings#actions-button-fl'>here</a>"
-            return "This bot already exists on Fates List" # Dont add bots which already exist
 
     async def add_bot(self):
         """Add a bot"""

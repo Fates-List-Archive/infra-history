@@ -33,6 +33,7 @@ var (
 	MainBotToken        string
 	ServerBotToken      string
 	ClientSecret        string
+	JAPIKey             string
 	MainServer          string
 	TestServer          string
 	StaffServer         string
@@ -89,6 +90,7 @@ func init() {
 	MainBotToken = fastjson.GetString(secretsJson, "token_main")
 	ClientSecret = fastjson.GetString(secretsJson, "client_secret")
 	ServerBotToken = fastjson.GetString(secretsJson, "token_server")
+	JAPIKey = fastjson.GetString(secretsJson, "japi_key")
 
 	var p fastjson.Parser
 

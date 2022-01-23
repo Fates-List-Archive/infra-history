@@ -1025,10 +1025,17 @@ func CmdInit() map[string]types.SlashCommand {
 			} */
 
 			client := http.Client{Timeout: 15 * time.Second}
-			gcResp, err := client.Get("https://japi.rest/discord/v1/application/" + context.Bot.ID)
+			gcReq, err := http.NewRequest("GET", "https://japi.rest/discord/v1/application/"+context.Bot.ID, nil)
 			if err != nil {
 				return err.Error()
 			}
+			gcReq.Header.Add("Authorization", common.JAPIKey)
+			gcResp, err := client.Do(gcReq)
+
+			if err != nil {
+				return err.Error()
+			}
+
 			if gcResp.StatusCode != 200 {
 				return "japi.rest returned a non-success status code when getting the approximate guild count. Please report this error to skylar#6666 if this happens after retrying!\n\n" + gcResp.Status
 			}

@@ -86,6 +86,7 @@ with open("config/data/secrets.json") as fp:
     sellix_api_key: str = _secret_data["sellix_api_key"]
     session_key: str = _secret_data["session_key"]
     rl_key: str = _secret_data["rl_key"]
+    japi_key = _secret_data["japi_key"]
 
 with open("config/data/partners.json") as fp:
     partners = json.load(fp)
