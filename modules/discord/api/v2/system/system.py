@@ -209,6 +209,88 @@ async def csp_report(request: Request):
         pass
     return api_success()
 
+@router.get("/_sunbeam/bot/{bot_id}/reviews_html", dependencies=[Depends(id_check("bot"))])
+async def bot_review_page(request: Request,
+                          bot_id: int,
+                          page: int = 1,
+                          user_id: int | None = 0):
+    page = page if page else 1
+    reviews = await parse_reviews(request.app.state.worker_session,
+                                  bot_id,
+                                  page=page)
+    context = {
+        "id": str(bot_id),
+        "type": "bot",
+        "reviews": {
+            "average_rating": float(reviews[1])
+        },
+        "user_id": str(user_id),
+    }
+    data = {
+        "bot_reviews": reviews[0],
+        "average_rating": reviews[1],
+        "total_reviews": reviews[2],
+        "review_page": page,
+        "total_review_pages": reviews[3],
+        "per_page": reviews[4],
+    }
+
+    bot_info = await get_bot(bot_id,
+                             worker_session=request.app.state.worker_session)
+    if bot_info:
+        user = dict(bot_info)
+        user["name"] = user["username"]
+
+    else:
+        return await templates.e(request, "Bot Not Found")
+
+    template = await templates.TemplateResponse(
+        "ext/reviews.html",
+        {
+            "request": request,
+            "data": {
+                "user": user
+            }
+        } | data,
+        context=context,
+    )
+    return {"html": template.body}
+
+@router.get("/_sunbeam/server/{guild_id}/reviews_html")
+async def guild_review_page(request: Request, guild_id: int, page: int = 1, user_id: int | None = 0):
+    page = page if page else 1
+    reviews = await parse_reviews(request.app.state.worker_session, guild_id, page=page, target_type=enums.ReviewType.server)
+    context = {
+        "id": str(guild_id),
+        "user_id": str(user_id),
+        "type": "server",
+        "reviews": {
+            "average_rating": float(reviews[1])
+        },
+        "index": "/servers"
+    }
+    data = {
+        "bot_reviews": reviews[0], 
+        "average_rating": reviews[1], 
+        "total_reviews": reviews[2], 
+        "review_page": page, 
+        "total_review_pages": reviews[3], 
+        "per_page": reviews[4],
+    }
+
+    user = {}
+    
+    template = await templates.TemplateResponse(
+        "ext/reviews.html", 
+        {
+            "request": request, 
+            "data": {
+                "user": user
+            }
+        } | data, 
+        context = context)
+    return {"html": template.body}
+
 @router.post("/sellix-webhook")
 async def sellix_webhook(request: Request):
     """
