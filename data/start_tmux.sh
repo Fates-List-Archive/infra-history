@@ -1,4 +1,5 @@
 HISTCONTROL="ignorespace${HISTCONTROL:+:$HISTCONTROL}"
+ulimit -Sv 3000000 # Force set 3gb ram limit
 KILL=1 flamepaw --cmd site.reload 
 tmux kill-server
 tmux new-session -d -s flamepaw 
@@ -9,4 +10,5 @@ tmux new-session -d -s mapleshade
 tmux send-keys -t mapleshade ' cd ~/GitHub-Updates-Bot && source ~/.mapleshadecfg && npm start; exec $SHELL' Enter
 tmux new-session -d -s main 
 tmux send-keys -t main ' flamepaw --cmd site.run; exec $SHELL' Enter
+cpulimit -e flamepaw -l 80 &
 export HISTCONTROL

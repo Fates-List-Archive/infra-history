@@ -206,7 +206,6 @@ func Server() {
 	prefixSupport := func(s *discordgo.Session, m *discordgo.MessageCreate, n int) {
 		// We handle a messageCreate as a interaction
 		if m.Message.Member == nil {
-			log.Info("No user set")
 			return
 		}
 		m.Member.User = m.Author
