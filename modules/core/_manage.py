@@ -331,7 +331,7 @@ def site_compilestatic():
     cmd = ("purgecss --css data/static/assets/src/material.css "
     "--content data/templates/*.html data/templates/base/*.html "
     "--output data/static/assets/src/materiald --safelist fade show modal "
-    "--blocklist pre blockquote address")
+    "--blocklist pre blockquote address .dropdown-item")
 
     print("Creating material-slim.css")
     with Popen(cmd, env=os.environ, shell=True) as proc:
