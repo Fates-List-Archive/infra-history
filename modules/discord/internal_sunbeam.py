@@ -9,32 +9,6 @@ def gen_owner_html(owners_lst: tuple):
     owners_html += "<br/>".join([f"<a class='long-desc-link' href='/profile/{owner[0]}'>{owner[1]}</a>" for owner in owners_lst if owner])
     return owners_html
 
-@router.get("/_sunbeam/dm/help")
-async def troubleshoot_api(request: Request):
-    """
-    Internal API used by sunbeam for troubleshooting issues
-
-    Used in https://fateslist.xyz/frostpaw/troubleshoot
-
-    This requires a Frostpaw header to be properly set
-    """
-    if not request.headers.get("Frostpaw"):
-        return abort(404)
-    data = {
-        "user_id": request.session.get("user_id"), 
-        "logged_in": "user_id" in request.session.keys(),
-        "vote_epoch": None,
-        "user_agent": request.headers.get("User-Agent"),
-        "user": None,
-        "pid": os.getpid(),
-        "ip": request.headers.get("X-Forwarded-For")
-    }
-
-    if data["logged_in"]:
-        data["user"] = await get_user(data["user_id"], worker_session=request.app.state.worker_session)
-
-    return {"message": "Please send a screenshot of this page and send it to staff (or our support server)", "data": data}
-
 @router.get("/_sunbeam/pub/add-bot")
 async def add_bot(request: Request):
     if "user_id" not in request.session.keys():
@@ -87,7 +61,7 @@ async def bot_settings(request: Request, bot_id: int):
 
     bot = dict(bot)
 
-    # Will be removed once discord becomes de-facto platform
+    # Will be removed once discord is no longer de-facto platform
     bot["platform"] = "discord"
 
     if flags_check(bot["flags"], enums.BotFlag.system):

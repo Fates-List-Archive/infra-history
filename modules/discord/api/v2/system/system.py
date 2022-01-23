@@ -20,7 +20,31 @@ def get_uptime():
         uptime_seconds = float(f.readline().split()[0])
     return uptime_seconds
 
-@router.post("/csp")
+@router.get("/_sunbeam/troubleshoot")
+async def troubleshoot_api(request: Request):
+    """
+    Internal API used by sunbeam for troubleshooting issues
+
+    Used in https://fateslist.xyz/frostpaw/troubleshoot
+
+    This requires a Frostpaw header to be properly set
+    """
+    if not request.headers.get("Frostpaw"):
+        return abort(404)
+    data = {
+        "user_id": request.session.get("user_id"), 
+        "logged_in": "user_id" in request.session.keys(),
+        "user_agent": request.headers.get("User-Agent"),
+        "pid": os.getpid(),
+        "cf_ip": request.headers.get("X-Forwarded-For")
+    }
+
+    if data["logged_in"]:
+        data["user"] = await get_user(data["user_id"], worker_session=request.app.state.worker_session)
+
+    return {"message": "Please send a screenshot of this page and send it to staff (or our support server)", "data": data}
+
+@router.post("/_csp")
 async def csp_report(request: Request):
     """
     This is where CSP reports should be sent to.
