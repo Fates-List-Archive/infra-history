@@ -42,19 +42,10 @@ async def regenerate_user_token(request: Request, user_id: int):
     operation_id="update_user_preferences"
 )
 async def update_user_preferences(request: Request, user_id: int, data: UpdateUserPreferences):
-    if data.user_id and data.user_id != user_id:
-        admin = (await is_staff(staff_roles, user_id, 4))[0]
-        if not admin:
-            return abort(403)
-        user_id = data.user_id
-    else:
-        state = await db.fetchval("SELECT state FROM users WHERE user_id = $1", user_id)
-        if state in (enums.UserState.global_ban, enums.UserState.profile_edit_ban):
-            return api_error("You have been banned from using this API endpoint")
+    state = await db.fetchval("SELECT state FROM users WHERE user_id = $1", user_id)
+    if state in (enums.UserState.global_ban, enums.UserState.profile_edit_ban):
+        return api_error("You have been banned from using this API endpoint")
 
-    if data.js_allowed is not None:
-        await db.execute("UPDATE users SET js_allowed = $1 WHERE user_id = $2", data.js_allowed, user_id)
-        request.session["js_allowed"] = data.js_allowed
     if data.description is not None:
         await db.execute("UPDATE users SET description = $1 WHERE user_id = $2", data.description, user_id)
     if data.user_css is not None:

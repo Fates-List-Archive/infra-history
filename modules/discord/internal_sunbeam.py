@@ -35,21 +35,6 @@ async def troubleshoot_api(request: Request):
 
     return {"message": "Please send a screenshot of this page and send it to staff (or our support server)", "data": data}
 
-@router.post("/_sunbeam/pub/csp")
-async def csp_report(request: Request):
-    """
-    This is where CSP reports should be sent to.
-
-    CSP reports should not happen in practice.
-
-    **These requests are logged to loguru**
-    """
-    try:
-        logger.warning("CSP Report: ", (await request.json()))
-    except:
-        pass
-    return api_success()
-
 @router.get("/_sunbeam/pub/add-bot")
 async def add_bot(request: Request):
     if "user_id" not in request.session.keys():
@@ -263,4 +248,5 @@ async def profile_editor(
         "bot": dict(profile) | profile["profile"],
         "langs": [{"value": lang.value, "text": lang.__doc__} for lang in list(enums.SiteLang)]
     }
+
     return await templates.TemplateResponse("profile_edit.html", {"request": request, "iframe": True} | context, context=context)

@@ -20,6 +20,21 @@ def get_uptime():
         uptime_seconds = float(f.readline().split()[0])
     return uptime_seconds
 
+@router.post("/csp")
+async def csp_report(request: Request):
+    """
+    This is where CSP reports should be sent to.
+
+    CSP reports should not happen in practice.
+
+    **These requests are logged to loguru**
+    """
+    try:
+        logger.warning("CSP Report: ", (await request.json()))
+    except:
+        pass
+    return api_success()
+
 @router.post("/sellix-webhook")
 async def sellix_webhook(request: Request):
     """
@@ -78,7 +93,9 @@ def get_top_spots(request: Request):
 
 @router.get("/blstats-full")
 async def stats_page(request: Request, full: bool = False):
-    """Returns the full set of botlist stats"""
+    """
+    Returns the full set of botlist stats
+    """
     worker_session = request.app.state.worker_session
     certified = await do_index_query(state = [enums.BotState.certified], limit = None, worker_session = worker_session) 
     bot_amount = await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
@@ -143,16 +160,18 @@ async def get_botlist_stats(request: Request,
         "workers": worker_session.workers,
     }
 
-
 @router.get("/features")
 def get_features(request: Request):
     """Returns all of the features the list supports and information about them. Keys indicate the feature id and value is feature information. The value should but may not always have a name, type and a description keys in the json"""
     return features
 
-
 @router.get("/tags")
 def get_tags(request: Request):
-    """These are the tags the list supports. The key is the tag name and the value is the iconify class we use"""
+    """
+    These are the *bot* tags the list has. The key is the tag name and the value is the iconify class we use
+    
+    **To get server tags, call the server index endpoint**
+    """
     return TAGS
 
 
@@ -216,20 +235,13 @@ async def get_bots_filtered(
             bot["prefix"],
             "invite":
             await invite_bot(bot["bot_id"], api=True),
-            "description":
-            bot["description"],
-            "state":
-            bot["state"],
-            "guild_count":
-            bot["guild_count"],
-            "votes":
-            bot["votes"],
-            "long_description":
-            bot["long_description"],
-            "website":
-            bot["website"],
-            "support":
-            bot["support"],
+            "description": bot["description"],
+            "state": bot["state"],
+            "guild_count": bot["guild_count"],
+            "votes": bot["votes"],
+            "long_description": bot["long_description"],
+            "website": bot["website"],
+            "support": bot["support"],
             "owners":
             await db.fetch(
                 "SELECT owner AS user_id, main FROM bot_owner WHERE bot_id = $1",
