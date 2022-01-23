@@ -10,12 +10,11 @@ from modules.models import enums
 
 
 class Vanity(Table, tablename="vanity"):
-    type = Integer()
-    vanity_url = Text(primary_key = True)
-    redirect = BigInt()
+    vanity_url = Text(unique=True, required=True)
+    type = Integer(choices = enums.Vanity)
+    redirect = BigInt(primary_key=True)
 
 class User(Table, tablename="users"):
-    vote_epoch = Timestamptz(help_text = "When the user has last voted")
     description = Text(default = "This user prefers to be an enigma")
     badges = Array(base_column = Text(), help_text = "Custom User Badges. The ones currently on profiles are special and manually handled without using this column.")
     username = Text()
@@ -23,7 +22,6 @@ class User(Table, tablename="users"):
     user_css = Text(default = "")
     state = Integer(default = 0, choices = enums.UserState)
     coins = Integer(default = 0)
-    js_allowed = Boolean(default = False, help_text = "Is the user allowed to use javascript")
     api_token = Text()
 
 class Bot(Table, tablename="bots"):
@@ -66,7 +64,7 @@ class BotTag(Table, tablename="bot_tags"):
 
 class Review(Table, tablename="reviews"):
     """Never ever make reviews on your own through this panel"""
-    id = UUID()
+    id = UUID(primary_key=True)
     target_type = Integer(choices=enums.ReviewType)
     target_id = BigInt()
     user_id = ForeignKey(references=User)
