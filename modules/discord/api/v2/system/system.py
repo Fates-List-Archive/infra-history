@@ -630,30 +630,3 @@ async def get_partners(request: Request):
     Gets the partner list.
     """
     return partners
-
-
-@router.get("/_sunbeam/redirect")
-async def sunbeam_redirect(request: Request, id: uuid.UUID):
-    """
-    Internally used by sunbeam for redirects as a fallback.
-
-    While the data you get from this API is sanitized because
-    it is actually rendered for users, it is *not* recommended
-    to rely or use this API outside of internal use cases. Data
-    is unstructured and will constantly change. **This API is not
-    backwards compatible whatsoever**
-
-    Additionally, this API *will* trigger a WS Invite Event.
-
-    This API will also be heavily monitored. If we find you attempting
-    to abuse this API endpoint or doing anything out of the ordinary with
-    it, you may be IP or user banned. Calling it once or twice is OK but
-    automating it is not. Use the Get Bot API instead for automation.
-
-    **This API is only documented because it's in our FastAPI backend and
-    to be complete**
-    """
-    url = await redis_db.get(f"sunbeam-redirect-{id}")
-    if id:
-        return RedirectResponse(url.decode())
-    return abort(404)
