@@ -125,3 +125,6 @@ class IsStaff(BaseModel):
     staff: bool
     perm: int
     sm: StaffRole
+
+class HTMLAPIResponse(BaseModel):
+    html: str

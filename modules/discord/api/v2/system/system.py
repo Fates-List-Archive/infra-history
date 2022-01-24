@@ -7,7 +7,7 @@ from hashlib import sha512
 import hmac
 
 from ..base import API_VERSION
-from .models import BotIndex, BotListStats, BotQueueGet, BotSearch, BotVanity, Partners, StaffRoles, IsStaff
+from .models import BotIndex, BotListStats, BotQueueGet, BotSearch, BotVanity, Partners, StaffRoles, IsStaff, HTMLAPIResponse
 
 router = APIRouter(
     prefix=f"/api/v{API_VERSION}",
@@ -29,7 +29,8 @@ def gen_owner_html(owners_lst: tuple):
     "/_sunbeam/add-bot",
     dependencies=[
         Depends(user_auth_check)
-    ]
+    ],
+    response_model=HTMLAPIResponse
 )
 async def add_bot_page(request: Request, user_id: int):
     """
@@ -71,7 +72,8 @@ async def add_bot_page(request: Request, user_id: int):
     "/_sunbeam/bots/{bot_id}/settings",
     dependencies=[
         Depends(user_auth_check)
-    ]
+    ],
+    response_model=HTMLAPIResponse
 )
 async def bot_settings_page(request: Request, bot_id: int, user_id: int):
     worker_session = request.app.state.worker_session
@@ -209,65 +211,26 @@ async def csp_report(request: Request):
         pass
     return api_success()
 
-@router.get("/_sunbeam/bot/{bot_id}/reviews_html", dependencies=[Depends(id_check("bot"))])
-async def bot_review_page(request: Request,
-                          bot_id: int,
-                          page: int = 1,
-                          user_id: int | None = 0):
+@router.get(
+    "/_sunbeam/reviews/{target_id}",
+    response_model=HTMLAPIResponse
+)
+async def review_page(
+    request: Request, 
+    target_id: int, 
+    target_type: enums.ReviewType,
+    page: int = 1, 
+    user_id: int | None = 0,
+):
     page = page if page else 1
-    reviews = await parse_reviews(request.app.state.worker_session,
-                                  bot_id,
-                                  page=page)
+    reviews = await parse_reviews(request.app.state.worker_session, target_id, page=page, target_type=target_type)
     context = {
-        "id": str(bot_id),
-        "type": "bot",
+        "id": str(target_type),
+        "user_id": str(user_id),
+        "type": "bot" if target_type == enums.ReviewType.bot else "server",
         "reviews": {
             "average_rating": float(reviews[1])
         },
-        "user_id": str(user_id),
-    }
-    data = {
-        "bot_reviews": reviews[0],
-        "average_rating": reviews[1],
-        "total_reviews": reviews[2],
-        "review_page": page,
-        "total_review_pages": reviews[3],
-        "per_page": reviews[4],
-    }
-
-    bot_info = await get_bot(bot_id,
-                             worker_session=request.app.state.worker_session)
-    if bot_info:
-        user = dict(bot_info)
-        user["name"] = user["username"]
-
-    else:
-        return await templates.e(request, "Bot Not Found")
-
-    template = await templates.TemplateResponse(
-        "ext/reviews.html",
-        {
-            "request": request,
-            "data": {
-                "user": user
-            }
-        } | data,
-        context=context,
-    )
-    return {"html": template.body}
-
-@router.get("/_sunbeam/server/{guild_id}/reviews_html")
-async def guild_review_page(request: Request, guild_id: int, page: int = 1, user_id: int | None = 0):
-    page = page if page else 1
-    reviews = await parse_reviews(request.app.state.worker_session, guild_id, page=page, target_type=enums.ReviewType.server)
-    context = {
-        "id": str(guild_id),
-        "user_id": str(user_id),
-        "type": "server",
-        "reviews": {
-            "average_rating": float(reviews[1])
-        },
-        "index": "/servers"
     }
     data = {
         "bot_reviews": reviews[0], 
@@ -278,14 +241,12 @@ async def guild_review_page(request: Request, guild_id: int, page: int = 1, user
         "per_page": reviews[4],
     }
 
-    user = {}
-    
     template = await templates.TemplateResponse(
         "ext/reviews.html", 
         {
             "request": request, 
             "data": {
-                "user": user
+                "user": {}
             }
         } | data, 
         context = context)
@@ -518,7 +479,11 @@ def get_staff_roles(request: Request):
 
 @router.get("/code/{vanity}", response_model=BotVanity)
 async def get_vanity(request: Request, vanity: str):
-    """Gets information about a vanity given a vanity code"""
+    """
+    Gets information about a vanity given a vanity code
+    
+    This is used by sunbeam in handling vanities
+    """
     vb = await vanity_bot(vanity)
     logger.trace(f"Vanity is {vanity} and vb is {vb}")
     if vb is None:

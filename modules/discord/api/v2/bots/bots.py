@@ -247,8 +247,8 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
 
     Additionally, this API *will* trigger a WS View Event.
 
-    To protect against scraping, this endpoint requires a proper
-    Frostpaw header to be set.
+    To protect against scraping and browsers, this endpoint requires a 
+    proper Frostpaw header to be set.
 
     This API will also be heavily monitored. If we find you attempting
     to abuse this API endpoint or doing anything out of the ordinary with
@@ -257,6 +257,9 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
 
     **This API is only documented because it's in our FastAPI backend and
     to be complete**
+
+    Response models will *never* be documented as it changes very
+    frequently
     """
     if not request.headers.get("Frostpaw"):
         return abort(404)
