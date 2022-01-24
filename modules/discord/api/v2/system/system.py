@@ -493,7 +493,11 @@ async def get_vanity(request: Request, vanity: str):
 @router.get("/index", response_model=BotIndex)
 async def get_index(request: Request,
                     type: enums.ReviewType = enums.ReviewType.bot):
-    """For any potential Android/iOS app, crawlers etc."""
+    """
+    Returns the bot/server index JSON
+
+    This is internally used by sunbeam to render the index page
+    """
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
     top_voted = await do_index_query(worker_session, add_query = "ORDER BY votes DESC", state = [0], type=type)
@@ -511,11 +515,6 @@ async def get_index(request: Request,
         "new_bots": new_bots, 
         "certified_bots": certified_bots, 
     }
-
-    if type == enums.ReviewType.server:
-        context = {"type": "server", "index": "/servers"}
-    else:
-        context = {"type": "bot"}
 
     return base_json
 
