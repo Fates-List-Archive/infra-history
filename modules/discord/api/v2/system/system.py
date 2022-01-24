@@ -555,6 +555,7 @@ async def search_list(request: Request, q: str, target_type: enums.SearchType):
             enums.BotState.certified
         )
         tags = tags_fixed
+    
     elif target_type == enums.SearchType.server:
         data = await db.fetch(
             """SELECT DISTINCT servers.guild_id,
@@ -569,21 +570,7 @@ async def search_list(request: Request, q: str, target_type: enums.SearchType):
             enums.BotState.approved
         )
         tags = await db.fetch("SELECT id, name, iconify_data, owner_guild FROM server_tags")
-    else:
-        return RedirectResponse(f"/api/v2/search/profiles?q={q}", status_code=301)
-    search_bots = await parse_index_query(
-        worker_session,
-        data,
-        type=enums.ReviewType.bot if target_type == enums.SearchType.bot else enums.ReviewType.server
-    )
-    return {"search_res": search_bots, "tags_fixed": tags, "query": q}
-
-@router.get("/search/profiles", response_model=BotSearch)
-async def search_by_profile(request: Request, q: str):
-    worker_session = request.app.state.worker_session
-    db = worker_session.postgres
-    if not q.replace(" ", ""):
-        profiles = []
+    
     else:
         profiles = await db.fetch(
             """SELECT DISTINCT users.user_id, users.description FROM users 
@@ -594,14 +581,19 @@ async def search_by_profile(request: Request, q: str):
             OR (users.username ilike $1) LIMIT 12""", 
             f'%{q}%'
         )
-    profile_obj = []
-    for profile in profiles:
-        profile_info = await get_user(profile["user_id"], worker_session = worker_session)
-        if profile_info:
-            profile_obj.append({"banner": None, "description": profile["description"], "user": profile_info})
-    return {"search_res": profile_obj, "tags_fixed": [], "query": q}
+        profile_obj = []
+        for profile in profiles:
+            profile_info = await get_user(profile["user_id"], worker_session = worker_session)
+            if profile_info:
+                profile_obj.append({"banner": None, "description": profile["description"], "user": profile_info})
+        return {"search_res": profile_obj, "tags_fixed": [], "query": q}
 
-
+    search_bots = await parse_index_query(
+        worker_session,
+        data,
+        type=enums.ReviewType.bot if target_type == enums.SearchType.bot else enums.ReviewType.server
+    )
+    return {"search_res": search_bots, "tags_fixed": tags, "query": q}
 
 @router.get("/search/tags", response_model=BotSearch, dependencies=[])
 async def search_by_tag(request: Request, tag: str,
@@ -628,8 +620,6 @@ async def search_by_tag(request: Request, tag: str,
     return {
         "search_res": search_bots,
         "tags_fixed": tags,
-        "profile_search": False,
-        "type": target_type.name,
         "query": tag,
     }
 
