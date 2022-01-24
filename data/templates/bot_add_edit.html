@@ -14,6 +14,7 @@
 {% endblock %}
 
 {% block content %}
+	<p style="color: black !important;">Reload your page if you see this message</p>
 	{% if context.mode == "edit" %}
 		<img style="border-radius: 50%; width: 120px;" src="{{bot.user.avatar}}" id="bot-avatar" alt="{{bot.user.username}}'s avatar">
 	{% else %}
@@ -383,6 +384,7 @@
 			select_single: {{form_values_select_single|tojson}},
 			select_multiple: {{form_values_select_multiple|tojson}}
 		}
+		window.context = context
 
 		if(context.actions) {
 			setTimeout(() => {

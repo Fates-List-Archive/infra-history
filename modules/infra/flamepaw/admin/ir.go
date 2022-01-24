@@ -172,6 +172,8 @@ func slashIr() map[string]types.SlashCommand {
 					context.Bot = bot
 				}
 
+				context.Reason = reason
+
 				if context.Reason == "" && !adminOp.SlashRaw {
 					context.Reason = "No reason specified"
 				}
