@@ -14,7 +14,12 @@ router = APIRouter(
     response_model = BotCommandsGet,
     operation_id="get_commands"
 )
-async def get_commands(request:  Request, bot_id: int, filter: Optional[str] = None, lang: str = "default"):
+async def get_commands(
+    request:  Request, 
+    bot_id: int, 
+    filter: Optional[str] = None, 
+    lang: str = "default"
+):
     cmd = await get_bot_commands(bot_id, lang, filter)
     if cmd == {}:
         return abort(404)
@@ -39,6 +44,7 @@ async def add_commands(request: Request, bot_id: int, commands: BotCommands):
     """
     ids = []
     for command in commands.commands:
+        command.cmd_groups = [c.lower() for c in command.cmd_groups]
         check = await db.fetchval("SELECT COUNT(1) FROM bot_commands WHERE cmd_name = $1 AND bot_id = $2", command.cmd_name, bot_id)
         if check:
             await db.execute("DELETE FROM bot_commands WHERE cmd_name = $1 AND bot_id = $2", command.cmd_name, bot_id)

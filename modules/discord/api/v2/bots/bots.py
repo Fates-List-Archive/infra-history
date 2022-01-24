@@ -337,11 +337,15 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
                 bot_id
             )
             bot["system"] = False
-        _owners = []
+        owners_lst = []
         for owner in owners:
-            if owner["main"]: _owners.insert(0, owner)
-            else: _owners.append(owner)
-        owners = _owners
+            payload = {
+                "user": await get_user(owner["owner"], worker_session = worker_session),
+                "main": owner["main"]
+            }
+            if owner["main"]: 
+                owners_lst.insert(0, payload)
+            else: owners_lst.append(payload)
 
         bot = sanitize_bot(bot, lang)
 
@@ -350,24 +354,15 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
 
         bot_info = await get_bot(bot_id, worker_session = worker_session)
         
-        owners_lst = [
-            {
-                "user": await get_user(obj["owner"], worker_session = worker_session),
-                "main": obj["main"]
-            }
-            for obj in owners if obj["owner"] is not None
-        ]
+        if not bot_info:
+            return abort(404)
 
         bot["owners_html"] = gen_owner_html(owners_lst)
 
-        bot_extra = {
-            "user": bot_info, 
-            "css": f"<style>{bot['css']}</style>"
-        }
-        bot |= bot_extra
-        
-        if not bot_info:
-            return abort(404)
+        bot["user"] = bot_info
+        bot["css"] = f"<style>{bot['css']}</style>"
+                
+        bot["commands"] = await get_bot_commands(bot_id, lang, None)
         
         bot["tags"] = [tag for tag in tags_fixed if tag["id"] in bot["tags"]]
 
@@ -376,15 +371,14 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
             "data": bot,
         }
 
-        # Only cache for bots with more than 1000 votes
-        await redis.set(f"botpagecache-sunbeam:{bot_id}:{lang}", orjson.dumps(bot_cache), ex=60*60*4)
+        # Dont cache right now, previously was only cache for bots with more than 1000 votes
+        # await redis.set(f"botpagecache-sunbeam:{bot_id}:{lang}", orjson.dumps(bot_cache), ex=60*60*4)
 
     await add_ws_event(bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": str(user_id), "widget": False}}, timeout=None)
     
     bot_cache["data"]["votes"] = await db.fetchval("SELECT votes FROM bots WHERE bot_id = $1", bot_cache["data"]["bot_id"])
     bot_cache["data"]["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
     data = bot_cache | {
-        "type": "bot", 
         "promos": await get_promotions(bot_id),
         "replace_list": constants.long_desc_replace_tuple_sunbeam
     }

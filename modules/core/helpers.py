@@ -124,30 +124,16 @@ async def get_bot_commands(bot_id: int,
             if not cmd_dict.get(group):
                 cmd_dict[group] = []
             _cmd = dict(cmd)
+            _cmd["id"] = str(_cmd["id"])
             for key in _cmd.keys():
-                if isinstance(_cmd[key], str):
-                    try:
-                        _cmd[key] = (cleaner.clean_html(
-                            intl_text(_cmd[key],
-                                      lang)).replace("<p>",
-                                                     "").replace("</p>", ""))
-                    except Exception:
-                        _cmd[key] = (bleach.clean(intl_text(
-                            _cmd[key], lang)).replace("<p>",
-                                                      "").replace("</p>", ""))
-                elif isinstance(_cmd[key], list):
-                    try:
-                        _cmd[key] = [
-                            cleaner.clean_html(intl_text(el, lang)).replace(
-                                "<p>", "").replace("</p>", "")
-                            for el in _cmd[key]
-                        ]
-                    except Exception:
-                        _cmd[key] = [
-                            bleach.clean(intl_text(el, lang)).replace(
-                                "<p>", "").replace("</p>", "")
-                            for el in _cmd[key]
-                        ]
+                if isinstance(_cmd[key], str) and key in ("description",):
+                    _cmd[key] = bleach.clean(
+                        intl_text(
+                            _cmd[key], lang
+                        ),
+                        strip=True,
+                        tags=["a", "strong", "em"]
+                    )
 
             cmd_dict[group].append(_cmd)
     return cmd_dict
