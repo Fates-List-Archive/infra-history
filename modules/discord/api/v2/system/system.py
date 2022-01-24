@@ -76,6 +76,11 @@ async def add_bot_page(request: Request, user_id: int):
     response_model=HTMLAPIResponse
 )
 async def bot_settings_page(request: Request, bot_id: int, user_id: int):
+    """
+    Returns:
+
+    **html** - The html to render in iframe
+    """
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
 
@@ -172,45 +177,6 @@ async def bot_settings_page(request: Request, bot_id: int, user_id: int):
         "html": template.body
     }
 
-@router.get("/_sunbeam/troubleshoot")
-async def troubleshoot_api(request: Request):
-    """
-    Internal API used by sunbeam for troubleshooting issues
-
-    Used in https://fateslist.xyz/frostpaw/troubleshoot
-
-    This requires a Frostpaw header to be properly set
-    """
-    if not request.headers.get("Frostpaw"):
-        return abort(404)
-    data = {
-        "user_id": request.session.get("user_id"), 
-        "logged_in": "user_id" in request.session.keys(),
-        "user_agent": request.headers.get("User-Agent"),
-        "pid": os.getpid(),
-        "cf_ip": request.headers.get("X-Forwarded-For")
-    }
-
-    if data["logged_in"]:
-        data["user"] = await get_user(data["user_id"], worker_session=request.app.state.worker_session)
-
-    return {"message": "Please send a screenshot of this page and send it to staff (or our support server)", "data": data}
-
-@router.post("/_csp")
-async def csp_report(request: Request):
-    """
-    This is where CSP reports should be sent to.
-
-    CSP reports should not happen in practice.
-
-    **These requests are logged to loguru**
-    """
-    try:
-        logger.warning("CSP Report: ", (await request.json()))
-    except:
-        pass
-    return api_success()
-
 @router.get(
     "/_sunbeam/reviews/{target_id}",
     response_model=HTMLAPIResponse
@@ -222,6 +188,11 @@ async def review_page(
     page: int = 1, 
     user_id: int | None = 0,
 ):
+    """
+    Returns:
+
+    **html** - The html to render in iframe
+    """
     page = page if page else 1
     reviews = await parse_reviews(request.app.state.worker_session, target_id, page=page, target_type=target_type)
     context = {
@@ -251,6 +222,44 @@ async def review_page(
         } | data, 
         context = context)
     return {"html": template.body}
+
+@router.get("/_sunbeam/troubleshoot")
+async def troubleshoot_api(request: Request, user_id: int | None = None):
+    """
+    Internal API used by sunbeam for troubleshooting issues
+
+    Used in https://fateslist.xyz/frostpaw/troubleshoot
+
+    This requires a Frostpaw header to be properly set
+    """
+    if not request.headers.get("Frostpaw"):
+        return abort(404)
+    data = {
+        "req_user_agent": request.headers.get("User-Agent"),
+        "pid": os.getpid(),
+        "cf_ip": request.headers.get("X-Forwarded-For"),
+        "user": None
+    }
+
+    if user_id:
+        data["user"] = await get_user(user_id, worker_session=request.app.state.worker_session)
+
+    return data
+
+@router.post("/_csp")
+async def csp_report(request: Request):
+    """
+    This is where CSP reports should be sent to.
+
+    CSP reports should not happen in practice.
+
+    **These requests are logged to loguru**
+    """
+    try:
+        logger.warning("CSP Report: ", (await request.json()))
+    except:
+        pass
+    return api_success()
 
 @router.post("/sellix-webhook")
 async def sellix_webhook(request: Request):
