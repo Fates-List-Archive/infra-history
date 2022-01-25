@@ -49,9 +49,8 @@ class templates():
     @staticmethod
     async def error(f, arg_dict, status_code):
         arg_dict["status_code"] = status_code
-        e = await templates.TemplateResponse(f, arg_dict, not_error = False)
-        return {"html": e.body}
+        return api_error("Unknown error")
 
     @staticmethod
     async def e(request, reason: str, status_code: int = 404, *, main: Optional[str] = ""):
-        return await templates.error("message.html", {"request": request, "message": main, "reason": reason, "retmain": True}, status_code)
+        return api_error(f"{main}:{reason}", status_code=status_code)
