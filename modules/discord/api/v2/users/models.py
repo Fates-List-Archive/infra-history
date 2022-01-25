@@ -27,7 +27,7 @@ class BotMeta(BaseModel):
     client_id: str | None = None
     prefix: str | None = None
     library: str
-    invite: str
+    invite: str | None = "P:0"
     website: str | None = None
     description: str
     banner_card: str | None = None
