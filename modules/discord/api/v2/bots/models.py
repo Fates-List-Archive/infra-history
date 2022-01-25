@@ -2,6 +2,8 @@ import uuid
 from typing import List, Optional
 import datetime
 
+from typing import Any
+
 from pydantic import BaseModel
 
 from modules.models import enums
@@ -51,7 +53,7 @@ class Bot(BaseModel):
     shard_count: int | None = 0
     user_count: int
     shards: list[int] | None = []
-    prefix: str
+    prefix: str | None = None
     library: str
     invite: str | None = None
     invite_link: str
@@ -77,7 +79,6 @@ class Bot(BaseModel):
     action_logs: list[dict] | None = None
     uptime_checks_total: int | None = None
     uptime_checks_failed: int | None = None
-    token: str | None = None
 
 class BotStats(BaseModel):
     guild_count: int
@@ -94,3 +95,8 @@ class BotEventList(BaseModel):
 
 class BotEvents(BaseModel):
     events: BotEventList
+
+class SettingsPage(BaseModel):
+    user: BaseUser
+    data: dict[str, Any]
+    context: dict[str, Any]

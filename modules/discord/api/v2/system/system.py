@@ -27,12 +27,11 @@ def gen_owner_html(owners_lst: tuple):
 
 @router.get(
     "/_sunbeam/add-bot",
-    response_model=SettingsPage
+    response_model=SettingsPage,
 )
 async def add_bot_page(request: Request, user_id: int):
     context = {
         "staff": (await is_staff(None, user_id, 4))[2].dict(),
-        "mode": "add",
         "tags": [{
             "text": tag["name"],
             "value": tag["id"]
@@ -46,103 +45,6 @@ async def add_bot_page(request: Request, user_id: int):
         "html": None,
         "user": {},
         "data": {},
-        "context": context
-    }
-
-@router.get(
-    "/_sunbeam/bots/{bot_id}/settings",
-    dependencies=[
-        Depends(user_auth_check)
-    ],
-    response_model=SettingsPage
-)
-async def bot_settings_page(request: Request, bot_id: int, user_id: int):
-    worker_session = request.app.state.worker_session
-    db = worker_session.postgres
-
-    check = await is_bot_admin(bot_id, user_id)
-    if (not check and bot_id !=
-            798951566634778641):  # Fates list main bot is staff viewable
-        return api_error("You are not allowed to edit this bot!", status_code=403)
-
-    bot = await db.fetchrow(
-        "SELECT bot_id, client_id, state, prefix, votes, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, flags, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1",
-        bot_id,
-    )
-
-    if not bot:
-        return abort(404)
-
-    bot = dict(bot)
-
-    if bot["css"]:
-        bot["css"] = bot["css"].replace("\\n", "\n").replace("\\t", "\t")
-
-    # Will be removed once discord is no longer de-facto platform
-    bot["platform"] = "discord"
-
-    if flags_check(bot["flags"], enums.BotFlag.system):
-        bot["system_bot"] = True
-    else:
-        bot["system_bot"] = False
-
-    tags = await db.fetch("SELECT tag FROM bot_tags WHERE bot_id = $1", bot_id)
-    bot["tags"] = [tag["tag"] for tag in tags]
-    owners = await db.fetch(
-        "SELECT owner, main FROM bot_owner WHERE bot_id = $1", bot_id)
-    if not owners:
-        return api_error("Invalid owners set. Contact Fates List Support")
-        
-    owners_lst = [(await get_user(obj["owner"],
-                                  user_only=True,
-                                  worker_session=worker_session))
-                  for obj in owners
-                  if obj["owner"] is not None and obj["main"]]
-
-    owners_lst_extra = [(await get_user(obj["owner"],
-                                        user_only=True,
-                                        worker_session=worker_session))
-                        for obj in owners
-                        if obj["owner"] is not None and not obj["main"]]
-
-    owners_html = gen_owner_html(owners_lst + owners_lst_extra)
-
-    bot["client_id"] = str(bot["client_id"])
-
-
-
-    bot["extra_owners"] = ",".join(
-        [str(o["owner"]) for o in owners if not o["main"]])
-    bot["user"] = await get_bot(bot_id, worker_session=worker_session)
-    if not bot["user"]:
-        return abort(404)
-
-    vanity = await db.fetchval(
-        "SELECT vanity_url AS vanity FROM vanity WHERE redirect = $1", bot_id)
-    bot["vanity"] = vanity
-
-    context = {
-        "staff": (await is_staff(None, user_id, 4))[2].dict(),
-        "bot_token": await db.fetchval("SELECT api_token FROM bots WHERE bot_id = $1", bot_id),
-        "user_token": request.headers.get("Authorization"),
-        "user_id": str(user_id),
-        "mode": "edit",
-        "bot_id": str(bot_id),
-        "owners_html": owners_html,
-        "tags": [{
-            "text": tag["name"],
-            "value": tag["id"]
-        } for tag in tags_fixed],
-        "features": [{
-            "text": feature["name"],
-            "value": id
-        } for id, feature in features.items()],
-        "votes": bot["votes"],
-    }
-
-    return {
-        "user": bot["user"],
-        "data": bot,
         "context": context
     }
 
