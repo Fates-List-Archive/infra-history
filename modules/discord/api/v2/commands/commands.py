@@ -20,6 +20,13 @@ async def get_commands(
     filter: Optional[str] = None, 
     lang: str = "default"
 ):
+    """
+    Gets the command list of a bot
+
+    **The `get_bot_commands` function used by this API is internally
+    called by the Get Bot Page API and as such this API endpoint is
+    not used by Sunbeam for those curious**
+    """
     cmd = await get_bot_commands(bot_id, lang, filter)
     if cmd == {}:
         return abort(404)

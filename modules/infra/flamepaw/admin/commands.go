@@ -408,15 +408,7 @@ func CmdInit() map[string]types.SlashCommand {
 		},
 		Handler: func(context types.SlashContext) string {
 			if context.StaffPerm < 2 {
-				time.AfterFunc(3*time.Second, func() {
-					err := common.DiscordMain.GuildMemberDeleteWithReason(common.StaffServer, context.User.ID, "Kicked due to not being a staff member")
-					if err != nil {
-						common.DiscordMain.ChannelMessageSendComplex(context.Interaction.ChannelID, &discordgo.MessageSend{
-							Content: "@everyone **I could not kick " + context.User.Mention() + ". Please kick them when you have time as they are not a staff member!**",
-						})
-					}
-				})
-				return "You are not a Fates List Staff Member. You will hence be kicked from the staff server!"
+				return "You are not a Fates List Staff Member"
 			}
 
 			common.DiscordMain.GuildMemberRoleAdd(common.StaffServer, context.User.ID, common.AccessGrantedRole)
@@ -439,7 +431,7 @@ func CmdInit() map[string]types.SlashCommand {
 			}
 
 			// Set verification code with 7 day expiry
-			context.Redis.Set(context.Context, "staffverify:"+context.User.ID, verify, 7*24*time.Hour)
+			context.Redis.Set(context.Context, "staffverify:"+context.User.ID, verify, 0)
 
 			return "Welcome back... master!"
 		},

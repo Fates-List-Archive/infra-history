@@ -37,10 +37,6 @@ with open("config/data/discord.json") as f:
         _role_data["bronze_user_role"])  # Bronze user role in main server
     test_botsrole: int = int(
         _role_data["test_server_bots_role"])  # Test server bots role
-    test_staffrole: int = int(
-        _role_data["test_server_staff_role"])  # Test server staff role
-    staff_ag: int = int(
-        _role_data["staff_server_access_granted_role"])  # self-explanatory
 
 with open("config/data/extra_data.json") as f:
     _config_data = json.load(f)

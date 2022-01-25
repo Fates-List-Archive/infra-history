@@ -117,7 +117,6 @@ func init() {
 	CertifiedDevRole = string(roles.Get("certified_dev_role").GetStringBytes())
 	BotDevRole = string(roles.Get("bot_dev_role").GetStringBytes())
 	AccessGrantedRole = string(roles.Get("staff_server_access_granted_role").GetStringBytes())
-	TestServerStaffRole = string(roles.Get("test_server_staff_role").GetStringBytes())
 	TestServerBotsRole = string(roles.Get("test_server_bots_role").GetStringBytes())
 
 	permInit()

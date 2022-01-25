@@ -15,7 +15,7 @@ from aenum import Enum, IntEnum
 from discord import Color, Embed, Member, User
 from loguru import logger
 
-from config import ag_role, log_channel, main, manager_key, site_url, staff, testing
+from config import log_channel, main, manager_key, site_url, staff, testing
 from modules.core.ipc import redis_ipc_new
 from modules.core.permissions import StaffMember
 from modules.models.enums import BotState, Status, UserState

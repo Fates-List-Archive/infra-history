@@ -121,7 +121,7 @@ async def fetch_server(
     guild_id: int, 
     compact: Optional[bool] = True, 
     no_cache: Optional[bool] = False,
-    sensitive: bool = True
+    sensitive: bool = False
 ):
     """
     Fetches server information given a server/guild ID. If not found, 404 will be returned.
@@ -136,7 +136,7 @@ async def fetch_server(
         return abort(404)
 
     if not no_cache:
-        cache = await redis_db.get(f"guildcache-{guild_id}")
+        cache = await redis_db.get(f"guildcache-{guild_id}-{compact}-{sensitive}")
         if cache:
             return orjson.loads(cache)
     
@@ -173,7 +173,7 @@ async def fetch_server(
     )
     
     if not sensitive:
-        await redis_db.set(f"guildcache-{guild_id}", orjson.dumps(api_ret), ex=60*60*8)
+        await redis_db.set(f"guildcache-{guild_id}-{compact}-{sensitive}", orjson.dumps(api_ret), ex=60*60*8)
 
     return api_ret
 

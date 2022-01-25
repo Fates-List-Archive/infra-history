@@ -46,7 +46,7 @@ class Guild(BaseModel):
     website: str | None = None
     css: str | None = None
     votes: int
-    vanity: str
+    vanity: str | None = None
     nsfw: bool
     banner_card: str | None = None
     banner_page: str | None = None

@@ -33,6 +33,9 @@ func SetupSlash(discord *discordgo.Session, cmdInit types.SlashFunction) {
 
 	// Add the slash commands
 	for cmdName, cmdData := range commandsIr {
+		if cmdData.Description == "" {
+			cmdData.Description = "No description set"
+		}
 		var v types.SlashCommand = cmdData
 
 		if v.Disabled {

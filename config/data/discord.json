@@ -1,8 +1,8 @@
 {
     "servers": {
         "main": "789934742128558080",
-        "testing": "845928429357367316",
-        "staff": "816130947274899487"
+        "testing": "931893344248938506",
+        "staff": "931893344248938506"
     },
     "roles": {
         "staff_ping_add_role": "836326316188893275",
@@ -11,9 +11,8 @@
         "certified_bots_role": "836326315203887195",
         "certified_dev_role": "836326313283026995",
         "bronze_user_role": "880019238453116929",
-        "test_server_bots_role": "845940351339987004",
-        "test_server_staff_role": "846028433985503232",
-        "staff_server_access_granted_role": "845931695387181066"
+        "test_server_bots_role": "935170443663527977",
+        "staff_server_access_granted_role": "931893803260985355"
     },
     "channels": {
         "bot_logs": "836326348326043648",
@@ -24,9 +23,9 @@
     },
     "oauth": {
         "client_id": "798951566634778641",
-        "redirect_uri": "https://fateslist.xyz/static/login-finish.html"
+        "redirect_uri": ""
     },
     "owner": "563808552288780322",
     "server_bot_invite": "https://discord.com/api/oauth2/authorize?client_id=811073947382579200&permissions=67649&scope=bot%20applications.commands",
-    "support_server": "https://discord.gg/cMAnfu8AJB"
+    "support_server": ""
 }

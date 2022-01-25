@@ -13,37 +13,37 @@
     },
     "bot_reviewer": {
         "id": "836326311147864104",
-        "staff_id": "845931373520748545",
+        "staff_id": "935172756734083132",
         "perm": 2,
         "fname": "Bot Reviewer"
     },
     "mod": {
         "id": "836326309528600627",
-        "staff_id": "845931545076432931",
+        "staff_id": "935172701608349756",
         "perm": 3,
         "fname": "Moderator"
     },
     "admin": {
         "id": "836326305666039848",
-        "staff_id": "845930903883874336",
+        "staff_id": "935172988821708870",
         "perm": 4,
         "fname": "Admin"
     },
     "developer": {
         "id": "836326304860078160",
-        "staff_id": "848745475494641694",
+        "staff_id": "935177591755792424",
         "perm": 5,
         "fname": "Developer"
     },
     "head_admin": {
         "id": "836349482340843572",
-        "staff_id": "845930541018513428",
+        "staff_id": "935173027845533738",
         "perm": 6,
         "fname": "Head Admin"
     },
     "overseer": {
         "id": "836326299223195738",
-        "staff_id": "830540676952227863",
+        "staff_id": "931931634415042560",
         "perm": 7,
         "fname": "Overseer"
     }
