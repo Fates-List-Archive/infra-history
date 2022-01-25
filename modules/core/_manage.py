@@ -303,56 +303,6 @@ def site_gensecret():
 
 def site_compilestatic():
     """Compiles all labelled static files"""
-
-    # Used in patching out code
-    def rm_lines(lines: list[str], start: str, end: str, keep_start: bool = True, keep_end: bool = True):
-        flag = False
-        _lines = []
-        for i, line in enumerate(lines):
-            if line.startswith(start):
-                print(f"Got start at line {i}")
-                flag = True
-                if keep_start:
-                    _lines.append(line) # Keep start line
-            elif flag and line.lstrip().startswith(end):
-                print(f"Got end at line {i}")
-                flag = False
-                if not keep_end:
-                    continue
-            
-            if not flag:
-                _lines.append(line)
-        return _lines
-
-
-    # PurgeCSS on material
-    shutil.rmtree("data/static/assets/src/materiald")
-    Path("data/static/assets/src/materiald").mkdir(exist_ok=True)
-    cmd = ("purgecss --css data/static/assets/src/material.css "
-    "--content data/templates/*.html data/templates/base/*.html "
-    "--output data/static/assets/src/materiald --safelist fade show modal "
-    "--blocklist pre blockquote address .dropdown-item")
-
-    print("Creating material-slim.css")
-    with Popen(cmd, env=os.environ, shell=True) as proc:
-        proc.wait()
-    
-    # More parsing bc it's not good enough...
-    with Path("data/static/assets/src/materiald/material.css").open() as f:
-        content = f.read()
-
-    lines = content.split("\n")
-    # Remove useless root stuff
-    lines = rm_lines(lines, ":root", "--font-family-sans-serif")
-    lines = rm_lines(lines, "[id]", "}", keep_start=False, keep_end=False)
-    with Path("data/static/assets/src/materiald/material.css").open("w") as f:
-        f.write("\n".join(lines))
-
-    shutil.copy2(
-        "data/static/assets/src/materiald/material.css", 
-        "data/static/assets/src/material-slim.scss"
-    )
-
     for src_file in Path("data/static/assets/src").rglob("*.js"):
         out_file = (str(src_file).replace(".js", ".min.js").replace(
             "src/", "prod/").replace("js/", ""))
