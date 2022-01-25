@@ -392,7 +392,7 @@ async def get_bot_invite(request: Request, bot_id: int, user_id: int = 0):
     to be complete**
     """
     if not request.headers.get("Frostpaw"):
-        return api_error("You may not call this API without the Frostpaw header set")
+        return abort(404)
     invite = await invite_bot(bot_id, user_id = user_id)
     if invite is None:
         return abort(404)
@@ -410,6 +410,33 @@ async def get_bot_invite(request: Request, bot_id: int, user_id: int = 0):
     response_model=SettingsPage
 )
 async def get_bot_settings(request: Request, bot_id: int, user_id: int):
+    """
+    Internally used by sunbeam for bot settings.
+
+    While the data you get from this API is sanitized because
+    it is actually rendered for users, it is *not* recommended
+    to rely or use this API outside of internal use cases. Data
+    is unstructured and will constantly change. **This API is not
+    backwards compatible whatsoever**
+
+    To protect against scraping, this endpoint requires a proper
+    Frostpaw header to be set.
+
+    This API will also be heavily monitored. If we find you attempting
+    to abuse this API endpoint or doing anything out of the ordinary with
+    it, you may be IP or user banned. Calling it once or twice is OK but
+    automating it is not. Use the Get Bot API instead for automation.
+
+    **This API is only documented because it's in our FastAPI backend and
+    to be complete**
+    """
+    if not request.headers.get("Frostpaw"):
+        return abort(404)
+    # TODO: make this just use vanilla owners_html
+    def sunbeam_get(owners_lst: tuple):
+        owners_html = "<br/>".join([f"<a class='long-desc-link' href='/profile/{owner[0]}'>{owner[1]}</a>" for owner in owners_lst if owner])
+        return owners_html
+
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
 
@@ -458,11 +485,9 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
                         for obj in owners
                         if obj["owner"] is not None and not obj["main"]]
 
-    owners_html = gen_owner_html(owners_lst + owners_lst_extra)
+    owners_html = sunbeam_get(owners_lst + owners_lst_extra)
 
     bot["client_id"] = str(bot["client_id"])
-
-
 
     bot["extra_owners"] = ",".join(
         [str(o["owner"]) for o in owners if not o["main"]])
