@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel
 
@@ -126,5 +126,7 @@ class IsStaff(BaseModel):
     perm: int
     sm: StaffRole
 
-class HTMLAPIResponse(BaseModel):
-    html: str
+class SettingsPage(BaseModel):
+    user: BaseUser
+    data: dict[str, Any]
+    context: dict[str, Any]

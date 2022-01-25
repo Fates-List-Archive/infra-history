@@ -7,7 +7,7 @@ from hashlib import sha512
 import hmac
 
 from ..base import API_VERSION
-from .models import BotIndex, BotListStats, BotQueueGet, BotSearch, BotVanity, Partners, StaffRoles, IsStaff, HTMLAPIResponse
+from .models import BotIndex, BotListStats, BotQueueGet, BotSearch, BotVanity, Partners, StaffRoles, IsStaff, SettingsPage
 
 router = APIRouter(
     prefix=f"/api/v{API_VERSION}",
@@ -27,21 +27,11 @@ def gen_owner_html(owners_lst: tuple):
 
 @router.get(
     "/_sunbeam/add-bot",
-    dependencies=[
-        Depends(user_auth_check)
-    ],
-    response_model=HTMLAPIResponse
+    response_model=SettingsPage
 )
 async def add_bot_page(request: Request, user_id: int):
-    """
-    Returns:
-
-    **html** - The html to render in iframe
-    """
     context = {
         "staff": (await is_staff(None, user_id, 4))[2].dict(),
-        "user_token": request.headers.get("Authorization"),
-        "user_id": str(user_id),
         "mode": "add",
         "tags": [{
             "text": tag["name"],
@@ -52,20 +42,11 @@ async def add_bot_page(request: Request, user_id: int):
             "value": id
         } for id, feature in features.items()],
     }
-    template = await templates.TemplateResponse(
-        "bot_add_edit.html",
-        {
-            "request": request,
-            "tags_fixed": tags_fixed,
-            "features": features,
-            "bot": {},
-            "iframe": True,
-        },
-        context=context,
-        compact=False,
-    )
     return {
-        "html": template.body
+        "html": None,
+        "user": {},
+        "data": {},
+        "context": context
     }
 
 @router.get(
@@ -73,32 +54,29 @@ async def add_bot_page(request: Request, user_id: int):
     dependencies=[
         Depends(user_auth_check)
     ],
-    response_model=HTMLAPIResponse
+    response_model=SettingsPage
 )
 async def bot_settings_page(request: Request, bot_id: int, user_id: int):
-    """
-    Returns:
-
-    **html** - The html to render in iframe
-    """
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
 
     check = await is_bot_admin(bot_id, user_id)
     if (not check and bot_id !=
             798951566634778641):  # Fates list main bot is staff viewable
-        return await templates.e(request,
-                                 "You are not allowed to edit this bot!",
-                                 status_code=403)
+        return api_error("You are not allowed to edit this bot!", status_code=403)
 
     bot = await db.fetchrow(
         "SELECT bot_id, client_id, state, prefix, votes, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, flags, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1",
         bot_id,
     )
+
     if not bot:
         return abort(404)
 
     bot = dict(bot)
+
+    if bot["css"]:
+        bot["css"] = bot["css"].replace("\\n", "\n").replace("\\t", "\t")
 
     # Will be removed once discord is no longer de-facto platform
     bot["platform"] = "discord"
@@ -113,9 +91,8 @@ async def bot_settings_page(request: Request, bot_id: int, user_id: int):
     owners = await db.fetch(
         "SELECT owner, main FROM bot_owner WHERE bot_id = $1", bot_id)
     if not owners:
-        return await templates.e(request,
-            "Invalid owners set. Contact Fates List Support",
-            status_code=400)
+        return api_error("Invalid owners set. Contact Fates List Support")
+        
     owners_lst = [(await get_user(obj["owner"],
                                   user_only=True,
                                   worker_session=worker_session))
@@ -129,6 +106,10 @@ async def bot_settings_page(request: Request, bot_id: int, user_id: int):
                         if obj["owner"] is not None and not obj["main"]]
 
     owners_html = gen_owner_html(owners_lst + owners_lst_extra)
+
+    bot["client_id"] = str(bot["client_id"])
+
+
 
     bot["extra_owners"] = ",".join(
         [str(o["owner"]) for o in owners if not o["main"]])
@@ -159,27 +140,14 @@ async def bot_settings_page(request: Request, bot_id: int, user_id: int):
         "votes": bot["votes"],
     }
 
-    template = await templates.TemplateResponse(
-        "bot_add_edit.html",
-        {
-            "request": request,
-            "tags_fixed": tags_fixed,
-            "bot": bot,
-            "vanity": vanity,
-            "features": features,
-            "iframe": True
-        },
-        context=context,
-        compact=False,
-    )
-
     return {
-        "html": template.body
+        "user": bot["user"],
+        "data": bot,
+        "context": context
     }
 
 @router.get(
     "/_sunbeam/reviews/{target_id}",
-    response_model=HTMLAPIResponse
 )
 async def review_page(
     request: Request, 

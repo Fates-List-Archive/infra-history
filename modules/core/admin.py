@@ -16,6 +16,7 @@ class BotActions():
 
     async def base_check(self, mode: str) -> Optional[str]:
         """Perform basic checks for adding/editting bots. A check returning None means success, otherwise error should be returned to client"""
+        logger.info(self.css)
         if mode == "add":
             state = await self.db.fetchval("SELECT state FROM bots WHERE bot_id = $1", self.bot_id)
             if state is not None:
