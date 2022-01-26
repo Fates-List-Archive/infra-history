@@ -97,6 +97,5 @@ class BotEvents(BaseModel):
     events: BotEventList
 
 class SettingsPage(BaseModel):
-    user: BaseUser
     data: dict[str, Any]
     context: dict[str, Any]

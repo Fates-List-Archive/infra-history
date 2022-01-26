@@ -127,6 +127,5 @@ class IsStaff(BaseModel):
     sm: StaffRole
 
 class SettingsPage(BaseModel):
-    user: BaseUser
     data: dict[str, Any]
     context: dict[str, Any]

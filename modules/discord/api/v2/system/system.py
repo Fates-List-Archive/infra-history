@@ -20,7 +20,6 @@ def get_uptime():
         uptime_seconds = float(f.readline().split()[0])
     return uptime_seconds
 
-
 @router.get(
     "/_sunbeam/add-bot",
     response_model=SettingsPage,
@@ -38,8 +37,6 @@ async def add_bot_page(request: Request, user_id: int):
         } for id, feature in features.items()],
     }
     return {
-        "html": None,
-        "user": {},
         "data": {},
         "context": context
     }

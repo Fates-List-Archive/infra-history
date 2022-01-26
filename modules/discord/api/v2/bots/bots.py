@@ -502,8 +502,6 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
     context = {
         "staff": (await is_staff(None, user_id, 4))[2].dict(),
         "bot_token": await db.fetchval("SELECT api_token FROM bots WHERE bot_id = $1", bot_id),
-        "user_token": request.headers.get("Authorization"),
-        "user_id": str(user_id),
         "bot_id": str(bot_id),
         "owners_html": owners_html,
         "tags": [{
@@ -517,7 +515,6 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
     }
 
     return {
-        "user": bot["user"],
         "data": bot,
         "context": context
     }
