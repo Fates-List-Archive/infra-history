@@ -76,7 +76,7 @@ async def review_page(
     }
 
     template = await templates.TemplateResponse(
-        "ext/reviews.html", 
+        "reviews.html", 
         {
             "request": request, 
             "data": {

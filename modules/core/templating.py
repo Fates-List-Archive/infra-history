@@ -14,7 +14,6 @@ class templates():
     async def TemplateResponse(f, arg_dict: dict, *, context: dict = {}, not_error: bool = True, compact: bool = True):
         request = arg_dict["request"]
         worker_session = request.app.state.worker_session
-        db = worker_session.postgres
         status = arg_dict.get("status_code")
         arg_dict["site_lang"] = "en"
         arg_dict["site_url"] = site_url
@@ -53,4 +52,4 @@ class templates():
 
     @staticmethod
     async def e(request, reason: str, status_code: int = 404, *, main: Optional[str] = ""):
-        return api_error(f"{main}:{reason}", status_code=status_code)
+        return api_error(f"{main}: {reason}", status_code=status_code)
