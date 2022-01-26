@@ -27,14 +27,8 @@ def get_uptime():
 async def add_bot_page(request: Request, user_id: int):
     context = {
         "staff": (await is_staff(None, user_id, 4))[2].dict(),
-        "tags": [{
-            "text": tag["name"],
-            "value": tag["id"]
-        } for tag in tags_fixed],
-        "features": [{
-            "text": feature["name"],
-            "value": id
-        } for id, feature in features.items()],
+        "tags": [tag["id"] for tag in tags_fixed],
+        "features": [id for id in features.keys()],
     }
     return {
         "data": {},

@@ -504,14 +504,8 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
         "bot_token": await db.fetchval("SELECT api_token FROM bots WHERE bot_id = $1", bot_id),
         "bot_id": str(bot_id),
         "owners_html": owners_html,
-        "tags": [{
-            "text": tag["name"],
-            "value": tag["id"]
-        } for tag in tags_fixed],
-        "features": [{
-            "text": feature["name"],
-            "value": id
-        } for id, feature in features.items()],
+        "tags": [tag["id"] for tag in tags_fixed],
+        "features": [id for id in features.keys()],
     }
 
     return {
