@@ -397,10 +397,12 @@ async def get_bot_invite(request: Request, bot_id: int, user_id: int = 0):
     if invite is None:
         return abort(404)
     
+    # Uncomment if sunbeam fails
     # JS sucks so much, its redirects don't work
-    id = uuid.uuid4()
-    await redis_db.set(f"sunbeam-redirect-{id}", invite, ex=60*30)
-    return {"fallback": str(id), "invite": invite}
+    # id = uuid.uuid4()
+    #await redis_db.set(f"sunbeam-redirect-{id}", invite, ex=60*30)
+    #return {"fallback": str(id), "invite": invite}
+    return {"invite": invite}
 
 @router.get(
     "/{bot_id}/_sunbeam/settings",
