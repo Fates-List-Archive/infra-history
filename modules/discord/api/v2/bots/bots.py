@@ -145,7 +145,7 @@ async def fetch_bot(
             return data
 
     api_ret = await db.fetchrow(
-        "SELECT bot_id, last_stats_post, description, flags, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id, uptime_checks_total, uptime_checks_failed FROM bots WHERE bot_id = $1 OR client_id = $1", 
+        "SELECT bot_id, created_at, last_stats_post, description, flags, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id, uptime_checks_total, uptime_checks_failed FROM bots WHERE bot_id = $1 OR client_id = $1", 
         bot_id
     )
     if api_ret is None:

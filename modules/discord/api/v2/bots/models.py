@@ -46,6 +46,7 @@ class Bot(BaseModel):
     user: BaseUser | None = None
     description: str | None = None
     tags: list[str]
+    created_at: datetime.datetime
     last_stats_post: datetime.datetime | None = None
     long_description_type: enums.LongDescType | None = None
     long_description: str | None = None

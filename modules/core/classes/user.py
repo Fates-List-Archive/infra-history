@@ -1,7 +1,7 @@
 from .base import DiscordUser
 from .bot import Bot
 from .badge import Badge
-from modules.core.cache import get_user
+from modules.core.cache import get_user, get_bot
 from modules.core.helpers import redis_ipc_new, flags_check
 from modules.models import enums   
 import orjson
@@ -58,7 +58,33 @@ class User(DiscordUser):
         if on_server == b"-1" or not on_server:
             on_server = b""
         user["badges"] = await Badge.from_user(self.id, on_server.decode("utf-8").split(" "), user["badges"], user["bot_developer"], user["certified_developer"])
-                         
+
+        packs_db = await db.fetch(
+            "SELECT id, icon, banner, created_at, owner, bots, description, name FROM bot_packs WHERE owner = $1",
+            self.id
+        )
+        packs = []
+        for pack in packs_db:
+            resolved_bots = []
+            ids = []
+            for id in pack["bots"]:
+                bot = await get_bot(id)
+                bot["description"] = await db.fetchval("SELECT description FROM bots WHERE bot_id = $1", id)
+                resolved_bots.append(bot)
+                ids.append(str(id))
+
+            packs.append({
+                "id": pack["id"],
+                "name": pack["name"],
+                "description": pack["description"],
+                "bots": ids,
+                "resolved_bots": resolved_bots,
+                "owner": user_obj,
+                "icon": pack["icon"],
+                "banner": pack["banner"],
+                "created_at": pack["created_at"]
+            })
+          
         return {
             "bots": bots, 
             "approved_bots": approved_bots, 
@@ -66,5 +92,6 @@ class User(DiscordUser):
             "profile": user,
             "site_lang": user["site_lang"],
             "dup": True,
-            "user": user_obj
+            "user": user_obj,
+            "packs": packs
         }

@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from modules.models import enums
 
+import datetime
 
 class BaseUser(BaseModel):
     """
@@ -23,6 +24,29 @@ class BaseUser(BaseModel):
         :rtype: str
         """
         return self.username
+
+class BotPackPartial(BaseModel):
+    """
+    Represents a partial bot pack on fates list 
+    (a bot pack without a id, owner or created_at)
+    """
+    name: str
+    description: str
+    icon: str | None = None
+    banner: str | None = None
+    bots: list[str]
+
+class PackBot(BaseUser):
+    description: str
+
+class BotPack(BotPackPartial):
+    """
+    Represents a bot pack on fates list
+    """
+    id: uuid.UUID    
+    created_at: datetime.datetime
+    owner: BaseUser
+    resolved_bots: list[PackBot]
 
 class APIResponse(BaseModel):
     """

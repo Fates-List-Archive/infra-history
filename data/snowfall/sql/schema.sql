@@ -90,12 +90,11 @@ CREATE TABLE bot_packs (
    id uuid primary key DEFAULT uuid_generate_v4(),
    icon text,
    banner text,
-   created_at bigint,
+   created_at timestamptz DEFAULT NOW(),
    owner bigint,
-   api_token text unique,
    bots bigint[],
    description text,
-   name text unique
+   name text
 );
 
 CREATE TABLE bot_commands (

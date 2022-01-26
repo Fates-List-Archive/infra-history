@@ -5,7 +5,7 @@ from pydantic import BaseModel, validator
 
 from modules.models import enums
 
-from ..base_models import APIResponse, BaseUser
+from ..base_models import APIResponse, BaseUser, BotPackPartial, IDResponse
 
 
 class UpdateUserPreferences(BaseModel):
@@ -71,3 +71,12 @@ class OwnershipTransfer(BaseModel):
 
 class BotAppeal(BaseModel):
     appeal: str
+
+class BotVoteCheck(BaseModel):
+    """vts = Vote Timestamps"""
+    votes: int
+    voted: bool
+    vote_right_now: bool | None = None
+    vote_epoch: int | None = None
+    time_to_vote: int | None = None
+    vts: list | None = None

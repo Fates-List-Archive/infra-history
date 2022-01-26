@@ -86,7 +86,7 @@ class BotIndex(BaseModel):
 class BaseSearch(BaseModel):
     tags_fixed: FLTags
     query: str
-
+    extra: list | None = []
 
 class BotSearch(BaseSearch):
     search_res: list

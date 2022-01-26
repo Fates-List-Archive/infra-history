@@ -390,6 +390,47 @@ async def get_index(request: Request,
 
     return base_json
 
+async def pack_search(q: str):
+    packs_db = await db.fetch(
+        """
+        SELECT bot_packs.id, bot_packs.icon, bot_packs.banner, 
+        bot_packs.created_at, bot_packs.owner, bot_packs.bots, 
+        bot_packs.description, bot_packs.name FROM (
+            SELECT id, icon, banner, 
+            created_at, owner, bots, 
+            description, name, unnest(bots) AS bot_id FROM bot_packs
+        ) bot_packs
+        INNER JOIN bots ON bots.bot_id = bot_packs.bot_id 
+        INNER JOIN users ON users.user_id = bot_packs.owner
+        WHERE bot_packs.name ilike $1 OR bot_packs.owner::text 
+        ilike $1 OR users.username ilike $1 OR bots.bot_id::text ilike $1 
+        OR bots.username_cached ilike $1
+        """,
+        f'%{q}%',
+    )
+    packs = []
+    for pack in packs_db:
+        resolved_bots = []
+        ids = []
+        for id in pack["bots"]:
+            bot = await get_bot(id)
+            bot["description"] = await db.fetchval("SELECT description FROM bots WHERE bot_id = $1", id)
+            resolved_bots.append(bot)
+            ids.append(str(id))
+
+        packs.append({
+            "id": pack["id"],
+            "name": pack["name"],
+            "description": pack["description"],
+            "bots": ids,
+            "resolved_bots": resolved_bots,
+            "owner": await get_user(pack["owner"]),
+            "icon": pack["icon"],
+            "banner": pack["banner"],
+            "created_at": pack["created_at"]
+        })
+    return packs
+
 
 @router.get(
     "/search",
@@ -443,6 +484,9 @@ async def search_list(request: Request, q: str, target_type: enums.SearchType):
         )
         tags = await db.fetch("SELECT id, name, iconify_data, owner_guild FROM server_tags")
     
+    elif target_type == enums.SearchType.pack:    
+        return {"search_res": await pack_search(q), "tags_fixed": [], "query": q}
+
     else:
         profiles = await db.fetch(
             """SELECT DISTINCT users.user_id, users.description FROM users 
@@ -465,7 +509,18 @@ async def search_list(request: Request, q: str, target_type: enums.SearchType):
         data,
         type=enums.ReviewType.bot if target_type == enums.SearchType.bot else enums.ReviewType.server
     )
-    return {"search_res": search_bots, "tags_fixed": tags, "query": q}
+
+    if target_type == enums.SearchType.bot:
+        extra = await pack_search(q)
+    else:
+        extra = []
+
+    return {
+        "search_res": search_bots, 
+        "tags_fixed": tags, 
+        "query": q,
+        "extra": extra    
+    }
 
 @router.get("/search/tags", response_model=BotSearch, dependencies=[])
 async def search_by_tag(request: Request, tag: str,

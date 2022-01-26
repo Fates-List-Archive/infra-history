@@ -142,6 +142,7 @@ class SearchType(Enum):
     bot = "bot", "Bot"
     server = "server", "Server"
     profile = "profile", "Profile"
+    pack = "pack", "Bot Pack"
 
 class VanityType(Enum):
     _init_ = "value __doc__"

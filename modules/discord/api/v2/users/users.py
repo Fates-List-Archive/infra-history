@@ -4,7 +4,7 @@ from modules.core import *
 from modules.core.classes import User as _User
 
 from ..base import API_VERSION
-from .models import APIResponse, BotMeta, enums, BaseUser, UpdateUserPreferences, OwnershipTransfer, BotAppeal
+from .models import APIResponse, IDResponse, BotMeta, BotPackPartial, enums, BaseUser, UpdateUserPreferences, OwnershipTransfer, BotAppeal, BotVoteCheck
 
 cleaner = Cleaner(remove_unknown_tags=False)
 
@@ -274,4 +274,177 @@ async def appeal_bot(request: Request, bot_id: int, data: BotAppeal):
     resubmit_embed.add_field(name=appeal_title, value = data.appeal)
     msg = {"content": f"<@&{staff_ping_add_role}>", "embed": resubmit_embed.to_dict(), "channel_id": str(appeals_channel), "mention_roles": [str(staff_ping_add_role)]}
     await redis_ipc_new(request.app.state.worker_session.redis, "SENDMSG", msg=msg, timeout=None)
+    return api_success()
+
+@router.get(
+    "/{user_id}/bots/{bot_id}/votes", 
+    response_model = BotVoteCheck, 
+    dependencies=[
+        Depends(
+            Ratelimiter(
+                global_limit = Limit(times=5, minutes=1)
+            )
+        ),
+        Depends(bot_user_auth_check)
+    ]
+)
+async def get_user_votes(request: Request, bot_id: int, user_id: int):
+    """
+    Endpoint to check amount of votes a user has.
+
+
+    **votes** - The amount of votes the bot has.
+    
+    **voted** - Whether or not the user has *ever* voted for the bot.
+
+    **vote_epoch** - The redis TTL of the users vote lock. This is not time_to_vote which is the
+    elapsed time the user has waited since their last vote.
+    
+    **vts** - A list of timestamps that the user has voted for the bot on that has been recorded.
+
+    **time_to_vote** - The time the user has waited since they last voted.
+
+    **vote_right_now** - Whether a user can vote right now. Currently equivalent to `vote_epoch < 0`.
+    """
+    voter_ts = await db.fetchval(
+        "SELECT timestamps FROM bot_voters WHERE bot_id = $1 AND user_id = $2", 
+        bot_id, 
+        user_id
+    )
+    
+    vote_epoch = await redis_db.ttl(f"vote_lock:{user_id}")
+
+    voter_count = len(voter_ts) if voter_ts else 0
+    
+    return {
+        "votes": voter_count, 
+        "voted": voter_count != 0, 
+        "vote_epoch": vote_epoch, 
+        "vts": voter_ts, 
+        "time_to_vote": (60*60*8 - vote_epoch) if (vote_epoch > 0) else 0, 
+        "vote_right_now": vote_epoch < 0, 
+    }
+
+async def pack_check(user_id: int, pack: BotPackPartial, mode = "add"):
+    bots = []
+
+    if len(pack.bots) > 5:
+        return api_error("Maximum bots in a pack is 5")
+
+    for bot_id in pack.bots:
+        try:
+            id = int(bot_id)
+        except:
+            return api_error(f"{bot_id} is not a valid Bot ID")
+        check = await db.fetchval("SELECT bot_id FROM bots WHERE bot_id = $1", id)
+        if not check:
+            return api_error(f"{bot_id} does not exist on Fates List")
+        bots.append(id)
+    
+    if mode == "add":
+        packs = await db.fetch("SELECT id FROM bot_packs WHERE owner = $1", user_id)
+        if len(packs) > 5:
+            return api_error("Pack limit reached!")
+
+    if not pack.icon.startswith("https://"):
+        return api_error("Icon URL must start with https://")
+    
+    if not pack.banner.startswith("https://"):
+        return api_error("Banner URL must start with https://")
+
+    return bots
+
+@router.post(
+    "/{user_id}/packs",
+    response_model=IDResponse,
+    dependencies=[
+        Depends(
+            Ratelimiter(
+                global_limit = Limit(times=5, minutes=1)
+            )
+        ),
+        Depends(user_auth_check)
+    ],
+)
+async def create_bot_pack(request: Request, user_id: int, pack: BotPackPartial):
+    """
+    Creates a new bot pack on the list
+    """
+    bots = await pack_check(user_id, pack)
+
+    if not isinstance(bots, list):
+        return bots
+
+    id = await db.fetchval(
+        "INSERT INTO bot_packs (icon, banner, owner, bots, description, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+        pack.icon,
+        pack.banner,
+        user_id,
+        bots,
+        pack.description,
+        pack.name
+    )
+    return api_success(id = str(id))
+
+@router.patch(
+    "/{user_id}/packs/{pack_id}",
+    response_model=APIResponse,
+    dependencies=[
+        Depends(
+            Ratelimiter(
+                global_limit = Limit(times=5, minutes=1)
+            )
+        ),
+        Depends(user_auth_check)
+    ],
+)
+async def update_bot_pack(request: Request, user_id: int, pack_id: uuid.UUID, pack: BotPackPartial):
+    """
+    Updates an existing bot pack on the list
+    """
+    bots = await pack_check(user_id, pack, mode="edit")
+
+    if not isinstance(bots, list):
+        return bots
+    
+    check = await db.fetchval("SELECT id FROM bot_packs WHERE id = $1 AND owner = $2", pack_id, user_id)
+    if not check:
+        return abort(404)
+
+    await db.fetchval(
+        "UPDATE bot_packs SET icon = $1, banner = $2, bots = $3, description = $4, name = $5 WHERE id = $6",
+        pack.icon,
+        pack.banner,
+        bots,
+        pack.description,
+        pack.name,
+        pack_id
+    )
+    return api_success()
+
+@router.delete(
+    "/{user_id}/packs/{pack_id}",
+    response_model=APIResponse,
+    dependencies=[
+        Depends(
+            Ratelimiter(
+                global_limit = Limit(times=5, minutes=1)
+            )
+        ),
+        Depends(user_auth_check)
+    ],
+)
+async def delete_user_pack(request: Request, user_id: int, pack_id: uuid.UUID):
+    """
+    Deletes an existing bot pack on the list
+    """
+    
+    check = await db.fetchval("SELECT id FROM bot_packs WHERE id = $1 AND owner = $2", pack_id, user_id)
+    if not check:
+        return abort(404)
+
+    await db.fetchval(
+        "DELETE FROM bot_packs WHERE id = $1",
+        pack_id
+    )
     return api_success()
