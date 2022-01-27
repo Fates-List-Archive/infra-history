@@ -409,7 +409,6 @@ async def get_bot_invite(request: Request, bot_id: int, user_id: int = 0):
     dependencies=[
         Depends(user_auth_check)
     ],
-    response_model=SettingsPage
 )
 async def get_bot_settings(request: Request, bot_id: int, user_id: int):
     """
@@ -448,7 +447,7 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
         return api_error("You are not allowed to edit this bot!", status_code=403)
 
     bot = await db.fetchrow(
-        "SELECT bot_id, client_id, state, prefix, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, flags, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1",
+        "SELECT bot_id, client_id, api_token, state, prefix, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, flags, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1",
         bot_id,
     )
 
@@ -503,7 +502,6 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
 
     context = {
         "perm": (await is_staff(None, user_id, 4))[1],
-        "token": await db.fetchval("SELECT api_token FROM bots WHERE bot_id = $1", bot_id),
         "bot_id": str(bot_id),
         "owners_html": owners_html,
         "tags": [tag["id"] for tag in tags_fixed],
