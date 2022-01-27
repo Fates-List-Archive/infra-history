@@ -502,8 +502,8 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
     bot["vanity"] = vanity
 
     context = {
-        "staff": (await is_staff(None, user_id, 4))[2].dict(),
-        "bot_token": await db.fetchval("SELECT api_token FROM bots WHERE bot_id = $1", bot_id),
+        "perm": (await is_staff(None, user_id, 4))[1],
+        "token": await db.fetchval("SELECT api_token FROM bots WHERE bot_id = $1", bot_id),
         "bot_id": str(bot_id),
         "owners_html": owners_html,
         "tags": [tag["id"] for tag in tags_fixed],

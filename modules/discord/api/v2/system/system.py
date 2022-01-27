@@ -25,7 +25,7 @@ def get_uptime():
 )
 async def add_bot_info(request: Request, user_id: int):
     context = {
-        "staff": (await is_staff(None, user_id, 4))[2].dict(),
+        "perm": (await is_staff(None, user_id, 4))[1],
         "tags": [tag["id"] for tag in tags_fixed],
         "features": list(features.keys()),
     }
