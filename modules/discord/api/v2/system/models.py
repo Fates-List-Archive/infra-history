@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from modules.models import enums
 
-from ..base_models import BaseUser
+from ..base_models import BaseUser, BotPack
 
 
 class BotListStats(BaseModel):
@@ -82,13 +82,14 @@ class BotIndex(BaseModel):
     certified_bots: BotPartialList
     new_bots: BotPartialList
 
+class Search(BaseModel):
+    bots: list | None = []
+    servers: list | None = []
+    profiles: list | None = []
+    packs: list[BotPack] | None = []
+    tags: dict[str, FLTags]
 
-class BaseSearch(BaseModel):
-    tags_fixed: FLTags
-    query: str
-    extra: list | None = []
-
-class BotSearch(BaseSearch):
+class TagSearch(BaseModel):
     search_res: list
 
 class PartnerLinks(BaseModel):

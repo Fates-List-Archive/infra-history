@@ -1,3 +1,4 @@
+from asyncio import DatagramProtocol
 import hmac
 from hashlib import md5
 from typing import Optional
@@ -5,9 +6,10 @@ from typing import Optional
 from modules.core import *
 from hashlib import sha512
 import hmac
+import json
 
 from ..base import API_VERSION
-from .models import BotIndex, BotListStats, BotQueueGet, BotSearch, BotVanity, Partners, StaffRoles, IsStaff, SettingsPage
+from .models import BotIndex, BotListStats, BotQueueGet, Search, TagSearch, BotVanity, Partners, StaffRoles, IsStaff, SettingsPage
 
 router = APIRouter(
     prefix=f"/api/v{API_VERSION}",
@@ -409,7 +411,7 @@ async def pack_search(q: str):
             ids.append(str(id))
 
         packs.append({
-            "id": pack["id"],
+            "id": str(pack["id"]),
             "name": pack["name"],
             "description": pack["description"],
             "bots": ids,
@@ -424,95 +426,101 @@ async def pack_search(q: str):
 
 @router.get(
     "/search",
-    response_model=BotSearch,
+    response_model=Search,
     dependencies=[],
 )
-async def search_list(request: Request, q: str, target_type: enums.SearchType):
-    """For any potential Android/iOS app, crawlers etc. 
+async def search_list(request: Request, q: str):
+    """
+    Searches the list for any bot/server/profile available
     Q is the query to search for. 
-    Target type is the type to search for
-    
-    **Profile search auto-redirects**
     """
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
     
     if q == "":
         return abort(404)
-
-    if target_type == enums.SearchType.bot:
-        data = await db.fetch(
-            """SELECT DISTINCT bots.bot_id,
-            bots.description, bots.banner_card AS banner, bots.state, 
-            bots.votes, bots.guild_count, bots.nsfw FROM bots 
-            INNER JOIN bot_owner ON bots.bot_id = bot_owner.bot_id 
-            WHERE (bots.description ilike $1 
-            OR bots.long_description ilike $1 
-            OR bots.username_cached ilike $1 
-            OR bot_owner.owner::text ilike $1) 
-            AND (bots.state = $2 OR bots.state = $3) 
-            ORDER BY bots.votes DESC, bots.guild_count DESC LIMIT 6
-            """, 
-            f'%{q}%',
-            enums.BotState.approved,
-            enums.BotState.certified
-        )
-        tags = tags_fixed
     
-    elif target_type == enums.SearchType.server:
-        data = await db.fetch(
-            """SELECT DISTINCT servers.guild_id,
-            servers.description, servers.banner_card AS banner, servers.state,
-            servers.votes, servers.guild_count, servers.nsfw FROM servers
-            WHERE (servers.description ilike $1
-            OR servers.long_description ilike $1
-            OR servers.name_cached ilike $1) AND servers.state = $2
-            ORDER BY servers.votes DESC, servers.guild_count DESC LIMIT 6
-            """,
-            f'%{q}%',
-            enums.BotState.approved
-        )
-        tags = await db.fetch("SELECT id, name, iconify_data, owner_guild FROM server_tags")
-    
-    elif target_type == enums.SearchType.pack:    
-        return {"search_res": await pack_search(q), "tags_fixed": [], "query": q}
+    cache = await redis_db.get(f"search:{q}")
+    if cache:
+        return orjson.loads(cache)
 
-    else:
-        profiles = await db.fetch(
-            """SELECT DISTINCT users.user_id, users.description FROM users 
-            INNER JOIN bot_owner ON users.user_id = bot_owner.owner 
-            INNER JOIN bots ON bot_owner.bot_id = bots.bot_id 
-            WHERE ((bots.state = 0 OR bots.state = 6) 
-            AND (bots.username_cached ilike $1 OR bots.description ilike $1 OR bots.bot_id::text ilike $1)) 
-            OR (users.username ilike $1) LIMIT 12""", 
-            f'%{q}%'
-        )
-        profile_obj = []
-        for profile in profiles:
-            profile_info = await get_user(profile["user_id"], worker_session = worker_session)
-            if profile_info:
-                profile_obj.append({"banner": None, "description": profile["description"], "user": profile_info})
-        return {"search_res": profile_obj, "tags_fixed": [], "query": q}
+    data = {}
+    data["tags"] = {}
 
-    search_bots = await parse_index_query(
-        worker_session,
-        data,
-        type=enums.ReviewType.bot if target_type == enums.SearchType.bot else enums.ReviewType.server
+    data["bots"] = await db.fetch(
+        """SELECT DISTINCT bots.bot_id,
+        bots.description, bots.banner_card AS banner, bots.state, 
+        bots.votes, bots.guild_count, bots.nsfw FROM bots 
+        INNER JOIN bot_owner ON bots.bot_id = bot_owner.bot_id 
+        WHERE (bots.description ilike $1 
+        OR bots.long_description ilike $1 
+        OR bots.username_cached ilike $1 
+        OR bot_owner.owner::text ilike $1) 
+        AND (bots.state = $2 OR bots.state = $3) 
+        ORDER BY bots.votes DESC, bots.guild_count DESC LIMIT 6
+        """, 
+        f'%{q}%',
+        enums.BotState.approved,
+        enums.BotState.certified
     )
 
-    if target_type == enums.SearchType.bot:
-        extra = await pack_search(q)
-    else:
-        extra = []
+    data["tags"]["bots"] = tags_fixed
+    
+    data["servers"] = await db.fetch(
+        """SELECT DISTINCT servers.guild_id,
+        servers.description, servers.banner_card AS banner, servers.state,
+        servers.votes, servers.guild_count, servers.nsfw FROM servers
+        WHERE (servers.description ilike $1
+        OR servers.long_description ilike $1
+        OR servers.name_cached ilike $1) AND servers.state = $2
+        ORDER BY servers.votes DESC, servers.guild_count DESC LIMIT 6
+        """,
+        f'%{q}%',
+        enums.BotState.approved
+    )
 
-    return {
-        "search_res": search_bots, 
-        "tags_fixed": tags, 
-        "query": q,
-        "extra": extra    
-    }
+    data["tags"]["servers"] = await db.fetch("SELECT id, name, iconify_data, owner_guild FROM server_tags")
+    
+    data["packs"] = await pack_search(q)
 
-@router.get("/search/tags", response_model=BotSearch, dependencies=[])
+    profiles = await db.fetch(
+        """SELECT DISTINCT users.user_id, users.description FROM users 
+        INNER JOIN bot_owner ON users.user_id = bot_owner.owner 
+        INNER JOIN bots ON bot_owner.bot_id = bots.bot_id 
+        WHERE ((bots.state = 0 OR bots.state = 6) 
+        AND (bots.username_cached ilike $1 OR bots.description ilike $1 OR bots.bot_id::text ilike $1)) 
+        OR (users.username ilike $1) LIMIT 12""", 
+        f'%{q}%'
+    )
+    profile_obj = []
+    for profile in profiles:
+        profile_info = await get_user(profile["user_id"], worker_session = worker_session)
+        if profile_info:
+            profile_obj.append({"banner": None, "description": profile["description"], "user": profile_info})
+    data["profiles"] = profile_obj
+
+    data["bots"] = await parse_index_query(
+        worker_session,
+        data["bots"],
+        type=enums.ReviewType.bot
+    )
+    
+    data["servers"] = await parse_index_query(
+        worker_session,
+        data["servers"],
+        type=enums.ReviewType.server
+    )
+
+    data["bots"] = [dict(obj) for obj in data["bots"]]
+    data["servers"] = [dict(obj) for obj in data["servers"]]
+    data["packs"] = [dict(obj) for obj in data["packs"]]
+    data["tags"]["servers"] = [dict(obj) for obj in data["tags"]["servers"]]
+
+    await redis_db.set(f"search:{q}", orjson.dumps(data), ex=60*5)
+
+    return data
+
+@router.get("/search/tags", response_model=TagSearch, dependencies=[])
 async def search_by_tag(request: Request, tag: str,
                         target_type: enums.SearchType):
     if target_type == enums.SearchType.bot:

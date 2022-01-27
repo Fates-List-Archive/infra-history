@@ -256,10 +256,10 @@ async def parse_index_query(
         if type == enums.ReviewType.server:
             bot_obj = dict(bot) | {
                 "user":
-                await db.fetchrow(
+                dict((await db.fetchrow(
                     "SELECT guild_id::text AS id, name_cached AS username, avatar_cached AS avatar FROM servers WHERE guild_id = $1",
                     bot["guild_id"],
-                ),
+                ))),
                 "bot_id":
                 str(bot["guild_id"]),
                 "banner":
