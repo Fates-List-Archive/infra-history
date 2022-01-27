@@ -385,7 +385,7 @@ async def get_index(request: Request,
 async def pack_search(q: str):
     packs_db = await db.fetch(
         """
-        SELECT bot_packs.id, bot_packs.icon, bot_packs.banner, 
+        SELECT DISTINCT bot_packs.id, bot_packs.icon, bot_packs.banner, 
         bot_packs.created_at, bot_packs.owner, bot_packs.bots, 
         bot_packs.description, bot_packs.name FROM (
             SELECT id, icon, banner, 
