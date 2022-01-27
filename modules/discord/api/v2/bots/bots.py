@@ -507,7 +507,7 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
         "bot_id": str(bot_id),
         "owners_html": owners_html,
         "tags": [tag["id"] for tag in tags_fixed],
-        "features": [id for id in features.keys()],
+        "features": list(features.keys()),
     }
 
     return {

@@ -89,11 +89,6 @@
             "name": "Open Source",
             "type": "positive",
             "description": "These bots are open source meaning they can easily be audited and/or potentially self hosted."
-        },
-        "slash_command": {
-            "name": "Slash Commands",
-            "type": "positive",
-            "description": "Slash commands are a brand new way to interact with bots to deliver a better experience!"
         }
     },
     "langs": {

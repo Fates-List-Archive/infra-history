@@ -332,8 +332,12 @@ async def pack_check(user_id: int, pack: BotPackPartial, mode = "add"):
         return api_error("Maximum bots in a pack is 5")
 
     for bot_id in pack.bots:
+        id = bot_id.replace(" ", "")
+        if not id: 
+            continue
+        
         try:
-            id = int(bot_id)
+            id = int(id)
         except:
             return api_error(f"{bot_id} is not a valid Bot ID")
         check = await db.fetchval("SELECT bot_id FROM bots WHERE bot_id = $1", id)
@@ -346,10 +350,10 @@ async def pack_check(user_id: int, pack: BotPackPartial, mode = "add"):
         if len(packs) > 5:
             return api_error("Pack limit reached!")
 
-    if not pack.icon.startswith("https://"):
+    if pack.icon and not pack.icon.startswith("https://"):
         return api_error("Icon URL must start with https://")
     
-    if not pack.banner.startswith("https://"):
+    if pack.banner and not pack.banner.startswith("https://"):
         return api_error("Banner URL must start with https://")
 
     return bots
@@ -434,7 +438,7 @@ async def update_bot_pack(request: Request, user_id: int, pack_id: uuid.UUID, pa
         Depends(user_auth_check)
     ],
 )
-async def delete_user_pack(request: Request, user_id: int, pack_id: uuid.UUID):
+async def delete_bot_pack(request: Request, user_id: int, pack_id: uuid.UUID):
     """
     Deletes an existing bot pack on the list
     """

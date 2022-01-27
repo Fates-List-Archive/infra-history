@@ -28,7 +28,7 @@ async def add_bot_page(request: Request, user_id: int):
     context = {
         "staff": (await is_staff(None, user_id, 4))[2].dict(),
         "tags": [tag["id"] for tag in tags_fixed],
-        "features": [id for id in features.keys()],
+        "features": list(features.keys()),
     }
     return {
         "data": {},

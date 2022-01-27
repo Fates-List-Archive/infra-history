@@ -107,6 +107,13 @@ class BotActions():
         if not self.tags:
             return "You must select tags for your bot" # No tags found
 
+        features_fixed = []
+        for _feature in self.features:
+            if _feature not in features.keys():
+                continue
+            features_fixed.append(_feature)
+        self.features = features_fixed
+
         imgres = None
         
         for banner_key in ("banner_page", "banner_card"):

@@ -53,7 +53,7 @@ class BotMeta(BaseModel):
     @validator("extra_owners")
     def extra_owner_converter(cls, v, values, **kwargs):
         eos = []
-        [eos.append(int(eo)) for eo in v if eo.isdigit() and eo not in eos]
+        [eos.append(int(eo.replace(" ", ""))) for eo in v if eo.replace(" ", "").isdigit() and eo.replace(" ", "") not in eos]
         return eos
 
 
