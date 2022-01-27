@@ -486,7 +486,7 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
                         for obj in owners
                         if obj["owner"] is not None and not obj["main"]]
 
-    owners_html = sunbeam_get(owners_lst + owners_lst_extra)
+    bot["owners_html"] = sunbeam_get(owners_lst + owners_lst_extra)
 
     bot["client_id"] = str(bot["client_id"])
 
@@ -500,10 +500,10 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
         "SELECT vanity_url AS vanity FROM vanity WHERE redirect = $1", bot_id)
     bot["vanity"] = vanity
 
+    bot["bot_id"] = str(bot_id)
+
     context = {
         "perm": (await is_staff(None, user_id, 4))[1],
-        "bot_id": str(bot_id),
-        "owners_html": owners_html,
         "tags": [tag["id"] for tag in tags_fixed],
         "features": list(features.keys()),
     }
