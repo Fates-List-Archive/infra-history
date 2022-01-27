@@ -232,6 +232,7 @@ func Server() {
 				if len(argDat) != 2 {
 					continue
 				}
+
 				options = append(options, &discordgo.ApplicationCommandInteractionDataOption{
 					Name:  argDat[0],
 					Type:  discordgo.ApplicationCommandOptionString,

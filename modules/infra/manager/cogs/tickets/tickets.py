@@ -75,7 +75,8 @@ class _TicketCallback(discord.ui.Select):
         await interaction.response.defer()
         err = await redis_ipc_new(self.bot.redis,
                                   "SUPPORT",
-                                  args=[str(interaction.author.id)])
+                                  args=[str(interaction.author.id)],
+                                  timeout=5)
         if err != b"0":
             if isinstance(err, bytes):
                 err = err.decode("utf-8")
@@ -152,31 +153,96 @@ class _StaffAgeView(discord.ui.View):
                                     description="18+ years old")
         self.add_item(self.select_menu)
 
+cancel_list = ["cancel", "quit"]
+
+class StaffQuestion():
+    def __init__(self, id: str, question: str, check, parser = None, minlength: int = 30, maxlength = 2000):
+        self.id = id
+        self.question = question
+        self.check = check # Function
+        self.parser = parser if parser else lambda m: m.content
+        self.minlength = minlength
+        self.maxlength = maxlength
+        self.answer = None
+    
+    def q_check(self, m):
+        if m.content.lower() in cancel_list:
+            return True
+        return self.check(m) and len(m.content) >= self.minlength and (not self.maxlength or len(m.content) <= self.maxlength)
+
+class StaffQuestionList():
+    def __init__(self, items):
+        self.items = items
+    
+    def get(self, id) -> StaffQuestion:
+        for item in self.items:
+            if item.id == id:
+                return item
 
 class _SelectAgeCallback(discord.ui.Select):
+    def app_check(self, m):
+        return m.author.id == self.interaction.user.id and isinstance(
+            m.channel, discord.DMChannel)
+
+    def app_ext_check(self, m):
+        return self.app_check(m)
+
     def __init__(self, bot, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.state = MenuState.rot
         self.bot = bot
         self.app_id = uuid.uuid4()
-        self.questions = {
-            "tz":
-            "Please DM me your timezone (the 3 letter code) to start your staff application",
-            "exp":
-            "Do you have experience being a bot reviewer? If so, from where and how long/much experience do you have? How confident are you at handling bots?",
-            "lang":
-            "How well do you know English? What other languages do you know? How good are you at speaking/talking/listening?",
-            "why": "Why are you interested in being staff here at Fates List?",
-            "contrib": "What do you think you can contribute to Fates List?",
-            "talent":
-            "What, in your opinion, are your strengths and weaknesses?",
-            "will": "How willing are you to learn new tools and processes?",
-        }
-
-        self.answers = {}
+        self.questions = StaffQuestionList([
+            StaffQuestion(
+                id="tz",
+                question="Please DM me your timezone (the 3 letter code) to start your staff application. **By continuing, you agree that staff applications are public for voting**",
+                check=lambda m: self.app_check(m) and m.content.isalpha(),
+                parser=lambda m: m.content.upper(),
+                minlength=3,
+                maxlength=3
+            ),
+            StaffQuestion(
+                id="exp",
+                question="Do you have experience being a bot reviewer? If so, from where and how long/much experience do you have? How confident are you at handling bots?",
+                check=lambda m: self.app_ext_check(m)
+            ),
+            StaffQuestion(
+                id="lang",
+                question="How well do you know English? What other languages do you know? How good are you at speaking/talking/listening?",
+                check=lambda m: self.app_ext_check(m)
+            ),
+            StaffQuestion(
+                id="why",
+                question="Why are you interested in being staff here at Fates List?",
+                check=lambda m: self.app_ext_check(m)
+            ),
+            StaffQuestion(
+                id="contrib",
+                question="What do you think you can contribute to Fates List?",
+                check=lambda m: self.app_ext_check(m)
+            ),
+            StaffQuestion(
+                id="talent",
+                question="What, in your opinion, are your strengths and weaknesses?",
+                check=lambda m: self.app_ext_check(m)
+            ),
+            StaffQuestion(
+                id="will",
+                question="How willing are you to learn new tools and processes?",
+                check=lambda m: self.app_ext_check(m)
+            ),
+            StaffQuestion(
+                id="warn",
+                question="Do you understand that being staff here is a privilege and that you may demoted without warning based on your performance.",
+                check=lambda m: self.app_ext_check(m),
+                minlength=10,
+                maxlength=30
+            ),
+        ])
 
     async def callback(self, interaction: discord.Interaction):
         self.disabled = True
+        self.interaction = interaction
         await interaction.response.edit_message(view=self.view)
         self.view.stop()
 
@@ -185,51 +251,44 @@ class _SelectAgeCallback(discord.ui.Select):
                 "You are unfortunately not eligible to apply for staff!",
                 ephemeral=True)
 
-        await interaction.followup.send(self.questions["tz"], ephemeral=True)
-
-        def app_check(m):
-            return m.author.id == interaction.user.id and isinstance(
-                m.channel, discord.DMChannel)
-
-        def app_ext_check(m):
-            return app_check(m) and len(m.content) > 30
-
-        def tz_check(m):
-            return app_check(m) and len(m.content) == 3 and m.content.isalpha()
+        await interaction.followup.send(self.questions.get("tz").question, ephemeral=True)
 
         try:
             tz = await self.bot.wait_for("message",
-                                         check=tz_check,
+                                         check=self.questions.get("tz").q_check,
                                          timeout=180)
         except Exception as exc:
             return await interaction.followup.send(
-                "You took too long to respond!", ephemeral=True)
+                f"You took too long to respond! {exc}", ephemeral=True)
 
-        self.answers["tz"] = tz.content.upper()
+        self.questions.get("tz").answer = self.questions.get("tz").parser(tz)
 
-        for q in self.questions:
-            if q == "tz":
+        for q in self.questions.items:
+            if q.id == "tz":
                 continue
-
+        
             await tz.channel.send(
-                f"**{self.questions[q]}**\n\nUse at least 30 characters!")
+                f"**{q.question}**\n\nUse at least {q.minlength} characters and at most {q.maxlength} characters!")
 
             try:
                 ans = await self.bot.wait_for("message",
-                                              check=app_ext_check,
+                                              check=q.q_check,
                                               timeout=180)
             except Exception as exc:
                 return await interaction.followup.send(
                     "You took too long to respond!", ephemeral=True)
 
-            self.answers[q] = ans.content
+            if ans.content.lower() in cancel_list:
+                return await ans.channel.send("Cancelled!")
+
+            q.answer = q.parser(ans)
 
         data = [
             f"Username: {interaction.user}\nUser ID: {interaction.user.id}\nAge Range: {self.values[0]}\nApplication ID: {self.app_id}"
         ]
-        for q in self.questions:
+        for q in self.questions.items:
             data.append(
-                f"{q}\n\nQuestion: {self.questions[q]}\n\nAnswer: {self.answers[q]}"
+                f"{q.id}\n\nQuestion: {q.question}\n\nAnswer: {q.answer}"
             )
 
         staff_channel = self.bot.get_channel(staff_apps_channel)
