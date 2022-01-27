@@ -22,18 +22,14 @@ def get_uptime():
 
 @router.get(
     "/_sunbeam/add-bot",
-    response_model=SettingsPage,
 )
-async def add_bot_page(request: Request, user_id: int):
+async def add_bot_info(request: Request, user_id: int):
     context = {
         "staff": (await is_staff(None, user_id, 4))[2].dict(),
         "tags": [tag["id"] for tag in tags_fixed],
         "features": list(features.keys()),
     }
-    return {
-        "data": {},
-        "context": context
-    }
+    return context
 
 @router.get(
     "/_sunbeam/reviews/{target_id}",
