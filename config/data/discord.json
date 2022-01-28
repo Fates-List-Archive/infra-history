@@ -19,7 +19,8 @@
         "server_logs": "837048691965034496",
         "appeals_channel": "836326351387623454",
         "site_errors_channel": "836326323281592330",
-	"main_support_channel": "838648883675922462"
+	"main_support_channel": "838648883675922462",
+        "github_channel": "836326337375109191"
     },
     "oauth": {
         "client_id": "798951566634778641",

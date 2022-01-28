@@ -121,14 +121,28 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		if header == "push" {
 			var commitList string
 			for _, commit := range gh.Commits {
-				commitList += commit.Message + "(" + commit.ID + ")\n"
+				commitList += commit.Message + " [" + commit.ID + "](" + commit.URL + ") (" + commit.Author.Username + ")\n"
 			}
 
 			messageSend = discordgo.MessageSend{
 				Embeds: []*discordgo.MessageEmbed{
 					{
-						Title:       "Push on:" + gh.Repo.FullName,
-						Description: commitList,
+						Color: 0x00ff1a,
+						Title: "Push on: " + gh.Repo.FullName,
+						Fields: []*discordgo.MessageEmbedField{
+							{
+								Name:  "Branch",
+								Value: "**Ref:** " + gh.Ref + "\n" + "**Base Ref:** " + gh.BaseRef,
+							},
+							{
+								Name:  "Commits",
+								Value: commitList,
+							},
+							{
+								Name:  "Pusher",
+								Value: "[" + "" + gh.Pusher.Name + "]" + "(" + "https://github.com/" + gh.Pusher.Name + ")",
+							},
+						},
 					},
 				},
 			}
@@ -144,7 +158,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			}
 		}
 
-		common.DiscordMain.ChannelMessageSendComplex("836337073618812928", &messageSend)
+		common.DiscordMain.ChannelMessageSendComplex(common.GithubChannel, &messageSend)
 
 		c.JSON(200, apiReturn(true, nil, nil))
 	})

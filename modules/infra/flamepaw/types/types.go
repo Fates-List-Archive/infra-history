@@ -11,6 +11,7 @@ import (
 
 type GithubWebhook struct {
 	Ref     string `json:"ref"`
+	BaseRef string `json:"base_ref,omitempty"`
 	Action  string `json:"action"`
 	Commits []struct {
 		ID        string `json:"id"`
