@@ -109,11 +109,6 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			return
 		}
 
-		if gh.Ref != "refs/heads/master" && gh.Ref != "refs/heads/main" {
-			c.JSON(200, apiReturn(true, "Not master branch", nil))
-			return
-		}
-
 		/*if gh.Repo.FullName != "" {
 			c.JSON(200, apiReturn(true, "Not Flamepaw/Dragon", nil))
 			return
