@@ -204,6 +204,7 @@ class FatesWorkerSession(Singleton):  # pylint: disable=too-many-instance-attrib
         self.redis = redis
         self.oauth = oauth
         self.worker_count = worker_count
+        self.tags = {}
 
         # Record basic stats and initially set workers to None
         self.start_time = time.time()
@@ -354,7 +355,8 @@ async def finish_init(app, session_id, workers, dbs):
         "SELECT id, icon FROM bot_list_tags"
     )
     tags = _tags(tags_db)
-    builtins.TAGS = tags
+    builtins.TAGS = tags # TODO: Remove this
+    app.state.worker_session.tags = tags
     builtins.tags_fixed = calc_tags(tags)
 
     # Setup sentry

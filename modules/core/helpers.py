@@ -18,6 +18,8 @@ from .events import *
 from .imports import *
 from .templating import *
 
+from lynxfall.utils.string import ireplacem, intl_text
+
 # Some replace tuples
 # TODO: Move this elsewhere
 js_rem_tuple = (("onclick", ""), ("onhover", ""), ("script", ""), ("onload", ""))

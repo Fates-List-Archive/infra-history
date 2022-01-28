@@ -1,5 +1,8 @@
 import discord
 from lynxfall.utils.string import get_token
+#from lynxfall.utils.string import ireplacem
+
+from .system import FatesWorkerSession
 
 from .cache import *
 from .events import *
@@ -9,8 +12,10 @@ from .ipc import redis_ipc_new
 from .permissions import *
 
 class BotActions():
-    def __init__(self, db, bot):
-        self.db = db
+    def __init__(self, worker_session: FatesWorkerSession, bot):
+        self.db: asyncpg.Pool = worker_session.postgres
+        self.redis = worker_session.redis
+        self.worker_session = worker_session
         self.__dict__.update(bot) # Add all kwargs to class
         logger.debug("Request Acknowledged")
 
@@ -98,7 +103,7 @@ class BotActions():
         tags_fixed = []
 
         for tag in self.tags:
-            if tag not in TAGS:
+            if tag not in self.worker_session.tags:
                 # Merely ignore the tag, autocomplete exists
                 continue
             tags_fixed.append(tag)
@@ -162,7 +167,7 @@ class BotActions():
         if self.webhook_secret and len(self.webhook_secret) < 8:
             return "Your webhook secret must be at least 8 characters long"
 
-        await redis_db.delete(f"botpagecache:{self.bot_id}")
+        await self.redis.delete(f"botpagecache:{self.bot_id}")
 
     async def edit_check(self):
         """Perform extended checks for editing bots"""
@@ -270,7 +275,7 @@ class BotActions():
         add_embed.add_field(name="Guild Count (approx.)", value=approx_guild_count)
         msg = {"content": f"<@&{staff_ping_add_role}>", "embed": add_embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": [str(staff_ping_add_role)]}
         if not self.system_bot:
-            await redis_ipc_new(redis_db, "SENDMSG", msg=msg, timeout=None)
+            await redis_ipc_new(self.redis, "SENDMSG", msg=msg, timeout=None)
 
 
     async def edit_bot(self):
@@ -326,4 +331,4 @@ class BotActions():
         )
         msg = {"content": "", "embed": edit_embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": []}
         if not self.system_bot:
-            await redis_ipc_new(redis_db, "SENDMSG", msg=msg, timeout=None)
+            await redis_ipc_new(self.redis, "SENDMSG", msg=msg, timeout=None)

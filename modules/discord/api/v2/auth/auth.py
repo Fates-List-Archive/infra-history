@@ -1,4 +1,5 @@
 
+import itsdangerous
 from modules.core import *
 
 from ..base import API_VERSION
@@ -6,6 +7,7 @@ from .models import (BaseUser, Login, LoginBan,
                      LoginInfo, LoginResponse, OAuthInfo)
 from itsdangerous import URLSafeSerializer
 from fastapi import Response
+import base64
 
 router = APIRouter(
     prefix = f"/api/v{API_VERSION}",
@@ -130,36 +132,71 @@ async def login_user(request: Request, response: Response, data: Login, worker_s
     )
 
     if request.headers.get("Frostpaw"):
-        auth_s = URLSafeSerializer(request.app.state.rl_key, "auth")
-        login_token = auth_s.dumps({"token": token, "user": user.dict(), "site_lang": site_lang, "css": css})
-        cookie = {"Set-Cookie": f"sunbeam-session={login_token}; max-age={60*60*8}; Secure; Path=/; SameSite=Lax; HttpOnly; Domain=fateslist.xyz;"}
-    else:
-        cookie = {}
+        key = get_token(101)
+        login_token_tss = orjson.dumps({"token": token, "user": user.dict(), "site_lang": site_lang, "css": css, "nonce": key})
 
-    return api_success(
-        user = user.dict(),
-        token = token,
-        css = css,
-        state = state,
-        js_allowed = js_allowed,
-        access_token = access_token,
-        banned = False,
-        scopes = data.scopes,
-        site_lang = site_lang,
-        headers=cookie
-    )
+        response.set_cookie(
+            key="sunbeam-session:warriorcats", 
+            value=base64.b64encode(login_token_tss).decode(), 
+            max_age=60*60*8, 
+            httponly=True, 
+            samesite="strict", 
+            secure=True,
+            domain="fateslist.xyz",
+            path="/"
+        )
 
-@router.get("/jwtparse/_sunbeam")
-def jwt_parse_sunbeam(request: Request, jwt: str):
-    try:
-        auth_s = URLSafeSerializer(request.app.state.rl_key, "auth")
-        return auth_s.loads(jwt)
-    except:
-        return abort(400)
+        response.set_cookie(
+            key="sunbeam-key", 
+            value=key, 
+            max_age=60*60*8, 
+            httponly=True, 
+            samesite="lax", 
+            secure=True,
+            domain="fateslist.xyz",
+            path="/"
+        )
+        #cookie = {"Set-Cookie": f"sunbeam-session={login_token}; max-age={60*60*8}; Secure; Path=/; SameSite=Lax; HttpOnly; Domain=fateslist.xyz;"}
+
+    return {
+        "done": True,
+        "reason": None,
+        "user": user.dict(),
+        "token": token,
+        "css": css,
+        "state": state,
+        "js_allowed": js_allowed,
+        "access_token": access_token,
+        "banned": False,
+        "scopes": data.scopes,
+        "site_lang": site_lang,
+    }
 
 @router.post("/logout/_sunbeam")
 def logout_sunbeam(request: Request, response: Response):
     if not request.headers.get("Frostpaw"):
         return abort(404)
-    cookie = {"Set-Cookie": "sunbeam-session=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; Path=/; SameSite=Lax; HttpOnly; Domain=fateslist.xyz;"}
-    return api_success(headers=cookie)
+    
+    response.set_cookie(
+        key="sunbeam-key", 
+        value="0", 
+        expires="Thu, 01 Jan 1970 00:00:00 GMT", 
+        httponly=True, 
+        samesite="lax", 
+        secure=True,
+        domain="fateslist.xyz",
+        path="/"
+    )
+
+    response.set_cookie(
+        key="sunbeam-session:warriorcats", 
+        value="0", 
+        expires="Thu, 01 Jan 1970 00:00:00 GMT", 
+        httponly=True, 
+        samesite="lax", 
+        secure=True,
+        domain="fateslist.xyz",
+        path="/"
+    )
+
+    return {}
