@@ -10,9 +10,20 @@ import (
 )
 
 type GithubWebhook struct {
-	Ref    string `json:"ref"`
-	Action string `json:"action"`
-	Repo   struct {
+	Ref     string `json:"ref"`
+	Action  string `json:"action"`
+	Commits []struct {
+		ID        string `json:"id"`
+		Message   string `json:"message"`
+		Timestamp string `json:"timestamp"`
+		URL       string `json:"url"`
+		Author    struct {
+			Name     string `json:"name"`
+			Email    string `json:"email"`
+			Username string `json:"username"`
+		} `json:"author"`
+	}
+	Repo struct {
 		ID          int    `json:"id"`
 		Name        string `json:"name"`
 		FullName    string `json:"full_name"`
@@ -29,6 +40,19 @@ type GithubWebhook struct {
 		HTMLURL    string `json:"html_url"`
 		CommitsURL string `json:"commits_url"`
 	} `json:"repository"`
+	Pusher struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	} `json:"pusher,omitempty"`
+	HeadCommit struct {
+		ID      string `json:"id"`
+		Message string `json:"message"`
+		Author  struct {
+			Name     string `json:"name"`
+			Email    string `json:"email"`
+			Username string `json:"username"`
+		} `json:"author,omitempty"`
+	} `json:"head_commit,omitempty"`
 }
 
 type StaffRole struct {

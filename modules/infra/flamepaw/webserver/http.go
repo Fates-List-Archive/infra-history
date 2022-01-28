@@ -116,14 +116,32 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			return
 		}*/
 
-		messageSend := discordgo.MessageSend{
-			Content: "**Action: " + header + "**",
-			TTS:     false,
-			File: &discordgo.File{
-				Name:        "gh-event.txt",
-				ContentType: "application/octet-stream",
-				Reader:      strings.NewReader(spew.Sdump(gh)),
-			},
+		var messageSend discordgo.MessageSend
+
+		if header == "push" {
+			var commitList string
+			for _, commit := range gh.Commits {
+				commitList += commit.Message + "(" + commit.ID + ")\n"
+			}
+
+			messageSend = discordgo.MessageSend{
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Title:       "Push on:" + gh.Repo.FullName,
+						Description: commitList,
+					},
+				},
+			}
+		} else {
+			messageSend = discordgo.MessageSend{
+				Content: "**Action: " + header + "**",
+				TTS:     false,
+				File: &discordgo.File{
+					Name:        "gh-event.txt",
+					ContentType: "application/octet-stream",
+					Reader:      strings.NewReader(spew.Sdump(gh)),
+				},
+			}
 		}
 
 		common.DiscordMain.ChannelMessageSendComplex("836337073618812928", &messageSend)
