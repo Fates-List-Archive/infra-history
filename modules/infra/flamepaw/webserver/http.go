@@ -12,8 +12,10 @@ import (
 	"flamepaw/types"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
@@ -96,6 +98,40 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 
 	router.GET("/__stats", func(c *gin.Context) {
 		c.String(200, spew.Sdump(hub.clients))
+	})
+
+	router.POST("/github", func(c *gin.Context) {
+		var gh types.GithubWebhook
+		err := c.BindJSON(&gh)
+		if err != nil {
+			log.Error(err)
+			c.JSON(400, apiReturn(false, err, nil))
+			return
+		}
+
+		if gh.Ref != "refs/heads/master" && gh.Ref != "refs/heads/main" {
+			c.JSON(200, apiReturn(true, "Not master branch", nil))
+			return
+		}
+
+		/*if gh.Repo.FullName != "" {
+			c.JSON(200, apiReturn(true, "Not Flamepaw/Dragon", nil))
+			return
+		}*/
+
+		messageSend := discordgo.MessageSend{
+			Content: "**Action: " + gh.Action + "**",
+			TTS:     false,
+			File: &discordgo.File{
+				Name:        "gh-event.txt",
+				ContentType: "application/octet-stream",
+				Reader:      strings.NewReader(spew.Sdump(gh)),
+			},
+		}
+
+		common.DiscordMain.ChannelMessageSendComplex("836337073618812928", &messageSend)
+
+		c.JSON(200, apiReturn(true, nil, nil))
 	})
 
 	router.OPTIONS("/bots/:id/votes", func(c *gin.Context) {

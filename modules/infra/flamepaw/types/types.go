@@ -9,6 +9,28 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+type GithubWebhook struct {
+	Ref    string `json:"ref"`
+	Action string `json:"action"`
+	Repo   struct {
+		ID          int    `json:"id"`
+		Name        string `json:"name"`
+		FullName    string `json:"full_name"`
+		Description string `json:"description"`
+		URL         string `json:"url"`
+		Owner       struct {
+			Login            string `json:"login"`
+			ID               int    `json:"id"`
+			AvatarURL        string `json:"avatar_url"`
+			URL              string `json:"url"`
+			HTMLURL          string `json:"html_url"`
+			OrganizationsURL string `json:"organizations_url"`
+		} `json:"owner"`
+		HTMLURL    string `json:"html_url"`
+		CommitsURL string `json:"commits_url"`
+	} `json:"repository"`
+}
+
 type StaffRole struct {
 	ID           string  `json:"id"`
 	StaffID      string  `json:"staff_id"`
