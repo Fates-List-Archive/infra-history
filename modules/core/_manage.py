@@ -226,6 +226,24 @@ def site_enum2html():
 
     print(base_md + "\n" + "\n\n".join(md_out))
 
+def site_getdragondocs():
+    """Gets the dragon docs"""
+    async def _docs():
+        import builtins
+        from fastapi import FastAPI # IPC needs it
+        builtins.app = FastAPI()
+        builtins.app.state.worker_session = FastAPI()
+        builtins.app.state.worker_session.ipc_up = True
+        import aioredis
+        redis = aioredis.from_url("redis://localhost:1001", db=1)
+        from modules.core.ipc import redis_ipc_new
+        docs = await redis_ipc_new(redis, "DOCS")
+        print(docs.decode())
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(_docs())
+
 
 def site_reload():
     """Get the PID of the running site and reloads the site"""

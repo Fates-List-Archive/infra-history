@@ -7,10 +7,15 @@
 package webserver
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flamepaw/common"
 	"flamepaw/types"
 	"fmt"
+	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +34,25 @@ import (
 )
 
 var logger = log.New()
+
+var Docs string = "# Flamepaw\nFlamepaw is internally used by the bot to provide a RESTful API for tasks requiring high concurrency.\n\n"
+
+// Given name and docs,
+func document(method, route, name, docs string, reqBody interface{}, resBody interface{}) {
+	Docs += "## " + strings.Title(strings.ReplaceAll(name, "_", " ")) + "\n\n"
+	Docs += "#### " + strings.ToUpper(method) + " " + route + "\n"
+	Docs += "**Description:** " + docs + "\n\n"
+	var body, err = json.MarshalIndent(resBody, "", "\t")
+	if err != nil {
+		body = []byte("No documentation available")
+	}
+	var ibody, err2 = json.MarshalIndent(reqBody, "", "\t")
+	if err2 != nil {
+		body = []byte("No documentation available")
+	}
+	Docs += "**Request Body:**\n```json\n" + string(ibody) + "\n```\n\n"
+	Docs += "**Response Body:**\n```json\n" + string(body) + "\n```\n\n"
+}
 
 func apiReturn(done bool, reason interface{}, context interface{}) gin.H {
 	if reason == "EOF" {
@@ -96,16 +120,43 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 	})
 	router := r.Group("/api/dragon")
 
+	document("GET", "/api/dragon/ping", "ping_server", "Ping the server", nil, types.APIResponse{})
+	router.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, apiReturn(true, nil, nil))
+	})
+
+	document("GET", "/api/dragon/__stats", "get_stats", "Get stats of websocket server", nil, nil)
 	router.GET("/__stats", func(c *gin.Context) {
 		c.String(200, spew.Sdump(hub.clients))
 	})
 
+	document("POST", "/api/dragon/github", "github_webhook", "Post to github webhook. Needs authorization", types.GithubWebhook{}, types.APIResponse{})
 	router.POST("/github", func(c *gin.Context) {
+		var bodyBytes []byte
+		if c.Request.Body != nil {
+			bodyBytes, _ = ioutil.ReadAll(c.Request.Body)
+		}
+
+		// Restore the io.ReadCloser to its original state
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		var signature = c.Request.Header.Get("X-Hub-Signature-256")
+
+		mac := hmac.New(sha256.New, []byte(common.GHWebhookSecret))
+		mac.Write([]byte(bodyBytes))
+		expected := hex.EncodeToString(mac.Sum(nil))
+
+		if "sha256="+expected != signature {
+			log.Error(expected + " " + signature + " ")
+			c.JSON(401, apiReturn(false, "Invalid signature", nil))
+			return
+		}
+
 		var gh types.GithubWebhook
 		err := c.BindJSON(&gh)
 		if err != nil {
 			log.Error(err)
-			c.JSON(400, apiReturn(false, err, nil))
+			c.JSON(400, apiReturn(false, err.Error(), nil))
 			return
 		}
 
@@ -189,6 +240,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		c.JSON(200, apiReturn(true, nil, nil))
 	})
 
+	document("OPTIONS", "/api/dragon/bots/:id/votes", "vote_bot", "Creates a vote for a bot. Needs authorization. This is the CORS code", nil, nil)
 	router.OPTIONS("/bots/:id/votes", func(c *gin.Context) {
 		var origin string = c.GetHeader("Origin")
 		var ref string = c.GetHeader("Referer")
@@ -204,6 +256,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		c.Header("Access-Control-Allow-Credentials", "true")
 	})
 
+	document("PATCH", "/api/dragon/bots/:id/votes", "vote_bot", "Creates a vote for a bot. Needs authorization. This is the actual route", types.UserVote{}, types.APIResponse{})
 	router.PATCH("/bots/:id/votes", func(c *gin.Context) {
 		var origin string = c.GetHeader("Origin")
 		if origin == "" {
@@ -345,6 +398,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		}
 	})
 
+	document("WS", "/api/dragon/ws", "websocket", "The websocket gateway for Fates List", nil, nil)
 	router.GET("/ws", func(c *gin.Context) {
 		serveWs(hub, c.Writer, c.Request)
 	})
@@ -354,5 +408,4 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		log.Fatal("could not start listening: ", err)
 		return
 	}
-
 }

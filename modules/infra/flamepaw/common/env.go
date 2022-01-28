@@ -33,6 +33,7 @@ var (
 	MainBotToken        string
 	ServerBotToken      string
 	ClientSecret        string
+	GHWebhookSecret     string
 	JAPIKey             string
 	MainServer          string
 	TestServer          string
@@ -92,6 +93,7 @@ func init() {
 	ClientSecret = fastjson.GetString(secretsJson, "client_secret")
 	ServerBotToken = fastjson.GetString(secretsJson, "token_server")
 	JAPIKey = fastjson.GetString(secretsJson, "japi_key")
+	GHWebhookSecret = fastjson.GetString(secretsJson, "gh_webhook_secret")
 
 	var p fastjson.Parser
 

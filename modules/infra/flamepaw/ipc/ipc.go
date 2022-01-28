@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flamepaw/common"
 	"flamepaw/types"
+	"flamepaw/webserver"
 	"os"
 	"strconv"
 	"strings"
@@ -385,6 +386,13 @@ func setupCommands() {
 	ipcActions["CMDLIST"] = types.IPCCommand{
 		Handler: func(cmd []string, context types.IPCContext) string {
 			return spew.Sdump("IPC Commands loaded: ", ipcActions)
+		},
+	}
+
+	// DOCS
+	ipcActions["DOCS"] = types.IPCCommand{
+		Handler: func(cmd []string, context types.IPCContext) string {
+			return webserver.Docs
 		},
 	}
 

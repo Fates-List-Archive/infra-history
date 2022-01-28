@@ -64,6 +64,12 @@ type GithubWebhook struct {
 	} `json:"head_commit,omitempty"`
 }
 
+type APIResponse struct {
+	Done    bool        `json:"done"`
+	Reason  *string     `json:"reason"`
+	Context interface{} `json:"context"`
+}
+
 type StaffRole struct {
 	ID           string  `json:"id"`
 	StaffID      string  `json:"staff_id"`
