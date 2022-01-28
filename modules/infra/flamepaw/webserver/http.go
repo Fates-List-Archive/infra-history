@@ -128,6 +128,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 				Embeds: []*discordgo.MessageEmbed{
 					{
 						Color: 0x00ff1a,
+						URL:   gh.Repo.URL,
 						Title: "Push on: " + gh.Repo.FullName,
 						Fields: []*discordgo.MessageEmbedField{
 							{
@@ -141,6 +142,31 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 							{
 								Name:  "Pusher",
 								Value: "[" + "" + gh.Pusher.Name + "]" + "(" + "https://github.com/" + gh.Pusher.Name + ")",
+							},
+						},
+					},
+				},
+			}
+		} else if header == "star" {
+			var color int
+			var title string
+			if gh.Action == "created" {
+				color = 0x00ff1a
+				title = "Starred: " + gh.Repo.FullName
+			} else {
+				color = 0xff0000
+				title = "Unstarred: " + gh.Repo.FullName
+			}
+			messageSend = discordgo.MessageSend{
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Color: color,
+						URL:   gh.Repo.URL,
+						Title: title,
+						Fields: []*discordgo.MessageEmbedField{
+							{
+								Name:  "User",
+								Value: "[" + gh.Sender.Login + "]" + "(" + gh.Sender.HTMLURL + ")",
 							},
 						},
 					},

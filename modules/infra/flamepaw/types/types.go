@@ -45,6 +45,14 @@ type GithubWebhook struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
 	} `json:"pusher,omitempty"`
+	Sender struct {
+		Login            string `json:"login"`
+		ID               int    `json:"id"`
+		AvatarURL        string `json:"avatar_url"`
+		URL              string `json:"url"`
+		HTMLURL          string `json:"html_url"`
+		OrganizationsURL string `json:"organizations_url"`
+	} `json:"sender,omitempty"`
 	HeadCommit struct {
 		ID      string `json:"id"`
 		Message string `json:"message"`
