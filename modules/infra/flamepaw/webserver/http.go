@@ -109,13 +109,15 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			return
 		}
 
+		var header = c.Request.Header.Get("X-GitHub-Event")
+
 		/*if gh.Repo.FullName != "" {
 			c.JSON(200, apiReturn(true, "Not Flamepaw/Dragon", nil))
 			return
 		}*/
 
 		messageSend := discordgo.MessageSend{
-			Content: "**Action: " + gh.Action + "**",
+			Content: "**Action: " + header + "**",
 			TTS:     false,
 			File: &discordgo.File{
 				Name:        "gh-event.txt",
