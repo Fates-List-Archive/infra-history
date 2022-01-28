@@ -195,7 +195,7 @@ class _SelectAgeCallback(discord.ui.Select):
         self.questions = StaffQuestionList([
             StaffQuestion(
                 id="tz",
-                question="Please DM me your timezone (the 3 letter code) to start your staff application. **By continuing, you agree that staff applications are public for voting**",
+                question="Please DM me your timezone (the 3 letter code) to start your staff application. **By continuing, you agree that staff applications could be made public**",
                 check=lambda m: self.app_check(m) and m.content.isalpha(),
                 parser=lambda m: m.content.upper(),
                 minlength=3,
