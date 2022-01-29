@@ -83,14 +83,6 @@ async def login_user(request: Request, response: Response, data: Login, worker_s
         state = enums.UserState(user_info["state"])
         if state.__sitelock__:
             ban_data = bans_data[str(state.value)]
-            ban_token = get_token(91)
-            await redis.set(ban_token, orjson.dumps(
-                {
-                    "username": userjson["username"],
-                    "id": userjson["id"],
-                    "state": state.value
-                }
-            ), ex=60*10)
             return api_error(
                 "You have been banned from Fates List",
                 banned = True,
@@ -98,7 +90,6 @@ async def login_user(request: Request, response: Response, data: Login, worker_s
                     type = ban_data["type"],
                     desc = ban_data["desc"],
                 ),
-                token = ban_token,
                 state = state,
                 status_code = 403
             )
@@ -132,8 +123,7 @@ async def login_user(request: Request, response: Response, data: Login, worker_s
     )
 
     if request.headers.get("Frostpaw"):
-        key = get_token(101)
-        login_token_tss = orjson.dumps({"token": token, "user": user.dict(), "site_lang": site_lang, "css": css, "nonce": key})
+        login_token_tss = orjson.dumps({"token": token, "user": user.dict(), "site_lang": site_lang, "css": css})
 
         response.set_cookie(
             key="sunbeam-session:warriorcats", 
@@ -146,30 +136,11 @@ async def login_user(request: Request, response: Response, data: Login, worker_s
             path="/"
         )
 
-        response.set_cookie(
-            key="sunbeam-key", 
-            value=key, 
-            max_age=60*60*8, 
-            httponly=True, 
-            samesite="lax", 
-            secure=True,
-            domain="fateslist.xyz",
-            path="/"
-        )
-        #cookie = {"Set-Cookie": f"sunbeam-session={login_token}; max-age={60*60*8}; Secure; Path=/; SameSite=Lax; HttpOnly; Domain=fateslist.xyz;"}
-
     return {
         "done": True,
         "reason": None,
-        "user": user.dict(),
-        "token": token,
-        "css": css,
         "state": state,
-        "js_allowed": js_allowed,
-        "access_token": access_token,
         "banned": False,
-        "scopes": data.scopes,
-        "site_lang": site_lang,
     }
 
 @router.post("/logout/_sunbeam")

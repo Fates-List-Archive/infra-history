@@ -25,21 +25,5 @@ class LoginBan(BaseModel):
     desc: str
 
 class LoginResponse(APIResponse):
-    user: BaseUser = BaseUser(
-        id = "0", 
-        username = "Unknown", 
-        avatar = "Unknown", 
-        disc = "0000", 
-        status = 0, 
-        bot = False
-    )
     ban: LoginBan = LoginBan(type = "Unknown", desc = "Unknown Ban Type")
     banned: bool = False
-    token: str = None
-    css: str | None = None
-    state: enums.UserState = None
-    js_allowed: bool = False
-    access_token: AccessToken = AccessToken(access_token = "", refresh_token = "", expires_in = 0, current_time = 0)
-    redirect: str = "/"
-    scopes: list[str]
-    site_lang: str = "default"
