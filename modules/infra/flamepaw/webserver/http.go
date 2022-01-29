@@ -179,7 +179,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 							Name:    gh.Sender.Login,
 							IconURL: gh.Sender.AvatarURL,
 						},
-						Title: "Push on: " + gh.Repo.FullName,
+						Title: "Push on " + gh.Repo.FullName,
 						Fields: []*discordgo.MessageEmbedField{
 							{
 								Name:  "Branch",
@@ -248,7 +248,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 							Name:    gh.Sender.Login,
 							IconURL: gh.Sender.AvatarURL,
 						},
-						Title: "Issue " + gh.Action + " on: " + gh.Repo.FullName + " (#" + strconv.Itoa(gh.Issue.Number) + ")",
+						Title: fmt.Sprintf("Issue %s on %s (#%d)", gh.Action, gh.Repo.FullName, gh.Issue.Number),
 						Fields: []*discordgo.MessageEmbedField{
 							{
 								Name:  "Action",
@@ -256,7 +256,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 							},
 							{
 								Name:  "User",
-								Value: "[" + gh.Sender.Login + "]" + "(" + gh.Sender.HTMLURL + ")",
+								Value: fmt.Sprintf("[%s](%s)", gh.Sender.Login, gh.Sender.HTMLURL),
 							},
 							{
 								Name:  "Title",
@@ -296,7 +296,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 							Name:    gh.Sender.Login,
 							IconURL: gh.Sender.AvatarURL,
 						},
-						Title: "Pull Request " + gh.Action + " on: " + gh.Repo.FullName + " (#" + strconv.Itoa(gh.PullRequest.Number) + ")",
+						Title: fmt.Sprintf("Pull Request %s on %s (#%d)", gh.Action, gh.Repo.FullName, gh.PullRequest.Number),
 						Fields: []*discordgo.MessageEmbedField{
 							{
 								Name:  "Action",
@@ -304,7 +304,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 							},
 							{
 								Name:  "User",
-								Value: "[" + gh.Sender.Login + "]" + "(" + gh.Sender.HTMLURL + ")",
+								Value: fmt.Sprintf("[%s](%s)", gh.Sender.Login, gh.Sender.HTMLURL),
 							},
 							{
 								Name:  "Title",
@@ -316,7 +316,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 							},
 							{
 								Name:  "More Information",
-								Value: "**Base Ref**:" + gh.PullRequest.Base.Ref + "\n**Base Label**:" + gh.PullRequest.Base.Label + "\n\n**Head Ref**:" + gh.PullRequest.Head.Ref + "\n**Head Label**:" + gh.PullRequest.Head.Label,
+								Value: fmt.Sprintf("**Base Ref:** %s\n**Base Label:** %s\n**Head Ref:** %s\n**Head Label:** %s", gh.PullRequest.Base.Ref, gh.PullRequest.Base.Label, gh.PullRequest.Head.Ref, gh.PullRequest.Head.Label),
 							},
 						},
 					},
@@ -348,11 +348,11 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 							Name:    gh.Sender.Login,
 							IconURL: gh.Sender.AvatarURL,
 						},
-						Title: "New Comment on: " + gh.Repo.FullName + " (#" + strconv.Itoa(gh.Issue.Number) + ")",
+						Title: fmt.Sprintf("Comment on %s (#%d) %s", gh.Repo.FullName, gh.Issue.Number, gh.Action),
 						Fields: []*discordgo.MessageEmbedField{
 							{
 								Name:  "User",
-								Value: "[" + gh.Sender.Login + "]" + "(" + gh.Sender.HTMLURL + ")",
+								Value: fmt.Sprintf("[%s](%s)", gh.Sender.Login, gh.Sender.HTMLURL),
 							},
 							{
 								Name:  "Title",
@@ -392,11 +392,11 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 							Name:    gh.Sender.Login,
 							IconURL: gh.Sender.AvatarURL,
 						},
-						Title: "Pull Request Review Comment on: " + gh.Repo.FullName + " (#" + strconv.Itoa(gh.PullRequest.Number) + ")",
+						Title: "Pull Request Review Comment on " + gh.Repo.FullName + " (#" + strconv.Itoa(gh.PullRequest.Number) + ")",
 						Fields: []*discordgo.MessageEmbedField{
 							{
 								Name:  "User",
-								Value: "[" + gh.Sender.Login + "]" + "(" + gh.Sender.HTMLURL + ")",
+								Value: fmt.Sprintf("[%s](%s)", gh.Sender.Login, gh.Sender.HTMLURL),
 							},
 							{
 								Name:  "Title",
