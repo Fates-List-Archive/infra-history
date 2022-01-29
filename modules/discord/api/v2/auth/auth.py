@@ -51,7 +51,7 @@ async def login_user(request: Request, response: Response, data: Login, worker_s
         userjson = await oauth.discord.get_user_json(access_token)
         if not userjson or not userjson.get("id"):
             raise ValueError("Invalid user json. Please contact Fates List Staff")
-            
+        
     except Exception as exc:
         return api_error(
             str(exc),
