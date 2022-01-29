@@ -162,17 +162,12 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 
 		var header = c.Request.Header.Get("X-GitHub-Event")
 
-		/*if gh.Repo.FullName != "" {
-			c.JSON(200, apiReturn(true, "Not Flamepaw/Dragon", nil))
-			return
-		}*/
-
 		var messageSend discordgo.MessageSend
 
 		if header == "push" {
 			var commitList string
 			for _, commit := range gh.Commits {
-				commitList += commit.Message + " [" + commit.ID + "](" + commit.URL + ") (" + commit.Author.Username + ")\n"
+				commitList += commit.Message + " [" + commit.ID + "](" + commit.URL + ") | [" + commit.Author.Username + "](https://github.com/" + commit.Author.Username + ")\n"
 			}
 
 			messageSend = discordgo.MessageSend{
@@ -180,6 +175,10 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 					{
 						Color: 0x00ff1a,
 						URL:   gh.Repo.URL,
+						Author: &discordgo.MessageEmbedAuthor{
+							Name:    gh.Sender.Login,
+							IconURL: gh.Sender.AvatarURL,
+						},
 						Title: "Push on: " + gh.Repo.FullName,
 						Fields: []*discordgo.MessageEmbedField{
 							{
@@ -223,6 +222,194 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 					},
 				},
 			}
+		} else if header == "issues" {
+			var body string = gh.Issue.Body
+			if len(gh.Issue.Body) > 1000 {
+				body = gh.Issue.Body[:1000]
+			}
+
+			if body == "" {
+				body = "No description available"
+			}
+
+			var color int
+			if gh.Action == "deleted" || gh.Action == "unpinned" {
+				color = 0xff0000
+			} else {
+				color = 0x00ff1a
+			}
+
+			messageSend = discordgo.MessageSend{
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Color: color,
+						URL:   gh.Issue.HTMLURL,
+						Author: &discordgo.MessageEmbedAuthor{
+							Name:    gh.Sender.Login,
+							IconURL: gh.Sender.AvatarURL,
+						},
+						Title: "Issue " + gh.Action + " on: " + gh.Repo.FullName + " (#" + strconv.Itoa(gh.Issue.Number) + ")",
+						Fields: []*discordgo.MessageEmbedField{
+							{
+								Name:  "Action",
+								Value: gh.Action,
+							},
+							{
+								Name:  "User",
+								Value: "[" + gh.Sender.Login + "]" + "(" + gh.Sender.HTMLURL + ")",
+							},
+							{
+								Name:  "Title",
+								Value: gh.Issue.Title,
+							},
+							{
+								Name:  "Body",
+								Value: body,
+							},
+						},
+					},
+				},
+			}
+		} else if header == "pull_request" {
+			var body string = gh.PullRequest.Body
+			if len(gh.PullRequest.Body) > 1000 {
+				body = gh.PullRequest.Body[:1000]
+			}
+
+			if body == "" {
+				body = "No description available"
+			}
+
+			var color int
+			if gh.Action == "closed" {
+				color = 0xff0000
+			} else {
+				color = 0x00ff1a
+			}
+
+			messageSend = discordgo.MessageSend{
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Color: color,
+						URL:   gh.PullRequest.HTMLURL,
+						Author: &discordgo.MessageEmbedAuthor{
+							Name:    gh.Sender.Login,
+							IconURL: gh.Sender.AvatarURL,
+						},
+						Title: "Pull Request " + gh.Action + " on: " + gh.Repo.FullName + " (#" + strconv.Itoa(gh.PullRequest.Number) + ")",
+						Fields: []*discordgo.MessageEmbedField{
+							{
+								Name:  "Action",
+								Value: gh.Action,
+							},
+							{
+								Name:  "User",
+								Value: "[" + gh.Sender.Login + "]" + "(" + gh.Sender.HTMLURL + ")",
+							},
+							{
+								Name:  "Title",
+								Value: gh.PullRequest.Title,
+							},
+							{
+								Name:  "Body",
+								Value: body,
+							},
+							{
+								Name:  "More Information",
+								Value: "**Base Ref**:" + gh.PullRequest.Base.Ref + "\n**Base Label**:" + gh.PullRequest.Base.Label + "\n\n**Head Ref**:" + gh.PullRequest.Head.Ref + "\n**Head Label**:" + gh.PullRequest.Head.Label,
+							},
+						},
+					},
+				},
+			}
+		} else if header == "issue_comment" {
+			var body string = gh.Issue.Body
+			if len(gh.Issue.Body) > 1000 {
+				body = gh.Issue.Body[:1000]
+			}
+
+			if body == "" {
+				body = "No description available"
+			}
+
+			var color int
+			if gh.Action == "deleted" {
+				color = 0xff0000
+			} else {
+				color = 0x00ff1a
+			}
+
+			messageSend = discordgo.MessageSend{
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Color: color,
+						URL:   gh.Issue.HTMLURL,
+						Author: &discordgo.MessageEmbedAuthor{
+							Name:    gh.Sender.Login,
+							IconURL: gh.Sender.AvatarURL,
+						},
+						Title: "New Comment on: " + gh.Repo.FullName + " (#" + strconv.Itoa(gh.Issue.Number) + ")",
+						Fields: []*discordgo.MessageEmbedField{
+							{
+								Name:  "User",
+								Value: "[" + gh.Sender.Login + "]" + "(" + gh.Sender.HTMLURL + ")",
+							},
+							{
+								Name:  "Title",
+								Value: gh.Issue.Title,
+							},
+							{
+								Name:  "Body",
+								Value: body,
+							},
+						},
+					},
+				},
+			}
+		} else if header == "pull_request_review_comment" {
+			var body string = gh.PullRequest.Body
+			if len(gh.PullRequest.Body) > 1000 {
+				body = gh.PullRequest.Body[:1000]
+			}
+
+			if body == "" {
+				body = "No description available"
+			}
+
+			var color int
+			if gh.Action == "deleted" {
+				color = 0xff0000
+			} else {
+				color = 0x00ff1a
+			}
+
+			messageSend = discordgo.MessageSend{
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Color: color,
+						URL:   gh.PullRequest.HTMLURL,
+						Author: &discordgo.MessageEmbedAuthor{
+							Name:    gh.Sender.Login,
+							IconURL: gh.Sender.AvatarURL,
+						},
+						Title: "Pull Request Review Comment on: " + gh.Repo.FullName + " (#" + strconv.Itoa(gh.PullRequest.Number) + ")",
+						Fields: []*discordgo.MessageEmbedField{
+							{
+								Name:  "User",
+								Value: "[" + gh.Sender.Login + "]" + "(" + gh.Sender.HTMLURL + ")",
+							},
+							{
+								Name:  "Title",
+								Value: gh.PullRequest.Title,
+							},
+							{
+								Name:  "Body",
+								Value: body,
+							},
+						},
+					},
+				},
+			}
 		} else {
 			messageSend = discordgo.MessageSend{
 				Content: "**Action: " + header + "**",
@@ -235,7 +422,13 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			}
 		}
 
-		common.DiscordMain.ChannelMessageSendComplex(common.GithubChannel, &messageSend)
+		_, err = common.DiscordMain.ChannelMessageSendComplex(common.GithubChannel, &messageSend)
+
+		if err != nil {
+			log.Error(err)
+			c.JSON(400, apiReturn(false, "Error sending message: "+err.Error(), nil))
+			return
+		}
 
 		c.JSON(200, apiReturn(true, nil, nil))
 	})
