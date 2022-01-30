@@ -521,7 +521,8 @@ async def search_list(request: Request, q: str):
     return data
 
 @router.get("/search/tags", response_model=TagSearch, dependencies=[])
-async def search_by_tag(request: Request, tag: str,
+async def search_by_tag(request: Request, 
+                        tag: str,
                         target_type: enums.SearchType):
     if target_type == enums.SearchType.bot:
         fetch = await db.fetch(

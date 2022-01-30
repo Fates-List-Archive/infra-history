@@ -91,6 +91,7 @@ class Search(BaseModel):
 
 class TagSearch(BaseModel):
     search_res: list
+    tags_fixed: FLTags
 
 class PartnerLinks(BaseModel):
     discord: str
