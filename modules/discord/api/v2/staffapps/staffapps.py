@@ -22,6 +22,13 @@ staff_app_questions = StaffAppQuestions(
             maxlength=3
         ),
         StaffAppQuestion(
+            id="age",
+            title="Age",
+            question="What is your age? Just the number Do not lie, we will investigate and find out!",
+            minlength=2,
+            maxlength=3,
+        ),
+        StaffAppQuestion(
             id="exp",
             title="Your Experience",
             question="Do you have experience being a bot reviewer? If so, from where and how long/much experience do you have? How confident are you at handling bots?",
@@ -56,7 +63,7 @@ staff_app_questions = StaffAppQuestions(
             title="Agreements",
             question="Do you understand that being staff here is a privilege and that you may demoted without warning based on your performance.",
             minlength=10,
-            maxlength=30
+            maxlength=50
         ),
     ]
 )
@@ -73,7 +80,10 @@ async def get_staff_app_questions(request: Request):
     ],
 )
 async def post_staff_app(request: Request, app: StaffAppCreate, user_id: int):
-    staff_app = ""
+    user = await get_user(user_id)
+    if not user:
+        return abort(404)
+    staff_app = f"User ID: {user_id}\nUsername: {user['username']}#{user['disc']}\n\n"
     for question in staff_app_questions.questions:
         if question.id not in app.answers:
             return api_error(f"Missing answer for question {question.id}")
@@ -86,13 +96,13 @@ async def post_staff_app(request: Request, app: StaffAppCreate, user_id: int):
                 return api_error(f"Answer for question {question.id} is not a valid timezone")
             app.answers[question.id] = app.answers[question.id].upper()
 
-        staff_app += f"{question.title} ({question.id}): {app.answers[question.id]}\n"
+        staff_app += f"{question.title} ({question.id}) [{question.question}]: {app.answers[question.id]}\n\n"
 
     await redis_ipc_new(
         request.app.state.worker_session.redis, 
         "SENDMSG", 
         msg = {
-            "content": f"**New Staff Application** <@{staff_ping_add_role}>", 
+            "content": f"**New Staff Application** <@&{staff_ping_add_role}>", 
             "file_name": f"staffapp-{user_id}.txt", 
             "file_content": staff_app, 
             "channel_id": str(staff_apps_channel),
