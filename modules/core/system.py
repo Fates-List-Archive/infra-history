@@ -170,7 +170,7 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
             response.headers[acac] = "false"
         
         response.headers[acam] = self.cors_allowed
-        if response.status_code == 405:
+        if response.status_code in (404, 405):
             if request.method == "OPTIONS" and is_api:
                 response.status_code = 200
                 response.headers["Allow"] = self.cors_allowed

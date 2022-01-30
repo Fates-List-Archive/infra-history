@@ -300,12 +300,16 @@ async def transfer_bot_ownership(
     ],
     operation_id="appeal_bot"
 )
-async def appeal_bot(request: Request, bot_id: int, data: BotAppeal):
-    if len(data.appeal) < 7:
+async def appeal_bot(request: Request, user_id: int, bot_id: int, data: BotAppeal):
+    if len(data.appeal) < 7 or len(data.appeal) > 2000:
         return api_error(
-            "Appeal must be at least 7 characters long"
+            "Appeals must be at least 7 characters long and maximum 2000 characters long"
         )
     db = request.app.state.worker_session.postgres
+
+    check = await is_bot_admin(bot_id, user_id) # Check for owner
+    if not check:
+        return api_error("You aren't the owner of this bot.")
 
     check = await db.fetchrow("SELECT state, flags FROM bots WHERE bot_id = $1", bot_id)
     state = check["state"]
@@ -325,12 +329,76 @@ async def appeal_bot(request: Request, bot_id: int, data: BotAppeal):
     if flags_check(flags, enums.BotFlag.staff_locked):
         return api_error("You cannot send an appeal for a bot that is staff locked")
 
+
+
     resubmit_embed = discord.Embed(title=title, color=0x00ff00)
     bot = await get_bot(bot_id)
     resubmit_embed.add_field(name="Username", value = bot['username'])
     resubmit_embed.add_field(name="Bot ID", value = str(bot_id))
     resubmit_embed.add_field(name="Resubmission", value = str(state == enums.BotState.denied))
     resubmit_embed.add_field(name=appeal_title, value = data.appeal)
+    msg = {"content": f"<@&{staff_ping_add_role}>", "embed": resubmit_embed.to_dict(), "channel_id": str(appeals_channel), "mention_roles": [str(staff_ping_add_role)]}
+    await redis_ipc_new(request.app.state.worker_session.redis, "SENDMSG", msg=msg, timeout=None)
+    return api_success()
+
+@router.post(
+    "/{user_id}/bots/{bot_id}/certification",
+    response_model=APIResponse,
+    dependencies=[
+        Depends(
+            Ratelimiter(
+                global_limit = Limit(times=5, minutes=1)
+            )
+        ),
+        Depends(user_auth_check)
+    ],
+    operation_id="certify_bot_request"
+)
+async def certify_bot_request(request: Request, bot_id: int, user_id: int, data: BotAppeal):
+    if len(data.appeal) < 7 or len(data.appeal) > 2000:
+        return api_error(
+            "Messages must be at least 7 characters long and maximum 2000 characters long"
+        )
+
+    db = request.app.state.worker_session.postgres
+    
+    check = await is_bot_admin(bot_id, user_id) # Check for owner
+    if not check:
+        return api_error("You aren't the owner of this bot.")
+
+    check = await db.fetchrow(
+        "SELECT state, flags, guild_count, banner_card, banner_page FROM bots WHERE bot_id = $1", 
+        bot_id
+    )
+
+    state = check["state"]
+    flags = check["flags"]
+
+    if state != enums.BotState.approved:
+        return api_error(
+            f"You cannot request certification for a bot that is not approved or is already certified ({state})"
+        )
+
+    if flags_check(flags, enums.BotFlag.staff_locked):
+        return api_error("You cannot send an certification request for a bot that is staff locked")
+
+    if not check["banner_page"] and not check["banner_card"]:
+        return api_error(
+            "This bot is not eligible for certification as it is does not have a bot card banner and/or a bot page banner",
+        )
+
+    if check["guild_count"] < 100:
+        return api_error(
+            ("This bot is not eligible for certification as it is either does not post stats or "
+                f"does not meet even our bare minimum requirement of 100 guilds (in {check['guild_count']} guilds according to our API)"
+            ),
+        )
+
+    resubmit_embed = discord.Embed(title="Certification Request", color=0x00ff00)
+    bot = await get_bot(bot_id)
+    resubmit_embed.add_field(name="Username", value = bot['username'])
+    resubmit_embed.add_field(name="Bot ID", value = str(bot_id))
+    resubmit_embed.add_field(name="Message", value = data.appeal)
     msg = {"content": f"<@&{staff_ping_add_role}>", "embed": resubmit_embed.to_dict(), "channel_id": str(appeals_channel), "mention_roles": [str(staff_ping_add_role)]}
     await redis_ipc_new(request.app.state.worker_session.redis, "SENDMSG", msg=msg, timeout=None)
     return api_success()

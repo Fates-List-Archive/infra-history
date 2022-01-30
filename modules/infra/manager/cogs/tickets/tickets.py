@@ -13,7 +13,6 @@ from discord import AllowedMentions, Color, Embed, Member, TextChannel, User
 from discord.ext import commands
 
 from config import (
-    certify_channel,
     ddr_channel,
     general_support_channel,
     reports_channel,
@@ -57,18 +56,7 @@ class TicketMenu(discord.ui.View):
         self.select_menu = _TicketCallback(bot=bot,
                                            placeholder="How can we help?",
                                            options=[])
-        self.select_menu.add_option(
-            label="General Support",
-            value="support",
-            description="General support on Fates List",
-            emoji="🎫",
-        )
-        self.select_menu.add_option(
-            label="Certification",
-            value="certify",
-            description="Certification requests",
-            emoji="✅",
-        )
+        # TODO: Add general support when we get the boosts
         self.select_menu.add_option(
             label="Staff Application",
             value="staff_app",
@@ -96,25 +84,6 @@ class _TicketCallback(discord.ui.Select):
                                  )  # Force reset select menu for user
         return await f(interaction)
 
-    async def support(self, interaction):
-        await interaction.response.defer()
-        err = await redis_ipc_new(self.bot.redis,
-                                  "SUPPORT",
-                                  args=[str(interaction.author.id)],
-                                  timeout=5)
-        if err != b"0":
-            if isinstance(err, bytes):
-                err = err.decode("utf-8")
-            return await interaction.send(
-                # f"Please go to <#{general_support_channel}> and make a thread there!\n"
-                f"Could not create private thread because: **{err}**",
-                ephemeral=True,
-            )
-        return await interaction.send(
-            "Created a private thread for you. Staff will assist you when they can!",
-            ephemeral=True,
-        )
-
     async def ddr(self, interaction):
         view = _DDRView(interaction, bot=self.bot)
         await interaction.response.send_message(
@@ -124,26 +93,6 @@ class _TicketCallback(discord.ui.Select):
              "abuse (to prevent vote spam and vote scams etc.)"),
             ephemeral=True,
             view=view,
-        )
-
-    async def certify(self, interaction):
-        uc = UserClient(interaction.user.id)
-        user = await uc.get_user() 
-        if isinstance(user, APIResponse):
-            return await interaction.response.send_message(
-                "You have not even logged in even once on Fates List!",
-                ephemeral=True)
-        profile = user.dict()
-        if not profile["approved_bots"]:
-            return await interaction.response.send_message(
-                "You do not have any approved bots...", ephemeral=True)
-
-        view = BotListView(self.bot, interaction, profile["approved_bots"],
-                           None, _CertifySelect)
-        return await interaction.response.send_message(
-            "Please choose the bot you wish to request certification for",
-            view=view,
-            ephemeral=True,
         )
 
     async def staff_app(self, interaction):
@@ -362,112 +311,6 @@ class _DDRView(discord.ui.View):
         self.stop()
         await interaction.edit_original_message(content="Cancelled!",
                                                 view=None)
-
-
-class _CertifySelect(discord.ui.Select):
-    def __init__(self, bot, inter, action, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.bot = bot
-        self.inter = inter
-        self.action = action
-
-    async def callback(self, interaction: discord.Interaction):
-        self.disabled = True
-        await interaction.response.defer()
-        self.view.stop()
-        if int(self.values[0]) == -1:
-            await interaction.followup.send(
-                "Please DM me the bot id you wish to certify", ephemeral=True)
-
-            def id_check(m):
-                return (m.content.isdigit()
-                        and m.author.id == interaction.user.id
-                        and isinstance(m.channel, discord.DMChannel)
-                        and len(m.content) in (16, 17, 18, 19, 20))
-
-            try:
-                id = await self.bot.wait_for("message",
-                                             check=id_check,
-                                             timeout=180)
-                await id.channel.send(
-                    f"Ok, now go back to <#{interaction.channel_id}> to continue certification :)"
-                )
-            except Exception as exc:
-                return await interaction.followup.send(
-                    "You took too long to respond!", ephemeral=True)
-
-            id = int(id.content)
-
-        else:
-            id = int(self.values[0])
-
-        bc = BotClient(id)
-
-        res = await bc.get_bot()
-        if isinstance(res, APIResponse):
-            return await interaction.followup.send(
-                f"Either this bot does not exist or our API is having an issue (got status code {res.status})",
-                ephemeral=True,
-            )
-
-        bot = res.dict()
-
-        for owner in bot["owners"]:
-            if int(owner["user"]["id"]) == interaction.user.id:
-                break
-        else:
-            return await interaction.followup.send(
-                f"**You may not request certification for bots you do not own!**",
-                ephemeral=True,
-            )
-
-        if bot["state"] == BotState.certified:
-            return await interaction.followup.send(
-                "**This bot is already certified!**", ephemeral=True)
-
-        if bot["state"] != BotState.approved:
-            state = BotState(bot["state"])
-            return await interaction.followup.send(
-                f"**This bot is not eligible for certification as it is currently {state.__doc__} ({state.value})**",
-                ephemeral=True,
-            )
-
-        if not bot["banner_page"] and not bot["banner_card"]:
-            return await interaction.followup.send(
-                f"**This bot is not eligible for certification as it is does not have a bot card banner and/or a bot page banner**",
-                ephemeral=True,
-            )
-
-        if bot["guild_count"] < 100:
-            return await interaction.followup.send(
-                ("**This bot is not eligible for certification as it is either does not post stats or "
-                 f"does not meet even our bare minimum requirement of 100 guilds (in {bot['guild_count']} guilds according to our API)**"
-                 ),
-                ephemeral=True,
-            )
-
-        channel = self.bot.get_channel(certify_channel)
-        embed = Embed(title="Certification Request")
-        embed.add_field(name="User", value=str(interaction.user))
-        embed.add_field(name="User ID", value=str(interaction.user.id))
-        embed.add_field(name="Bot Name", value=bot["user"]["username"])
-        embed.add_field(name="Description", value=bot["description"])
-        embed.add_field(name="Bot ID", value=str(id))
-        embed.add_field(name="Guild Count", value=bot["guild_count"])
-        embed.add_field(name="Link", value=f"https://fateslist.xyz/{id}")
-        embed.add_field(name="Invite Link", value=bot["invite_link"])
-        await channel.send(
-            f"<@&{staff_ping_role}>",
-            embed=embed,
-            allowed_mentions=AllowedMentions.all(),
-        )
-
-        await interaction.followup.send(
-            ("Your certification request has been sent successfully. You will be DM'd by a staff member as soon as they are ready to look at your bot! "
-             "Be sure to have your DMs open!"),
-            ephemeral=True,
-        )
-
 
 class Tickets(commands.Cog):
     """Commands to handle ticketing"""
