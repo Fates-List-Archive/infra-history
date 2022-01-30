@@ -16,23 +16,6 @@ from config import (
     stats_channel
 )
 
-class InteractionWrapper:
-    def __init__(self, interaction, ephemeral: bool = False):
-        self.interaction = interaction
-        asyncio.create_task(self.auto_defer(ephemeral))
-
-    async def auto_defer(self, ephemeral: bool):
-        start_time = time.time()
-        while time.time(
-        ) - start_time < 15 and not self.interaction.response.is_done():
-            await asyncio.sleep(0)
-        
-        if not self.interaction.response.is_done():
-            await self.interaction.response.defer(ephemeral=ephemeral)
-
-    async def send(self, *args, **kwargs):
-        return await self.interaction.send(*args, **kwargs)
-
 class Users(commands.Cog):
     """Commands made specifically for users to use"""
 
@@ -53,7 +36,6 @@ class Users(commands.Cog):
         description="Vote for a bot",
     )
     async def _vote_slash(self, inter, bot: User):
-        InteractionWrapper(inter) # This also autodefers
         await self._vote(inter, bot)
 
     @commands.command(
@@ -108,7 +90,7 @@ class Users(commands.Cog):
     async def flprofile(self, inter, user: User = None):
         return await self._profile(inter, user)
 
-    @tasks.loop(minutes=5)
+    @tasks.loop(seconds=60)
     async def statloop(self):
         try:
             sc = SystemClient()
@@ -123,7 +105,7 @@ class Users(commands.Cog):
                 await channel.purge(
                     limit=1)  # Remove Fates List Manager has pinned...
             else:
-                await self.msg.edit(embed=stats)
+                await self.msg.edit(embed=stats.embed())
         except Exception as exc:
             print(etrace(exc), flush=True)
 
