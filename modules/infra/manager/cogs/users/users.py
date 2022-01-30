@@ -5,6 +5,8 @@ import asyncio
 import datetime
 from modules.models.enums import UserState, Status
 from fateslist import UserClient, APIResponse
+from fateslist.utils import extract_time 
+from fateslist.system import SystemClient
 from discord import Color, Embed, User
 from discord.ext import commands, tasks
 
@@ -13,69 +15,6 @@ from config import (
     staff,
     stats_channel
 )
-
-# TODO: Port this to fateslist.py as well
-# usage: (_d, _h, _m, _s, _mils, _mics) = tdTuple(td)
-def extract_time(td: datetime.timedelta) -> tuple:
-    def _t(t, n):
-        if t < n:
-            return (t, 0)
-        v = t // n
-        return (t - (v * n), v)
-
-    (s, h) = _t(td.seconds, 3600)
-    (s, m) = _t(s, 60)
-    return (td.days, h, m, s)
-
-async def blstats():
-    try:
-        async with aiohttp.ClientSession() as sess:
-            async with sess.get(f"https://api.fateslist.xyz/api/blstats?workers=true") as res:
-                status = res.status
-                res = await res.json()
-                res = [status, res]
-    except Exception as exc:
-        res = [
-            502,
-            {
-                "uptime": 0,
-                "pid": 0,
-                "up": False,
-                "server_uptime": 0,
-                "bot_count": "Unknown",
-                "bot_count_total": "Unknown",
-                "error": f"{type(exc).__name__}: {exc} - Servers likely down",
-                "workers": [0],
-            },
-        ]
-    embed = Embed(title="Bot List Stats", description="Fates List Stats")
-    uptime_tuple = extract_time(datetime.timedelta(seconds=res[1]["uptime"]))
-    # ttvr = Time Till Votes Reset
-    ttvr_tuple = extract_time(
-        (datetime.datetime.now().replace(day=1, second=0, minute=0, hour=0) +
-         datetime.timedelta(days=32)).replace(day=1) - datetime.datetime.now())
-    uptime = "{} days, {} hours, {} minutes, {} seconds".format(*uptime_tuple)
-    ttvr = "{} days, {} hours, {} minutes, {} seconds".format(*ttvr_tuple)
-    embed.add_field(name="Uptime", value=uptime)
-    embed.add_field(name="Time Till Votes Reset", value=ttvr)
-    embed.add_field(name="Worker PID", value=str(res[1]["pid"]))
-    embed.add_field(name="Worker Number",
-                    value=res[1]["workers"].index(res[1]["pid"]) + 1)
-    embed.add_field(
-        name="Workers",
-        value=f"{', '.join([str(w) for w in res[1]['workers']])} ({len(res[1]['workers'])} workers)",
-    )
-    embed.add_field(name="UP?", value=str(res[1]["up"]))
-    embed.add_field(name="Server Uptime", value=str(res[1]["server_uptime"]))
-    embed.add_field(name="Bot Count", value=str(res[1]["bot_count"]))
-    embed.add_field(name="Bot Count (Total)",
-                    value=str(res[1]["bot_count_total"]))
-    embed.add_field(
-        name="Errors",
-        value=res[1]["error"]
-        if res[1].get("error") else "No errors fetching stats from API",
-    )
-    return embed
 
 class InteractionWrapper:
     def __init__(self, interaction, ephemeral: bool = False):
@@ -161,7 +100,9 @@ class Users(commands.Cog):
                             description="Show Fates List Stats",
                             guild_ids=[staff])
     async def stats(self, inter):
-        return await inter.send(embed=await blstats(inter))
+        sc = SystemClient()
+        stats = await sc.blstats()
+        return await inter.send(embed=stats.embed())
 
     @commands.slash_command(
         name="flprofile",
@@ -173,13 +114,14 @@ class Users(commands.Cog):
     @tasks.loop(minutes=5)
     async def statloop(self):
         try:
-            stats = await blstats()
+            sc = SystemClient()
+            stats = await sc.blstats()
             if not self.msg:
                 channel = self.bot.get_channel(stats_channel)
                 await channel.purge(
                     limit=100, check=lambda m: m.author.id != m.guild.owner_id
                 )  # Delete old messages there
-                self.msg = await channel.send(embed=stats)
+                self.msg = await channel.send(embed=stats.embed())
                 await self.msg.pin(reason="Stat Message Pin")
                 await channel.purge(
                     limit=1)  # Remove Fates List Manager has pinned...
