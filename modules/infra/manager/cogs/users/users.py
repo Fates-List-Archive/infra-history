@@ -1,22 +1,98 @@
 import time
-from http import HTTPStatus
-from typing import Optional
 import asyncpg
 import aiohttp
-
-from core import MiniContext, Status, UserState, blstats, profile, InteractionWrapper
-from discord import Color, Embed, Member, User
+import asyncio
+import datetime
+from modules.models.enums import UserState, Status
+from fateslist import UserClient, APIResponse
+from discord import Color, Embed, User
 from discord.ext import commands, tasks
 
 from config import (
     main,
-    main_botdev_role,
-    main_certdev_role,
     staff,
-    stats_channel,
-    testing,
+    stats_channel
 )
 
+# TODO: Port this to fateslist.py as well
+# usage: (_d, _h, _m, _s, _mils, _mics) = tdTuple(td)
+def extract_time(td: datetime.timedelta) -> tuple:
+    def _t(t, n):
+        if t < n:
+            return (t, 0)
+        v = t // n
+        return (t - (v * n), v)
+
+    (s, h) = _t(td.seconds, 3600)
+    (s, m) = _t(s, 60)
+    return (td.days, h, m, s)
+
+async def blstats():
+    try:
+        async with aiohttp.ClientSession() as sess:
+            async with sess.get(f"https://api.fateslist.xyz/api/blstats?workers=true") as res:
+                status = res.status
+                res = await res.json()
+                res = [status, res]
+    except Exception as exc:
+        res = [
+            502,
+            {
+                "uptime": 0,
+                "pid": 0,
+                "up": False,
+                "server_uptime": 0,
+                "bot_count": "Unknown",
+                "bot_count_total": "Unknown",
+                "error": f"{type(exc).__name__}: {exc} - Servers likely down",
+                "workers": [0],
+            },
+        ]
+    embed = Embed(title="Bot List Stats", description="Fates List Stats")
+    uptime_tuple = extract_time(datetime.timedelta(seconds=res[1]["uptime"]))
+    # ttvr = Time Till Votes Reset
+    ttvr_tuple = extract_time(
+        (datetime.datetime.now().replace(day=1, second=0, minute=0, hour=0) +
+         datetime.timedelta(days=32)).replace(day=1) - datetime.datetime.now())
+    uptime = "{} days, {} hours, {} minutes, {} seconds".format(*uptime_tuple)
+    ttvr = "{} days, {} hours, {} minutes, {} seconds".format(*ttvr_tuple)
+    embed.add_field(name="Uptime", value=uptime)
+    embed.add_field(name="Time Till Votes Reset", value=ttvr)
+    embed.add_field(name="Worker PID", value=str(res[1]["pid"]))
+    embed.add_field(name="Worker Number",
+                    value=res[1]["workers"].index(res[1]["pid"]) + 1)
+    embed.add_field(
+        name="Workers",
+        value=f"{', '.join([str(w) for w in res[1]['workers']])} ({len(res[1]['workers'])} workers)",
+    )
+    embed.add_field(name="UP?", value=str(res[1]["up"]))
+    embed.add_field(name="Server Uptime", value=str(res[1]["server_uptime"]))
+    embed.add_field(name="Bot Count", value=str(res[1]["bot_count"]))
+    embed.add_field(name="Bot Count (Total)",
+                    value=str(res[1]["bot_count_total"]))
+    embed.add_field(
+        name="Errors",
+        value=res[1]["error"]
+        if res[1].get("error") else "No errors fetching stats from API",
+    )
+    return embed
+
+class InteractionWrapper:
+    def __init__(self, interaction, ephemeral: bool = False):
+        self.interaction = interaction
+        asyncio.create_task(self.auto_defer(ephemeral))
+
+    async def auto_defer(self, ephemeral: bool):
+        start_time = time.time()
+        while time.time(
+        ) - start_time < 15 and not self.interaction.response.is_done():
+            await asyncio.sleep(0)
+        
+        if not self.interaction.response.is_done():
+            await self.interaction.response.defer(ephemeral=ephemeral)
+
+    async def send(self, *args, **kwargs):
+        return await self.interaction.send(*args, **kwargs)
 
 class Users(commands.Cog):
     """Commands made specifically for users to use"""
@@ -97,8 +173,7 @@ class Users(commands.Cog):
     @tasks.loop(minutes=5)
     async def statloop(self):
         try:
-            ctx = MiniContext(self.bot.guilds[0].owner, self.bot)
-            stats = await blstats(ctx)
+            stats = await blstats()
             if not self.msg:
                 channel = self.bot.get_channel(stats_channel)
                 await channel.purge(
@@ -126,11 +201,14 @@ class Users(commands.Cog):
     async def _profile(inter, user=None):
         """Gets a users profile (Not yet done)"""
         target = user if user else inter.author
-        _profile = await profile(inter, target)
-        if not _profile:
+        uc = UserClient(target.id)
+        _profile = await uc.get_user()
+        if isinstance(_profile, APIResponse):
             return
         embed = Embed(title=f"{target}'s Profile",
                       description="Here is your profile")
+
+        _profile = _profile.dict()
 
         # Base fields
         embed.add_field(name="User ID", value=_profile["user"]["id"])

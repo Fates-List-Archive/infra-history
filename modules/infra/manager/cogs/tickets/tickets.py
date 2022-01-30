@@ -7,7 +7,8 @@ from http import HTTPStatus
 from typing import Optional, Union
 
 import discord
-from core import BotListView, BotState, MenuState, MiniContext, request
+from fateslist import BotClient, UserClient, APIResponse
+from modules.models.enums import BotState
 from discord import AllowedMentions, Color, Embed, Member, TextChannel, User
 from discord.ext import commands
 
@@ -22,12 +23,37 @@ from config import (
 )
 from modules.core.ipc import redis_ipc_new
 
+class BotListView(discord.ui.View):
+    def __init__(self, bot, inter, bots, action, select_menu):
+        super().__init__()
+        self.bots = bots
+        self.select_menu = select_menu(
+            bot=bot,
+            inter=inter,
+            action=action,
+            placeholder="Please choose the bot",
+            options=[],
+        )
+        options = 0
+        for bot in self.bots:
+            username = bot["user"]["username"][:25]
+            description = bot["description"][:50]
+
+            self.select_menu.add_option(label=username,
+                                        description=description,
+                                        value=bot["user"]["id"])
+            options += 1
+
+            if options == 24:
+                break
+
+        self.select_menu.add_option(label="Not listed", value="-1")
+        self.add_item(self.select_menu)
 
 class TicketMenu(discord.ui.View):
     def __init__(self, bot, public):
         super().__init__(timeout=None)
         self.public = public
-        self.state = MenuState.rot
         self.select_menu = _TicketCallback(bot=bot,
                                            placeholder="How can we help?",
                                            options=[])
@@ -62,7 +88,6 @@ class TicketMenu(discord.ui.View):
 class _TicketCallback(discord.ui.Select):
     def __init__(self, bot, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.state = MenuState.rot
         self.bot = bot
 
     async def callback(self, interaction: discord.Interaction):
@@ -102,17 +127,13 @@ class _TicketCallback(discord.ui.Select):
         )
 
     async def certify(self, interaction):
-        res = await request(
-            "GET",
-            MiniContext(interaction.user, self.bot),
-            f"/api/users/{interaction.user.id}",
-            staff=False,
-        )
-        if res[0] == 404:
+        uc = UserClient(interaction.user.id)
+        user = await uc.get_user() 
+        if isinstance(user, APIResponse):
             return await interaction.response.send_message(
                 "You have not even logged in even once on Fates List!",
                 ephemeral=True)
-        profile = res[1]
+        profile = user.dict()
         if not profile["approved_bots"]:
             return await interaction.response.send_message(
                 "You do not have any approved bots...", ephemeral=True)
@@ -189,7 +210,6 @@ class _SelectAgeCallback(discord.ui.Select):
 
     def __init__(self, bot, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.state = MenuState.rot
         self.bot = bot
         self.app_id = uuid.uuid4()
         self.questions = StaffQuestionList([
@@ -350,7 +370,6 @@ class _CertifySelect(discord.ui.Select):
         self.bot = bot
         self.inter = inter
         self.action = action
-        self.state = MenuState.rot
 
     async def callback(self, interaction: discord.Interaction):
         self.disabled = True
@@ -382,19 +401,16 @@ class _CertifySelect(discord.ui.Select):
         else:
             id = int(self.values[0])
 
-        res = await request(
-            "GET",
-            MiniContext(interaction.user, self.bot),
-            f"/api/bots/{id}?compact=true&no_cache=true",
-            staff=False,
-        )
-        if res[0] != 200:
+        bc = BotClient(id)
+
+        res = await bc.get_bot()
+        if isinstance(res, APIResponse):
             return await interaction.followup.send(
-                f"Either this bot does not exist or our API is having an issue (got status code {res[0]})",
+                f"Either this bot does not exist or our API is having an issue (got status code {res.status})",
                 ephemeral=True,
             )
 
-        bot = res[1]
+        bot = res.dict()
 
         for owner in bot["owners"]:
             if int(owner["user"]["id"]) == interaction.user.id:

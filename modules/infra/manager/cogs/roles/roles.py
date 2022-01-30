@@ -1,19 +1,14 @@
-from core import MenuState, profile, MiniContext
 from discord.ext import commands
-from discord import Embed, User, Color, Member, TextChannel, AllowedMentions
+from discord import Embed, Color
 import discord
-from http import HTTPStatus
-from typing import Optional, Union
 import asyncio
-import io
-import uuid
+from fateslist import UserClient, APIResponse
 from config import ilovepings_role, addbotping_role, newsping_role, role_channel, main_botdev_role, main_certdev_role, bronze_user_role, giveaway_role
 
 class RoleMenu(discord.ui.View):
     def __init__(self, bot, public, roles):
         super().__init__(timeout=None)
         self.public = public
-        self.state = MenuState.rot
         self.select_menu = _RoleCallback(bot=bot, placeholder="Choose your roles!", options=[], allowed_roles=roles, max_values=len(roles))
         self.select_menu.add_option(
             label="I Love Pings", 
@@ -45,7 +40,6 @@ class RoleMenu(discord.ui.View):
 class _RoleCallback(discord.ui.Select):
     def __init__(self, bot, allowed_roles, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.state = MenuState.rot
         self.bot = bot
         self.allowed_roles = allowed_roles
      
@@ -81,19 +75,19 @@ class _GetRolesView(discord.ui.View):
     @discord.ui.button(label="Get Old Roles")
     async def _getroles(self, button, inter):
         target = inter.user
-        _profile = await profile(MiniContext(target, self.bot), target)
-        if not _profile:
+        uc = UserClient(target.id)
+        _profile = await uc.get_user()
+        if isinstance(_profile, APIResponse):
             embed = Embed(title = "No Profile Found", description = "You have not even logged in even once on Fates List!", color = Color.red())
             return await inter.response.send_message(embed=embed, ephemeral=True)
         
         embed = Embed(title = "Roles Given", description = "These are the roles you have got on Fates List", color = Color.blue())
     
-        i = 1
         success, failed = 0, 0
         keys = (("bot_developer", main_botdev_role, "You are not a bot developer"), ("certified_developer", main_certdev_role, "You do not have any certified bots"))  # List of special roles
         for key in keys:
             role = key[0].replace('_', ' ').title()
-            if not _profile["profile"][key[0]]:
+            if not _profile.profile[key[0]]:
                 embed.add_field(name = role, value = f":x: Not going to give you the {role} role because: *{key[2]}*")
                 failed += 1
                 continue
@@ -150,4 +144,3 @@ class Roles(commands.Cog):
         view.msg = msg
         await channel.send("If you have the Bronze User role, you can redeem it for a free upvote every 24 hours here!", view=RedeemView(self.bot))
         await channel.send("Click the button below to get the Bot/Certified Developer roles if you don't already have it!", view=_GetRolesView(self.bot))
-   
