@@ -8,7 +8,6 @@ package webserver
 
 import (
 	"context"
-	"encoding/json"
 	"flamepaw/types"
 	"net/http"
 	"strconv"

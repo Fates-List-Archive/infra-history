@@ -2,11 +2,14 @@ package common
 
 import (
 	"context"
-	"encoding/json"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/go-redis/redis/v8"
 	log "github.com/sirupsen/logrus"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func AddWsEvent(ctx context.Context, redis *redis.Client, channel string, eventId string, event map[string]interface{}) {
 	wsEvent, err := json.Marshal(map[string]map[string]interface{}{

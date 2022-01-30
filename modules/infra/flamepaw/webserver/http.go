@@ -11,7 +11,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"flamepaw/common"
 	"flamepaw/types"
 	"fmt"
@@ -19,6 +18,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	docencoder "encoding/json"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
@@ -33,6 +36,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
 var logger = log.New()
 
 var Docs string = "# Flamepaw\nFlamepaw is internally used by the bot to provide a RESTful API for tasks requiring high concurrency.\n\n"
@@ -42,11 +47,11 @@ func document(method, route, name, docs string, reqBody interface{}, resBody int
 	Docs += "## " + strings.Title(strings.ReplaceAll(name, "_", " ")) + "\n\n"
 	Docs += "#### " + strings.ToUpper(method) + " " + route + "\n"
 	Docs += "**Description:** " + docs + "\n\n"
-	var body, err = json.MarshalIndent(resBody, "", "\t")
+	var body, err = docencoder.MarshalIndent(resBody, "", "\t")
 	if err != nil {
 		body = []byte("No documentation available")
 	}
-	var ibody, err2 = json.MarshalIndent(reqBody, "", "\t")
+	var ibody, err2 = docencoder.MarshalIndent(reqBody, "", "\t")
 	if err2 != nil {
 		body = []byte("No documentation available")
 	}
@@ -54,7 +59,8 @@ func document(method, route, name, docs string, reqBody interface{}, resBody int
 	Docs += "**Response Body:**\n```json\n" + string(body) + "\n```\n\n"
 }
 
-func apiReturn(done bool, reason interface{}, context interface{}) gin.H {
+// API return
+func apiReturn(c *gin.Context, statusCode int, done bool, reason interface{}, context interface{}) {
 	if reason == "EOF" {
 		reason = "Request body required"
 	}
@@ -63,18 +69,17 @@ func apiReturn(done bool, reason interface{}, context interface{}) gin.H {
 		reason = nil
 	}
 
-	if context == nil {
-		return gin.H{
-			"done":   done,
-			"reason": reason,
-		}
-	} else {
-		return gin.H{
-			"done":   done,
-			"reason": reason,
-			"ctx":    context,
-		}
+	var ret = gin.H{"done": done, "reason": reason}
+	if context != nil {
+		ret["ctx"] = context
 	}
+	c.Header("Content-Type", "application/json")
+	body, err := json.MarshalToString(ret)
+	if err != nil {
+		body, _ = json.MarshalToString(gin.H{"done": false, "reason": "Internal server error: " + err.Error()})
+		statusCode = 500
+	}
+	c.String(statusCode, body)
 }
 
 func addUserVote(db *pgxpool.Pool, redis *redis.Client, userID string, botID string) {
@@ -113,16 +118,17 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 
 	r.Use(ginlogrus.Logger(logger), gin.Recovery())
 
+	document("PPROF", "/api/dragon/pprof", "pprof", "Golang pprof (debugging, may not always exist!)", nil, nil)
 	pprof.Register(r, "api/dragon/pprof")
 
 	r.NoRoute(func(c *gin.Context) {
-		c.JSON(404, apiReturn(false, "Not Found", nil))
+		apiReturn(c, 404, false, "Not Found", nil)
 	})
 	router := r.Group("/api/dragon")
 
 	document("GET", "/api/dragon/ping", "ping_server", "Ping the server", nil, types.APIResponse{})
 	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, apiReturn(true, nil, nil))
+		apiReturn(c, 404, true, nil, nil)
 	})
 
 	document("GET", "/api/dragon/__stats", "get_stats", "Get stats of websocket server", nil, nil)
@@ -148,7 +154,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 
 		if "sha256="+expected != signature {
 			log.Error(expected + " " + signature + " ")
-			c.JSON(401, apiReturn(false, "Invalid signature", nil))
+			apiReturn(c, 401, false, "Invalid signature", nil)
 			return
 		}
 
@@ -156,7 +162,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		err := c.BindJSON(&gh)
 		if err != nil {
 			log.Error(err)
-			c.JSON(400, apiReturn(false, err.Error(), nil))
+			apiReturn(c, 422, false, err.Error(), nil)
 			return
 		}
 
@@ -426,11 +432,11 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 
 		if err != nil {
 			log.Error(err)
-			c.JSON(400, apiReturn(false, "Error sending message: "+err.Error(), nil))
+			apiReturn(c, 400, false, "Error sending message: "+err.Error(), nil)
 			return
 		}
 
-		c.JSON(200, apiReturn(true, nil, nil))
+		apiReturn(c, 200, true, nil, nil)
 	})
 
 	document("OPTIONS", "/api/dragon/bots/:id/votes", "vote_bot", "Creates a vote for a bot. Needs authorization. This is the CORS code", nil, nil)
@@ -462,33 +468,33 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 
 		var vote types.UserVote
 		if err := c.ShouldBindJSON(&vote); err != nil {
-			c.JSON(400, apiReturn(false, err.Error(), nil))
+			apiReturn(c, 422, false, err.Error(), nil)
 			return
 		}
 
 		vote.BotID = c.Param("id")
 
 		if _, err := strconv.ParseInt(vote.BotID, 10, 64); err != nil {
-			c.JSON(400, apiReturn(false, err.Error(), nil))
+			apiReturn(c, 422, false, err.Error(), nil)
 			return
 		}
 
 		var auth types.InternalUserAuth
 
 		if err := c.ShouldBindHeader(&auth); err != nil {
-			c.JSON(400, apiReturn(false, err.Error(), nil))
+			apiReturn(c, 401, false, "Invalid User Token: "+err.Error(), nil)
 			return
 		}
 
 		var authcheck pgtype.Int8
 		err := db.QueryRow(ctx, "SELECT user_id FROM users WHERE user_id = $1 AND api_token = $2", vote.UserID, auth.AuthToken).Scan(&authcheck)
 		if err != nil && err != pgx.ErrNoRows {
-			c.JSON(400, apiReturn(false, "Invalid User Token", nil))
+			apiReturn(c, 401, false, "Invalid User Token", nil)
 			return
 		}
 
 		if authcheck.Status != pgtype.Present && !(common.Debug && vote.UserID == "0") {
-			c.JSON(401, apiReturn(false, "You are not logged in. Please try logging in and out and then try again.", nil))
+			apiReturn(c, 401, false, "You are not logged in. Please try logging in and out and then try again.", nil)
 			return
 		}
 
@@ -513,16 +519,16 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			err := db.QueryRow(ctx, "SELECT flags, votes FROM bots WHERE bot_id = $1", vote.BotID).Scan(&flags, &votesDb)
 
 			if err == pgx.ErrNoRows {
-				c.JSON(400, apiReturn(false, "No bot found?", nil))
+				apiReturn(c, 400, false, "No bot found?", nil)
 				return
 			} else if err != nil {
-				c.JSON(400, apiReturn(false, err.Error(), nil))
+				apiReturn(c, 400, false, err.Error(), nil)
 				return
 			}
 
 			for _, v := range flags.Elements {
 				if int(v.Int) == types.BotFlagSystem.Int() {
-					c.JSON(400, apiReturn(false, "You can't vote for system bots!", nil))
+					apiReturn(c, 400, false, "You can't vote for system bots!", nil)
 					return
 				}
 			}
@@ -557,7 +563,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			vote_b, err := json.Marshal(voteEvent)
 			if err != nil {
 				log.Error(err)
-				c.JSON(400, apiReturn(false, "Could not create vote webhook... Please contact us on our support server for more information: "+err.Error(), nil))
+				apiReturn(c, 400, false, "Could not create vote webhook... Please contact us on our support server for more information: "+err.Error(), nil)
 				return
 			}
 
@@ -582,12 +588,12 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 				}
 			}()
 
-			c.JSON(200, apiReturn(true, "You have successfully voted for this bot :)", nil))
+			apiReturn(c, 200, true, "You have successfully voted for this bot :)", nil)
 		} else {
 			hours := check / time.Hour
 			mins := (check - (hours * time.Hour)) / time.Minute
 			secs := (check - (hours*time.Hour + mins*time.Minute)) / time.Second
-			c.JSON(429, apiReturn(false, fmt.Sprintf("Please wait %02d hours, %02d minutes %02d seconds before trying to vote for bots", hours, mins, secs), debug))
+			apiReturn(c, 429, false, fmt.Sprintf("Please wait %02d hours, %02d minutes %02d seconds before trying to vote for bots", hours, mins, secs), debug)
 		}
 	})
 

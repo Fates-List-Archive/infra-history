@@ -1,7 +1,6 @@
 package common
 
 import (
-	"encoding/json"
 	"flamepaw/types"
 	"io/ioutil"
 

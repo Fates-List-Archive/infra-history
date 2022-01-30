@@ -2,7 +2,6 @@ package ipc
 
 import (
 	"context"
-	"encoding/json"
 	"flamepaw/common"
 	"flamepaw/types"
 	"flamepaw/webserver"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
+
 	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-redis/redis/v8"
@@ -18,6 +19,8 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const (
 	workerChannel     string        = "_worker_fates"
