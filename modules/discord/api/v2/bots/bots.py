@@ -131,6 +131,8 @@ async def fetch_bot(
 
     This endpoint handles both bot IDs and client IDs
 
+    - **compact** (default `true`) -> long_description_type, long_description, css and keep_banner_decor will be not be given
+
     - **no_cache** (default: `false`) -> cached responses will not be served (may be temp disabled in the case of a DDOS or temp disabled for specific 
     bots as required). **Uncached requests may take up to 100-200 times longer or possibly more**
     
