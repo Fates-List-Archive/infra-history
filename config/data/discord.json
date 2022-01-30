@@ -6,6 +6,9 @@
     },
     "roles": {
         "staff_ping_add_role": "836326316188893275",
+        "i_love_pings_role": "848602909687676998",
+        "news_ping_role": "848608405933129769",
+        "giveaway_ping_role": "904288064426348586",
         "bot_dev_role": "836326314344185876",
         "bots_role": "836326315946672158",
         "certified_bots_role": "836326315203887195",
@@ -19,7 +22,8 @@
         "server_logs": "837048691965034496",
         "appeals_channel": "836326351387623454",
         "site_errors_channel": "836326323281592330",
-	"main_support_channel": "838648883675922462",
+        "roles_channel": "848605596936437791",
+	    "main_support_channel": "838648883675922462",
         "github_channel": "836326337375109191"
     },
     "oauth": {

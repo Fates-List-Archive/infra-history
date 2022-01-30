@@ -44,9 +44,15 @@ var (
 	CertifiedBotRole    string
 	CertifiedDevRole    string
 	BotDevRole          string
+	RolesChannel        string
 	AccessGrantedRole   string
 	TestServerStaffRole string
 	TestServerBotsRole  string
+	StaffPingAddRole    string
+	ILovePingsRole      string
+	NewsPingRole        string
+	GiveawayPingRole    string
+	BronzeUserRole      string
 	CliCmd              string
 	RootPath            string
 	PythonPath          string
@@ -114,6 +120,7 @@ func init() {
 	SiteLogs = string(channels.Get("bot_logs").GetStringBytes())
 	MainSupportChannel = string(channels.Get("main_support_channel").GetStringBytes())
 	GithubChannel = string(channels.Get("github_channel").GetStringBytes())
+	RolesChannel = string(channels.Get("roles_channel").GetStringBytes())
 
 	var roles = v.GetObject("roles")
 
@@ -121,6 +128,11 @@ func init() {
 	CertifiedDevRole = string(roles.Get("certified_dev_role").GetStringBytes())
 	BotDevRole = string(roles.Get("bot_dev_role").GetStringBytes())
 	AccessGrantedRole = string(roles.Get("staff_server_access_granted_role").GetStringBytes())
+	StaffPingAddRole = string(roles.Get("staff_ping_add_role").GetStringBytes())
+	ILovePingsRole = string(roles.Get("i_love_pings_role").GetStringBytes())
+	NewsPingRole = string(roles.Get("news_ping_role").GetStringBytes())
+	GiveawayPingRole = string(roles.Get("giveaway_ping_role").GetStringBytes())
+	BronzeUserRole = string(roles.Get("bronze_user_role").GetStringBytes())
 	TestServerBotsRole = string(roles.Get("test_server_bots_role").GetStringBytes())
 
 	permInit()

@@ -7,6 +7,7 @@ import (
 	"flamepaw/ipc"
 	"flamepaw/serverlist"
 	"flamepaw/slashbot"
+	"flamepaw/supportsystem"
 	"flamepaw/types"
 	"flamepaw/webserver"
 	"os"
@@ -184,10 +185,17 @@ func Server() {
 	})
 
 	discord.AddHandler(onReady)
+	discord.AddHandler(supportsystem.SendRolesMessage)
 	discordServerBot.AddHandler(onReady)
 
 	// Slash command handling
 	iHandle := func(s *discordgo.Session, i *discordgo.Interaction, bot int) {
+		// Support System check
+		if i.Type == discordgo.InteractionMessageComponent {
+			supportsystem.MessageHandler(ctx, discord, rdb, db, i)
+			return
+		}
+
 		if i.Type == discordgo.InteractionApplicationCommand {
 			log.WithFields(log.Fields{
 				"i":   spew.Sdump(i),
