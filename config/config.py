@@ -22,6 +22,7 @@ with open("config/data/discord.json") as f:
         _channel_data["appeals_channel"])  # Appeal/resubmission channel
     site_errors_channel: int = int(
         _channel_data["site_errors_channel"])  # Site error logging
+    staff_apps_channel: int = int(_channel_data["staff_apps_channel"])  # Staff app channel
     test_server: int = int(_server_data["testing"])  # Test server
     main_server: int = int(_server_data["main"])  # Main server
     staff_server: int = int(_server_data["staff"])  # Staff server

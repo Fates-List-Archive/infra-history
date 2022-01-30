@@ -20,34 +20,6 @@ from config import (
     staff_ping_role,
     support_channel,
 )
-from modules.core.ipc import redis_ipc_new
-
-class BotListView(discord.ui.View):
-    def __init__(self, bot, inter, bots, action, select_menu):
-        super().__init__()
-        self.bots = bots
-        self.select_menu = select_menu(
-            bot=bot,
-            inter=inter,
-            action=action,
-            placeholder="Please choose the bot",
-            options=[],
-        )
-        options = 0
-        for bot in self.bots:
-            username = bot["user"]["username"][:25]
-            description = bot["description"][:50]
-
-            self.select_menu.add_option(label=username,
-                                        description=description,
-                                        value=bot["user"]["id"])
-            options += 1
-
-            if options == 24:
-                break
-
-        self.select_menu.add_option(label="Not listed", value="-1")
-        self.add_item(self.select_menu)
 
 class TicketMenu(discord.ui.View):
     def __init__(self, bot, public):
@@ -63,12 +35,6 @@ class TicketMenu(discord.ui.View):
             description="Think you got what it takes to be staff on Fates List?",
             emoji="🛠️",
         )
-        self.select_menu.add_option(
-            label="Data Deletion Request",
-            value="ddr",
-            description="This will wipe all data other than when you last voted. May take up to 24 hours",
-            emoji="🖨️",
-        )
 
         self.add_item(self.select_menu)
 
@@ -83,17 +49,6 @@ class _TicketCallback(discord.ui.Select):
         await self.view.msg.edit(view=self.view
                                  )  # Force reset select menu for user
         return await f(interaction)
-
-    async def ddr(self, interaction):
-        view = _DDRView(interaction, bot=self.bot)
-        await interaction.response.send_message(
-            ("Are you sure you wish to request a Data Deletion Request. "
-             "All of your bots, profile info and any perks you may have will be wiped from your account! "
-             "Your vote epoch (when you last voted) will stay as it is temporary (expires after 8 hours) and is needed for anti-vote "
-             "abuse (to prevent vote spam and vote scams etc.)"),
-            ephemeral=True,
-            view=view,
-        )
 
     async def staff_app(self, interaction):
         view = _StaffAgeView(interaction, self.bot)
@@ -275,42 +230,6 @@ class _SelectAgeCallback(discord.ui.Select):
             "if you wish to check on the status of your application or if you have any concerns! **Do not "
             "resend a new application or make a support ticket for this**\n\n\nThank you\nThe Fates List Staff Team"
         ))
-
-
-class _DDRView(discord.ui.View):
-    """Data Deletion Request Confirm View"""
-
-    def __init__(self, interaction, bot):
-        super().__init__()
-        self.interaction = interaction
-        self.bot = bot
-
-    async def disable(self, interaction):
-        for button in self.children:
-            button.disabled = True
-        await interaction.response.edit_message(view=self)
-
-    @discord.ui.button(label="Yes")
-    async def send_ddr(self, button, interaction):
-        await self.disable(interaction)
-        await interaction.followup.send(
-            "Please wait while we send your data deletion request...",
-            ephemeral=True)
-        channel = self.bot.get_channel(ddr_channel)
-        embed = Embed(title="Data Deletion Request")
-        embed.add_field(name="User", value=str(interaction.user))
-        embed.add_field(name="User ID", value=str(interaction.user.id))
-        await channel.send(interaction.guild.owner.mention, embed=embed)
-        await interaction.followup.send(
-            content="Sent! Your data will be deleted within 24 hours!",
-            ephemeral=True)
-
-    @discord.ui.button(label="No")
-    async def cancel_ddr(self, button, interaction):
-        await self.disable(interaction)
-        self.stop()
-        await interaction.edit_original_message(content="Cancelled!",
-                                                view=None)
 
 class Tickets(commands.Cog):
     """Commands to handle ticketing"""

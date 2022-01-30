@@ -39,6 +39,7 @@ var (
 	TestServer          string
 	StaffServer         string
 	SiteLogs            string
+	AppealsChannel      string
 	MainSupportChannel  string
 	GithubChannel       string
 	CertifiedBotRole    string
@@ -121,6 +122,7 @@ func init() {
 	MainSupportChannel = string(channels.Get("main_support_channel").GetStringBytes())
 	GithubChannel = string(channels.Get("github_channel").GetStringBytes())
 	RolesChannel = string(channels.Get("roles_channel").GetStringBytes())
+	AppealsChannel = string(channels.Get("appeals_channel").GetStringBytes())
 
 	var roles = v.GetObject("roles")
 
