@@ -5,7 +5,7 @@ import asyncio
 import datetime
 from modules.models.enums import UserState, Status
 from fateslist import UserClient, APIResponse
-from fateslist.utils import extract_time 
+from fateslist.utils import etrace 
 from fateslist.system import SystemClient
 from discord import Color, Embed, User
 from discord.ext import commands, tasks
@@ -41,10 +41,9 @@ class Users(commands.Cog):
         self.msg = None
         self.statloop.start()
 
-    @commands.slash_command(
+    @commands.command(
         name="catid",
         description="Get the category ID of a channel",
-        guild_ids=[main, staff],
     )
     async def catid(self, inter):
         return await self._catid(inter)
@@ -90,15 +89,13 @@ class Users(commands.Cog):
                     return await inter.send(f'{json["reason"]}\n**Status Code:** {res.status}')
                 return await inter.send("Successfully voted for this bot!")
 
-    @commands.slash_command(name="chanid",
-                            description="Get channel id",
-                            guild_ids=[main, staff])
+    @commands.command(name="chanid",
+                            description="Get channel id")
     async def chanid(self, inter):
         return await inter.send(str(inter.channel.id))
 
-    @commands.slash_command(name="flstats",
-                            description="Show Fates List Stats",
-                            guild_ids=[staff])
+    @commands.command(name="flstats",
+                            description="Show Fates List Stats")
     async def stats(self, inter):
         sc = SystemClient()
         stats = await sc.blstats()
@@ -128,7 +125,7 @@ class Users(commands.Cog):
             else:
                 await self.msg.edit(embed=stats)
         except Exception as exc:
-            print(f"{type(exc).__name__}: {exc}", flush=True)
+            print(etrace(exc), flush=True)
 
     def cog_unload(self):
         self.statloop.cancel()
