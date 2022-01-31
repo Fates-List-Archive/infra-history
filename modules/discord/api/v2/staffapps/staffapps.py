@@ -12,6 +12,8 @@ router = APIRouter(
     tags=[f"API v{API_VERSION} - Staff Apps"],
 )
 
+app_version = "1"
+
 staff_app_questions = StaffAppQuestions(
     questions=[
         StaffAppQuestion(
@@ -83,6 +85,11 @@ async def post_staff_app(request: Request, app: StaffAppCreate, user_id: int):
     user = await get_user(user_id)
     if not user:
         return abort(404)
+
+    check = await redis_db.get(f"staffapp:{user_id}")
+    if check and check.decode() == app_version:
+        return api_error("You have already submitted a staff application recently!")
+
     staff_app = f"User ID: {user_id}\nUsername: {user['username']}#{user['disc']}\n\n"
     for question in staff_app_questions.questions:
         if question.id not in app.answers:
@@ -110,4 +117,5 @@ async def post_staff_app(request: Request, app: StaffAppCreate, user_id: int):
         }
     )
 
+    await redis_db.set(f"staffapp:{user_id}", app_version, ex=60*60*24)
     return api_success()

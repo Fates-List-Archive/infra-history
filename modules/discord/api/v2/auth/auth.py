@@ -32,15 +32,17 @@ async def get_login_link(request: Request, data: LoginInfo, worker_session = Dep
     if request.headers.get("Frostpaw"):
         url.url = url.url.replace("https://fateslist.xyz", request.headers.get("Frostpaw-Server", "https://sunbeam.fateslist.xyz")).replace("/static/login-finish.html", "/frostpaw/login", 1)
     else:
-        url.url = url.url.replace("https://fateslist.xyz", "https://api.fateslist.xyz")
+        return api_error("Unsupported auth method")
 
     return api_success(url = url.url, state=url.state)
 
 @router.post("/users", response_model = LoginResponse)
 async def login_user(request: Request, response: Response, data: Login, worker_session = Depends(worker_session)):
+    """
+    Returns a cookie containing login information
+    """
     oauth = worker_session.oauth
     db = worker_session.postgres
-    redis = worker_session.redis
 
     try:
         if request.headers.get("Frostpaw"):

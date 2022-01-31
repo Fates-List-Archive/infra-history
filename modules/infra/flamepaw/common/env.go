@@ -30,36 +30,38 @@ var (
 )
 
 var (
-	MainBotToken        string
-	ServerBotToken      string
-	ClientSecret        string
-	GHWebhookSecret     string
-	JAPIKey             string
-	MainServer          string
-	TestServer          string
-	StaffServer         string
-	SiteLogs            string
-	AppealsChannel      string
-	MainSupportChannel  string
-	GithubChannel       string
-	CertifiedBotRole    string
-	CertifiedDevRole    string
-	BotDevRole          string
-	RolesChannel        string
-	AccessGrantedRole   string
-	TestServerStaffRole string
-	TestServerBotsRole  string
-	StaffPingAddRole    string
-	ILovePingsRole      string
-	NewsPingRole        string
-	GiveawayPingRole    string
-	BronzeUserRole      string
-	CliCmd              string
-	RootPath            string
-	PythonPath          string
-	Debug               bool
-	RegisterCommands    bool
-	IPCOnly             bool
+	MainBotToken            string
+	ServerBotToken          string
+	ClientSecret            string
+	GHWebhookSecret         string
+	VoteTokenAccessKey      string
+	VoteTokenAccessKeyBytes []byte
+	JAPIKey                 string
+	MainServer              string
+	TestServer              string
+	StaffServer             string
+	SiteLogs                string
+	AppealsChannel          string
+	MainSupportChannel      string
+	GithubChannel           string
+	CertifiedBotRole        string
+	CertifiedDevRole        string
+	BotDevRole              string
+	RolesChannel            string
+	AccessGrantedRole       string
+	TestServerStaffRole     string
+	TestServerBotsRole      string
+	StaffPingAddRole        string
+	ILovePingsRole          string
+	NewsPingRole            string
+	GiveawayPingRole        string
+	BronzeUserRole          string
+	CliCmd                  string
+	RootPath                string
+	PythonPath              string
+	Debug                   bool
+	RegisterCommands        bool
+	IPCOnly                 bool
 )
 
 func init() {
@@ -101,6 +103,8 @@ func init() {
 	ServerBotToken = fastjson.GetString(secretsJson, "token_server")
 	JAPIKey = fastjson.GetString(secretsJson, "japi_key")
 	GHWebhookSecret = fastjson.GetString(secretsJson, "gh_webhook_secret")
+	VoteTokenAccessKey = fastjson.GetString(secretsJson, "vote_token_access_key")
+	VoteTokenAccessKeyBytes = []byte(VoteTokenAccessKey)
 
 	var p fastjson.Parser
 

@@ -5,7 +5,7 @@ from pydantic import BaseModel, validator
 
 import modules.models.enums as enums
 
-from ..base_models import AccessToken, APIResponse, BaseUser
+from ..base_models import APIResponse, BaseUser
 from config import auth_namespaces
 
 class Login(BaseModel):
