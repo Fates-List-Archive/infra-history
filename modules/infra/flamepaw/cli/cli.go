@@ -138,7 +138,7 @@ func Server() {
 		log.Info("Logged in as ", m.User.Username)
 		if !uptimeFirstRun {
 			uptimeFirstRun = true
-			go doEvery(5*time.Minute, uptimeFunc)
+			go doEvery(15*time.Minute, uptimeFunc)
 		}
 	}
 
