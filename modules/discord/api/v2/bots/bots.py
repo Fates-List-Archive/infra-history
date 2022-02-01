@@ -190,7 +190,8 @@ async def fetch_bot(
 
     api_ret["owners"] = owners
 
-    api_ret["features"] = api_ret["features"]
+    api_ret["features"] = [features[id] for id in api_ret["features"] if id in features]
+
     api_ret["invite_link"] = await invite_bot(bot_id, api=True)
     
     api_ret["user"] = await get_bot(bot_id)

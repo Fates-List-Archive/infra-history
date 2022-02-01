@@ -6,6 +6,19 @@ from modules.models import enums
 
 from ..base_models import BaseUser, BotPack
 
+class BotFeature(BaseModel):
+    """
+    Represents all of the features the list supports and information 
+    about them. Keys indicate the feature id and value is 
+    feature information. The value should but may 
+    not always have a name, type and a description keys in the json
+    """
+    name: str
+    type: str
+    description: str
+
+class BotFeatures(BaseModel):
+    __root__: dict[str, BotFeature]
 
 class BotListStats(BaseModel):
     uptime: float
@@ -81,6 +94,8 @@ class BotIndex(BaseModel):
     top_voted: BotPartialList
     certified_bots: BotPartialList
     new_bots: BotPartialList
+    features: BotFeatures | None = None
+
 
 class Search(BaseModel):
     bots: list | None = []
@@ -88,6 +103,7 @@ class Search(BaseModel):
     profiles: list | None = []
     packs: list[BotPack] | None = []
     tags: dict[str, FLTags]
+    features: BotFeatures | None = None
 
 class TagSearch(BaseModel):
     search_res: list
@@ -152,11 +168,3 @@ class BotStatsFull(BaseModel):
     under_review: BotPartialList
     denied: BotPartialList | None = None
     banned: BotPartialList | None = None
-
-class BotFeature(BaseModel):
-    name: str
-    type: str
-    description: str
-
-class BotFeatures(BaseModel):
-    __root__: dict[str, BotFeature]

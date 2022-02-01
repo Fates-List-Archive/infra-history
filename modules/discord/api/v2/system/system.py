@@ -251,11 +251,6 @@ async def get_botlist_stats(request: Request,
         "workers": worker_session.workers,
     }
 
-@router.get("/features", response_model=BotFeatures)
-def get_features(request: Request):
-    """Returns all of the features the list supports and information about them. Keys indicate the feature id and value is feature information. The value should but may not always have a name, type and a description keys in the json"""
-    return features
-
 @router.get("/is_staff", response_model=IsStaff)
 async def check_staff_member(request: Request,
                              user_id: int,
@@ -378,6 +373,7 @@ async def get_index(request: Request,
         "top_voted": top_voted, 
         "new_bots": new_bots, 
         "certified_bots": certified_bots, 
+        "features": features if type == enums.ReviewType.bot else None,
     }
 
     return base_json
@@ -515,6 +511,7 @@ async def search_list(request: Request, q: str):
     data["servers"] = [dict(obj) for obj in data["servers"]]
     data["packs"] = [dict(obj) for obj in data["packs"]]
     data["tags"]["servers"] = [dict(obj) for obj in data["tags"]["servers"]]
+    data["features"] = features
 
     await redis_db.set(f"search:{q}", orjson.dumps(data), ex=60*5)
 

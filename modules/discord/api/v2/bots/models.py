@@ -5,6 +5,7 @@ import datetime
 from typing import Any
 
 from pydantic import BaseModel
+from modules.discord.api.v2.system.models import BotFeature
 
 from modules.models import enums
 
@@ -60,7 +61,7 @@ class Bot(BaseModel):
     invite_link: str
     invite_amount: int
     owners: BotOwners | None = None
-    features: list[str]
+    features: list[BotFeature]
     state: enums.BotState
     website: str | None = None
     support: str | None = None

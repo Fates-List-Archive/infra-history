@@ -40,6 +40,7 @@ async def regenerate_user_token(request: Request, user_id: int):
 
 @router.patch(
     "/{user_id}/preferences",
+    response_model=APIResponse,
     dependencies = [
         Depends(user_auth_check)
     ],
@@ -158,6 +159,7 @@ async def edit_bot(
 
 @router.delete(
     "/{user_id}/bots/{bot_id}", 
+    response_model=APIResponse,
     dependencies=[
         Depends(
             Ratelimiter(
@@ -207,6 +209,7 @@ async def delete_bot(request: Request, user_id: int, bot_id: int):
 
 @router.patch(
     "/{user_id}/bots/{bot_id}/ownership",
+    response_model=APIResponse,
     dependencies=[
         Depends(
             Ratelimiter(
