@@ -1,10 +1,10 @@
 from lxml.html.clean import Cleaner
 
 from modules.core import *
-from modules.core.classes import User as _User
+from modules.core.classes import User as _User, Profile
 from fastapi import APIRouter
 
-from ..base import API_VERSION
+from ..base import API_VERSION, responses
 from .models import APIResponse, IDResponse, BotMeta, BotPackPartial, enums, BaseUser, UpdateUserPreferences, OwnershipTransfer, BotAppeal, BotVoteCheck
 
 cleaner = Cleaner(remove_unknown_tags=False)
@@ -12,12 +12,14 @@ cleaner = Cleaner(remove_unknown_tags=False)
 router = APIRouter(
     prefix = f"/api/v{API_VERSION}/users",
     include_in_schema = True,
-    tags = [f"API v{API_VERSION} - Users"]
+    tags = [f"API v{API_VERSION} - Users"],
+    responses=responses,
 )
 
 @router.get(
     "/{user_id}",
-    operation_id="fetch_user"
+    operation_id="fetch_user",
+    response_model = Profile,
 )
 async def fetch_user(request: Request, user_id: int, bot_logs: bool = False, system_bots: bool = False, worker_session = Depends(worker_session)):
     user = await _User(id = user_id, db = worker_session.postgres).profile(bot_logs=bot_logs, system_bots=system_bots)
@@ -108,6 +110,20 @@ async def add_bot(
     if rc is None:
         return api_success()
     return api_error(rc)
+
+
+@router.get("/{user_id}/bots/{bot_id}/backup",
+    dependencies=[
+        Depends(user_auth_check)
+    ]
+)
+async def bot_backup(user_id: int, bot_id: int):
+    """Backs up a bot returning the backup. Backups are not stored"""
+    check = await db.fetchval("SELECT main FROM bot_owner WHERE owner = $1 AND bot_id = $2", user_id, bot_id)
+    if check is None:
+        return abort(401)
+    backup = await db.fetchrow("SELECT * FROM bots WHERE bot_id = $1", bot_id)
+    return backup
 
 @router.patch(
     "/{user_id}/bots/{bot_id}", 

@@ -21,6 +21,17 @@
 				"discord": "https://fateslist.xyz/server/755722576445046806/invite",
 				"website": "https://agb-dev.xyz"
 			}
+		},
+		{
+			"id": "voltic",
+			"name": "Voltic Development",
+			"owner": "116730818822537225",
+			"image": "https://cdn.discordapp.com/attachments/933050504995545190/937916242470252554/vd_staff23.png",
+			"description": "A place you can call home. Need help with what you are working on?\nCome join us and ask the community, We all have the same goal & that is to become developers in whatever programming language! Then show of what you are been working on",
+			"links": {
+				"discord": "https://discord.gg/Q6ZSW63Fpw",
+				"website": "https://voltic.thedev.id/"
+			}
 		}
 	],
 	"icons": {

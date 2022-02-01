@@ -1,17 +1,20 @@
 import hmac
+from http.client import responses
 from typing import Optional
 
 from modules.core import *
 from hashlib import sha512
 import hmac
 
-from ..base import API_VERSION
-from .models import BotIndex, BotListStats, BotQueueGet, Search, TagSearch, BotVanity, Partners, StaffRoles, IsStaff, SettingsPage
+from ..base import API_VERSION, responses
+from ..base_models import APIResponse, HTMLAPIResponse
+from .models import AddBotInfo, BotFeatures, BotIndex, BotListStats, BotQueueGet, BotStatsFull, Search, TagSearch, BotVanity, Partners, StaffRoles, IsStaff, Troubleshoot
 
 router = APIRouter(
     prefix=f"/api/v{API_VERSION}",
     include_in_schema=True,
     tags=[f"API v{API_VERSION} - System"],
+    responses=responses,
 )
 
 def get_uptime():
@@ -21,6 +24,7 @@ def get_uptime():
 
 @router.get(
     "/_sunbeam/add-bot",
+    response_model=AddBotInfo,
 )
 async def add_bot_info(request: Request, user_id: int):
     context = {
@@ -32,6 +36,7 @@ async def add_bot_info(request: Request, user_id: int):
 
 @router.get(
     "/_sunbeam/reviews/{target_id}",
+    response_model=HTMLAPIResponse
 )
 async def review_page(
     request: Request, 
@@ -75,7 +80,10 @@ async def review_page(
         context = context)
     return {"html": template.body}
 
-@router.get("/_sunbeam/troubleshoot")
+@router.get(
+    "/_sunbeam/troubleshoot",
+    response_model=Troubleshoot
+)
 async def troubleshoot_api(request: Request, user_id: int | None = None):
     """
     Internal API used by sunbeam for troubleshooting issues
@@ -98,7 +106,10 @@ async def troubleshoot_api(request: Request, user_id: int | None = None):
 
     return data
 
-@router.post("/_csp")
+@router.post(
+    "/_csp",
+    response_model=APIResponse
+)
 async def csp_report(request: Request):
     """
     This is where CSP reports should be sent to.
@@ -169,7 +180,10 @@ def get_top_spots(request: Request):
     return {"bots": bots_top, "servers": servers_top}
 
 
-@router.get("/blstats-full")
+@router.get(
+    "/blstats-full",
+    response_model=BotStatsFull
+)
 async def stats_page(request: Request, full: bool = False):
     """
     Returns the full set of botlist stats
@@ -191,11 +205,10 @@ async def stats_page(request: Request, full: bool = False):
         "banned": banned if full else [],
         "banned_amount": await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = $1", enums.BotState.banned),
         "under_review": under_review,
-        "full": full
     }
     return data
 
-@router.get("/blstats", response_model=BotListStats, operation_id="blstats")
+@router.get("/blstats", response_model=BotListStats)
 async def get_botlist_stats(request: Request,
                             worker_session=Depends(worker_session)):
     """
@@ -238,22 +251,12 @@ async def get_botlist_stats(request: Request,
         "workers": worker_session.workers,
     }
 
-@router.get("/features")
+@router.get("/features", response_model=BotFeatures)
 def get_features(request: Request):
     """Returns all of the features the list supports and information about them. Keys indicate the feature id and value is feature information. The value should but may not always have a name, type and a description keys in the json"""
     return features
 
-@router.get("/tags")
-def get_tags(request: Request):
-    """
-    These are the *bot* tags the list has. The key is the tag name and the value is the iconify class we use
-    
-    **To get server tags, call the server index endpoint**
-    """
-    return TAGS
-
-
-@router.get("/is_staff", operation_id="check_staff_member", response_model=IsStaff)
+@router.get("/is_staff", response_model=IsStaff)
 async def check_staff_member(request: Request,
                              user_id: int,
                              min_perm: int = 2):

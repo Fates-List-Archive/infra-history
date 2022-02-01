@@ -131,3 +131,32 @@ class IsStaff(BaseModel):
 class SettingsPage(BaseModel):
     data: dict[str, Any]
     context: dict[str, Any]
+
+class AddBotInfo(BaseModel):
+    perm: int
+    tags: list[str]
+    features: list[str]
+
+class Troubleshoot(BaseModel):
+    req_user_agent: str | None = None
+    pid: int
+    cf_ip: str | None = None
+    user: BaseUser | None = None
+
+class BotStatsFull(BaseModel):
+    bot_amount: int
+    denied_amount: int
+    banned_amount: int
+    certified: BotPartialList
+    queue: BotPartialList
+    under_review: BotPartialList
+    denied: BotPartialList | None = None
+    banned: BotPartialList | None = None
+
+class BotFeature(BaseModel):
+    name: str
+    type: str
+    description: str
+
+class BotFeatures(BaseModel):
+    __root__: dict[str, BotFeature]

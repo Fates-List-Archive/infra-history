@@ -351,6 +351,9 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
         
         bot["tags"] = [tag for tag in tags_fixed if tag["id"] in bot["tags"]]
 
+        bot["features"] =  [features[id] for id in bot["features"] if id in features]
+
+
         bot_cache = {
             "fl_cache_ver": BOT_CACHE_VER,
             "data": bot,

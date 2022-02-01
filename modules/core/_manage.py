@@ -52,7 +52,7 @@ def _fappgen(session_id, workers, static_assets):
 
     _app = FastAPI(
         title="Fates List",
-        description="""
+        description=f"""
             Current API: v2 beta 3
             Default API: v{API_VERSION}
             API URL: https://api.fateslist.xyz
@@ -69,12 +69,14 @@ def _fappgen(session_id, workers, static_assets):
         redoc_url=f"/api/v{API_VERSION}/docs/redoc",
         docs_url=f"/api/v{API_VERSION}/docs/swagger",
         openapi_url=f"/api/v{API_VERSION}/docs/openapi",
-        servers=[{
-            "url": "https://api.fateslist.xyz",
-            "description": "Fates List API"
-        }],
+        servers=[
+            {
+                "url": "https://api.fateslist.xyz",
+                "description": "Fates List API"
+            }, 
+        ]
     )
-
+    
     _app.state.static = static_assets
 
     @_app.on_event("startup")

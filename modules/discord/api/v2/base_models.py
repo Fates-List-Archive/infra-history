@@ -57,6 +57,12 @@ class APIResponse(BaseModel):
     done: bool
     reason: str | None = None
 
+class HTMLAPIResponse(BaseModel):
+    """
+    Represents a "regular" API response on Fates List HTML endpoints
+    """
+    html: str
+
 class IDResponse(APIResponse):
     id: uuid.UUID
 

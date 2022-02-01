@@ -83,12 +83,22 @@
         "custom_prefix": {
             "name": "Customizable Prefix",
             "type": "positive",
-            "description": "A bot with Custom Prefix supports changing of the bots prefix and is considered positive by Fates List"
+            "description": "This bot supports changing of its prefix and/or has recently migrated to slash commands"
         },
         "open_source": {
             "name": "Open Source",
             "type": "positive",
-            "description": "These bots are open source meaning they can easily be audited and/or potentially self hosted."
+            "description": "These bots are open source meaning they can easily be audited and/or potentially self hosted"
+        },
+        "slash_commands": {
+            "name": "Slash Commands",
+            "type": "positive",
+            "description": "These bots support slash commands"
+        },
+        "cryptocurrency": {
+            "name": "Cryptocurrency",
+            "type": "negative",
+            "description": "These bots offer services related to cryptocurrency and are considered negative by Fates List"
         }
     },
     "langs": {

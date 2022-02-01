@@ -638,7 +638,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 				}
 			}()
 
-			apiReturn(c, 200, true, "You have successfully voted for this bot :)", nil)
+			apiReturn(c, 200, true, "You have successfully voted for this bot :).\n\nPro Tip: You can vote for bots directly on your server using Squirrelflight, join our support server for more information", nil)
 		} else {
 			hours := check / time.Hour
 			mins := (check - (hours * time.Hour)) / time.Minute
