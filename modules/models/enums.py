@@ -4,8 +4,6 @@ from typing import Dict, ForwardRef, List, Optional
 from aenum import Enum, IntEnum
 from pydantic import BaseModel
 
-from modules.models.ula import *
-
 
 class WidgetFormat(Enum):
     _init_ = "value __doc__"

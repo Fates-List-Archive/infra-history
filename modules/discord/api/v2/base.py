@@ -1,6 +1,5 @@
 from modules.discord.api.v2.base_models import APIResponse
 
-
 API_VERSION = 2 # API Version
 
 responses = {
