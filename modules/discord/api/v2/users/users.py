@@ -13,7 +13,6 @@ router = APIRouter(
     prefix = f"/api/v{API_VERSION}/users",
     include_in_schema = True,
     tags = [f"API v{API_VERSION} - Users"],
-    responses=responses,
 )
 
 @router.get(

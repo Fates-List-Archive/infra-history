@@ -48,10 +48,12 @@ def _fappgen(session_id, workers, static_assets):
     from fastapi.responses import ORJSONResponse
 
     from config import API_VERSION
+    from modules.discord.api.v2.base import responses
     from modules.core.system import init_fates_worker
 
     _app = FastAPI(
         title="Fates List",
+        responses=responses,
         description=f"""
             Current API: v2 beta 3
             Default API: v{API_VERSION}

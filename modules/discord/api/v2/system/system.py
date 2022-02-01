@@ -14,7 +14,6 @@ router = APIRouter(
     prefix=f"/api/v{API_VERSION}",
     include_in_schema=True,
     tags=[f"API v{API_VERSION} - System"],
-    responses=responses,
 )
 
 def get_uptime():
