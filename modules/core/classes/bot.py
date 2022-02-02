@@ -1,11 +1,13 @@
 from .base import DiscordUser
 from typing import Optional, List
+from modules.core.events import add_ws_event
+from modules.models import enums
 from modules.core.cache import get_bot
 
 class Bot(DiscordUser):
     async def fetch(self):
         """Fetch a user object from our cache"""
-        return await get_bot(self.id)
+        return await get_bot(self.id, worker_session=self.worker_session)
     
     async def invite_url(self):
         """Fetch the discord invite URL without any side effects"""
@@ -20,5 +22,5 @@ class Bot(DiscordUser):
     async def invite(self, user_id: int | None = None):
         """Invites a user to a bot updating invite amount"""
         await self.db.execute("UPDATE bots SET invite_amount = invite_amount + 1 WHERE bot_id = $2", self.id)
-        await add_ws_event(self.id, {"m": {"e": enums.APIEvents.bot_invite}, "ctx": {"user": str(user_id)}})
+        await add_ws_event(self.redis, self.id, {"m": {"e": enums.APIEvents.bot_invite}, "ctx": {"user": str(user_id)}})
         return await self.invite_url()
