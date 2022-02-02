@@ -175,7 +175,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		if header == "push" {
 			var commitList string
 			for _, commit := range gh.Commits {
-				commitList += commit.Message + " [" + commit.ID + "](" + commit.URL + ") | [" + commit.Author.Username + "](https://github.com/" + commit.Author.Username + ")\n"
+				commitList += fmt.Sprintf("%s [%s](%s) | [%s](%s)\n", commit.Message, commit.ID[:7], commit.URL, commit.Author.Username, "https://github.com/"+commit.Author.Username)
 			}
 
 			messageSend = discordgo.MessageSend{
