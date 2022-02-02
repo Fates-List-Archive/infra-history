@@ -30,6 +30,7 @@ func SetupSlash(discord *discordgo.Session, cmdInit types.SlashFunction) {
 	commandsIr := cmdInit()
 
 	var cmds []*discordgo.ApplicationCommand
+	var serverCmds []*discordgo.ApplicationCommand
 
 	// Add the slash commands
 	for cmdName, cmdData := range commandsIr {
@@ -59,44 +60,29 @@ func SetupSlash(discord *discordgo.Session, cmdInit types.SlashFunction) {
 		if v.Server == "" {
 			cmds = append(cmds, &cmd)
 		} else {
-			go func() {
-				if common.RegisterCommands {
-					_, err := discord.ApplicationCommandCreate(discord.State.User.ID, v.Server, &cmd)
-					time.Sleep(1 * time.Second)
-					log.Info(v.Autocompleter)
-					if v.Server == common.StaffServer {
-						go discord.ApplicationCommandCreate(discord.State.User.ID, common.StaffServer, &cmd) // Just to force create
-					}
-					if err != nil {
-						panic(err.Error())
-					}
-				}
-			}()
+			serverCmds = append(serverCmds, &cmd)
 		}
-		deferFunc := func() {
-			e := recover()
-			if e != nil {
-				log.Error(e)
-				os.Exit(0)
-			}
-		}
-		defer deferFunc()
 		commands[discord.State.User.ID+cmdName] = cmdData
 	}
 
-	log.Info("Loading commands on Discord for ", discord.State.User.Username)
+	log.Info("Handling commands on Discord for ", discord.State.User.Username)
 	if common.RegisterCommands {
 		_, err := discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, "", cmds)
 		if err != nil {
 			log.Fatal("Cannot create commands due to error: ", err)
 		}
-		go discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, common.StaffServer, cmds)
+		_, err = discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, common.StaffServer, serverCmds)
+		if err != nil {
+			log.Fatal("Cannot create commands due to error: ", err)
+		}
 	}
 	log.Info("All slash commands for server list loaded!")
 
 	if common.RegisterCommands {
 		apps, _ := discord.ApplicationCommands(discord.State.User.ID, common.StaffServer)
-		log.Info(spew.Sdump(apps))
+		log.Info(discord.State.User.Username+" (Staff)", spew.Sdump(apps))
+		apps, _ = discord.ApplicationCommands(discord.State.User.ID, "")
+		log.Info(discord.State.User.Username+" (Public)", spew.Sdump(apps))
 		time.AfterFunc(3*time.Second, func() { os.Exit(0) })
 	}
 }

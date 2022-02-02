@@ -232,6 +232,7 @@ func MessageHandler(
 		voteCheck := rdb.Exists(ctx, "vote_lock:"+i.Member.User.ID).Val()
 		if voteCheck != 0 {
 			slashbot.SendIResponseEphemeral(common.DiscordMain, i, "You have not yet voted for a bot on Fates List in the last 8 hours!", false)
+			return
 		}
 
 		rdb.Del(ctx, "vote_lock:"+i.Member.User.ID)
