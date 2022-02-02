@@ -225,8 +225,8 @@ func SlashHandler(
 	}() // This tends to be a bit slow
 }
 
+// Returns string of permissions needed from perm int
 func ServerPermsString(perm int, full bool) string {
-	// Returns string of permissions needed from perm int
 	var p string
 	switch perm {
 	case 1:
@@ -422,8 +422,8 @@ func recovery() {
 	}
 }
 
+// Gets an argument, if possibleLink is set, this will convert the possible link using common/converters.go if possible
 func GetArg(discord *discordgo.Session, i *discordgo.Interaction, name string, possibleLink bool) interface{} {
-	// Gets an argument, if possibleLink is set, this will convert the possible link using common/converters.go if possible
 	defer recovery()
 	appCmdData := i.ApplicationCommandData()
 	for _, v := range appCmdData.Options {
