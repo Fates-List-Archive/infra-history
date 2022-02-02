@@ -2,6 +2,8 @@ from aioredis import Connection
 
 from config._logger import logger
 
+import inspect
+
 from .imports import *
 from .system import redis_ipc_new
 
@@ -11,15 +13,11 @@ async def _user_fetch(
     user_type: int,
     user_only: bool = False,
     *, 
-    worker_session = None
+    worker_session
 ) -> Optional[dict]:
-    """Internal function to fetch a user. If worker_sessiom is not explicitly specified, a warning will be logged"""
-    if not worker_session:
-        logger.debug("Using builtins is deprecated. Use worker session instead")
-        redis = redis_db
-    else:
-        db = worker_session.postgres
-        redis = worker_session.redis
+    """Internal function to fetch a user. If worker_session is not explicitly specified, this will error"""
+    db = worker_session.postgres
+    redis = worker_session.redis
     
     # Check if a suitable version is in the cache first before querying Discord
 
@@ -98,7 +96,7 @@ async def _user_fetch(
         }
        
     # Add/Update redis
-    await redis_db.hset(
+    await redis.hset(
         str(user_id),
         key = "cache",
         value = orjson.dumps(cache)
@@ -119,11 +117,11 @@ async def _user_fetch(
         } 
     return None
 
-async def get_user(user_id: int, user_only = False, *, worker_session = None) -> Optional[dict]:
+async def get_user(user_id: int, user_only = False, *, worker_session) -> Optional[dict]:
     return await _user_fetch(str(int(user_id)), 1, user_only = user_only, worker_session = worker_session) # 1 means user
 
-async def get_bot(user_id: int, user_only = False, *, worker_session = None) -> Optional[dict]:
+async def get_bot(user_id: int, user_only = False, *, worker_session) -> Optional[dict]:
     return await _user_fetch(str(int(user_id)), 2, user_only = user_only, worker_session = worker_session) # 2 means bot
 
-async def get_any(user_id: int, user_only = False, *, worker_session = None) -> Optional[dict]:
+async def get_any(user_id: int, user_only = False, *, worker_session) -> Optional[dict]:
     return await _user_fetch(str(int(user_id)), 3, user_only = user_only, worker_session = worker_session) # 3 means all

@@ -30,7 +30,7 @@ class BotActions():
                 return "This bot already exists on Fates List" # Dont add bots which already exist
         
         if self.system_bot:
-            if not (await is_staff(None, self.user_id, 5))[0]:
+            if not (await is_staff(None, self.user_id, 5, redis=self.redis))[0]:
                 if mode == "edit":
                     return "It seem's like you wish to claim this bot. In order to do so, hou must set 'System Bot' to 'No'/false"
                 return "Only staff (Head Admin+) may add system bots"
@@ -95,7 +95,7 @@ class BotActions():
         if len(self.long_description) < 300 and not self.system_bot:
             return "Your long description must be at least 300 characters long"
 
-        bot_obj = await get_bot(self.bot_id) # Check if bot exists
+        bot_obj = await get_bot(self.bot_id, worker_session=self.worker_session) # Check if bot exists
 
         if not bot_obj:
             return "According to Discord's API and our cache, your bot does not exist. Please try again after 2 hours."
@@ -150,7 +150,7 @@ class BotActions():
             return "Only Patreon, PayPal.me and Buymeacoffee are supported for donations at this time} You can request for more on our support server!" 
         
         for eo in self.extra_owners:
-            tmp = await get_user(eo)
+            tmp = await get_user(eo, worker_session=self.worker_session)
             if not tmp:
                 return "One of your extra owners doesn't exist"
 
@@ -161,9 +161,9 @@ class BotActions():
             self.privacy_policy = self.privacy_policy.replace("http://", "https://") # Force https on privacy policy
             if not self.privacy_policy.startswith("https://"): # Make sure we actually have a HTTPS privacy policy
                 return "Your privacy policy must be a proper URL starting with https://. URLs which start with http:// will be automatically converted to HTTPS while adding"
-        check = await vanity_check(self.bot_id, self.vanity) # Check if vanity is already being used or is reserved
-        if check:
-            return "The custom vanity URL you are trying to get is already in use or is reserved"
+        check = await vanity_bot(self.db, self.redis, self.vanity)
+        if check and check[0] != self.bot_id:
+            return f"The custom vanity URL you are trying to get is already in use or is reserved ({check})"
         if self.webhook_secret and len(self.webhook_secret) < 8:
             return "Your webhook secret must be at least 8 characters long"
 
@@ -179,11 +179,11 @@ class BotActions():
         if flags_check(flags, (enums.BotFlag.staff_locked, enums.BotFlag.edit_locked)):
             return "This bot cannot be edited as it has been locked (see Bot Settings). Join the support server and run /unlock <BOT> to unlock it."
 
-        check = await is_bot_admin(int(self.bot_id), int(self.user_id)) # Check for owner
+        check = await is_bot_admin(int(self.bot_id), int(self.user_id), worker_session=self.worker_session) # Check for owner
         if not check:
             return "You aren't the owner of this bot."
 
-        check = await get_user(self.user_id)
+        check = await get_user(self.user_id, worker_session=self.worker_session)
         if check is None: # Check if owner exists
             return "You do not exist on the Discord API. Please wait for a few hours and try again"
 
@@ -261,9 +261,9 @@ class BotActions():
                 tags_add = [(self.bot_id, tag) for tag in tags_fixed] # Get list of bot_id, tag tuples for executemany    
                 await connection.executemany("INSERT INTO bot_tags (bot_id, tag) VALUES ($1, $2)", tags_add) # Add all the tags to the database
 
-        await bot_add_event(self.bot_id, enums.APIEvents.bot_add, {}) # Send a add_bot event to be succint and complete 
+        await bot_add_event(self.redis, self.bot_id, enums.APIEvents.bot_add, {}) # Send a add_bot event to be succint and complete 
         owner = int(self.user_id)            
-        bot_name = (await get_bot(self.bot_id))["username"]
+        bot_name = (await get_bot(self.bot_id, worker_session=self.worker_session))["username"]
 
         add_embed = discord.Embed(
             title="New Bot!", 
@@ -322,7 +322,7 @@ class BotActions():
                 else:
                     await connection.execute("UPDATE vanity SET vanity_url = $1 WHERE redirect = $2", self.vanity, self.bot_id) # Update the vanity since bot already use it
                 await connection.execute("INSERT INTO user_bot_logs (user_id, bot_id, action) VALUES ($1, $2, $3)", self.user_id, self.bot_id, enums.UserBotAction.edit_bot)
-        await bot_add_event(self.bot_id, enums.APIEvents.bot_edit, {"user": str(self.user_id)}) # Send event
+        await bot_add_event(self.redis, self.bot_id, enums.APIEvents.bot_edit, {"user": str(self.user_id)}) # Send event
         edit_embed = discord.Embed(
             title="Bot Edit!", 
             description=f"<@{self.user_id}> has edited the bot <@{self.bot_id}>!", 

@@ -18,12 +18,6 @@ router = APIRouter(
 @router.post("/oauth", response_model = OAuthInfo)
 async def get_login_link(request: Request, data: LoginInfo, worker_session = Depends(worker_session)):
     oauth = worker_session.oauth
-    if data.redirect:
-        if not data.redirect.startswith("/") and not data.redirect.startswith("https://fateslist.xyz"):
-            return api_error(
-                "Invalid redirect. You may only redirect to pages on Fates List"
-            )
-    redirect = data.redirect if data.redirect else "/"
     url = await oauth.discord.get_auth_url(
         data.scopes,
     )
@@ -110,7 +104,7 @@ async def login_user(request: Request, response: Response, data: Login, worker_s
         _avatar_id = int(userjson['discriminator']) % 5
         avatar = f"https://cdn.discordapp.com/embed/avatars/{_avatar_id}.png"
     
-    user = await get_user(int(userjson["id"]))
+    user = await get_user(int(userjson["id"]), worker_session=worker_session)
 
     if "guilds.join" in data.scopes:
         await oauth.discord.add_user_to_guild(access_token, userjson["id"], main_server, TOKEN_MAIN)

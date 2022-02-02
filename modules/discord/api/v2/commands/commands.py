@@ -24,10 +24,11 @@ async def get_commands(
     Gets the command list of a bot
 
     **The `get_bot_commands` function used by this API is internally
-    called by the Get Bot Page API and as such this API endpoint is
+    called by the Get Bot Page API and as such this API endpoint itself is
     not used by Sunbeam for those curious**
     """
-    cmd = await get_bot_commands(bot_id, lang, filter)
+    db = request.app.worker_session.postgres
+    cmd = await get_bot_commands(db, bot_id, lang, filter)
     if cmd == {}:
         return abort(404)
     return cmd
@@ -49,6 +50,8 @@ async def add_commands(request: Request, bot_id: int, commands: BotCommands):
     """
     Adds a command to your bot. If it already exists, this will delete and readd the command so it can be used to edit already existing commands
     """
+    db = request.app.worker_session.postgres
+    redis = request.app.worker_session.redis
     ids = []
     for command in commands.commands:
         command.cmd_groups = [c.lower() for c in command.cmd_groups]
@@ -59,6 +62,7 @@ async def add_commands(request: Request, bot_id: int, commands: BotCommands):
         await db.execute("INSERT INTO bot_commands (id, bot_id, cmd_groups, cmd_type, cmd_name, description, args, examples, premium_only, notes, doc_link, vote_locked) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", id, bot_id, command.cmd_groups, command.cmd_type, command.cmd_name, command.description, command.args, command.examples, command.premium_only, command.notes, command.doc_link, command.vote_locked)
         ids.append(str(id))
     await add_ws_event(
+        redis,
         bot_id,
         {
             "m": {
@@ -90,9 +94,12 @@ async def delete_commands(request: Request, bot_id: int, commands: BotCommandDel
     If ids/names is provided, all commands with said ids/names will be deleted (this can be used together). 
     If nuke is provided, then all commands will deleted. Ids/names and nuke cannot be used at the same time
     """
+    db = request.app.worker_session.postgres
+    redis = request.app.worker_session.redis
     if commands.nuke:
         await db.execute("DELETE FROM bot_commands WHERE bot_id = $1", bot_id)
         await add_ws_event(
+            redis,
             bot_id, 
             {
                 "m": {
@@ -110,6 +117,7 @@ async def delete_commands(request: Request, bot_id: int, commands: BotCommandDel
     for name in commands.names:
         await db.execute("DELETE FROM bot_commands WHERE cmd_name = $1 AND bot_id = $2", name, bot_id)
     await add_ws_event(
+        redis,
         bot_id, 
         {
             "m": {

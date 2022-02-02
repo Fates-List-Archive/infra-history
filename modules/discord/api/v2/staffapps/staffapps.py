@@ -88,11 +88,15 @@ async def get_staff_app_questions(request: Request):
     ],
 )
 async def post_staff_app(request: Request, app: StaffAppCreate, user_id: int):
-    user = await get_user(user_id)
+    redis = request.app.state.worker_session.redis
+    user = await get_user(
+        user_id, 
+        worker_session=request.app.state.worker_session
+    )
     if not user:
         return abort(404)
 
-    check = await redis_db.get(f"staffapp:{user_id}")
+    check = await redis.get(f"staffapp:{user_id}")
     if check and check.decode() == app_version:
         return api_error("You have already submitted a staff application recently!")
 
@@ -118,7 +122,7 @@ async def post_staff_app(request: Request, app: StaffAppCreate, user_id: int):
 
     id = str(uuid.uuid4())
 
-    await redis_db.set(f"sapp:{id}", qdata, ex=60*60*24*7)
+    await redis.set(f"sapp:{id}", qdata, ex=60*60*24*7)
 
     msg_url = f"https://fateslist.xyz/frostpaw/qibli?data={id}"
 
@@ -148,7 +152,7 @@ async def post_staff_app(request: Request, app: StaffAppCreate, user_id: int):
         }
     )
 
-    await redis_db.set(f"staffapp:{user_id}", app_version, ex=60*60*24)
+    await redis.set(f"staffapp:{user_id}", app_version, ex=60*60*24)
     return api_success()
 
 @router.get("/qibli/{id}")
@@ -156,7 +160,8 @@ async def short_url(request: Request, id: uuid.UUID):
     """
     Gets the qibli data for a id
     """
-    data = await redis_db.get(f"sapp:{id}")
+    redis = request.app.state.worker_session.redis
+    data = await redis.get(f"sapp:{id}")
     if not data:
         return abort(404)
     return orjson.loads(data)

@@ -88,6 +88,7 @@ async def get_widget(
 
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
+    redis = worker_session.redis
    
     if target_type == enums.ReviewType.bot:
         col = "bot_id"
@@ -106,7 +107,7 @@ async def get_widget(
     
     bot = dict(bot)
     
-    bt.add_task(add_ws_event, target_id, {"m": {"e": event}, "ctx": {"user": request.session.get('user_id'), "widget": True}}, type=_type)
+    bt.add_task(add_ws_event, redis, target_id, {"m": {"e": event}, "ctx": {"user": request.session.get('user_id'), "widget": True}}, type=_type)
     if target_type == enums.ReviewType.bot:
         data = {"bot": bot, "user": await get_bot(target_id, worker_session = request.app.state.worker_session)}
     else:
@@ -124,7 +125,7 @@ async def get_widget(
 
     if format in (enums.WidgetFormat.png, enums.WidgetFormat.webp):
         # Check if in cache
-        cache = await redis_db.get(cache_key)
+        cache = await redis.get(cache_key)
         if cache and not no_cache:
             def _stream():
                 with io.BytesIO(cache) as output:
@@ -264,7 +265,7 @@ async def get_widget(
         output = io.BytesIO()
         widget_img.save(output, format=format.name.upper())
         output.seek(0)
-        await redis_db.set(cache_key, output.read(), ex=60*3)
+        await redis.set(cache_key, output.read(), ex=60*3)
         output.seek(0)
 
         def _stream():    

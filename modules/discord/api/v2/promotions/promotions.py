@@ -15,7 +15,8 @@ router = APIRouter(
 )
 async def get_promotion(request:  Request, bot_id: int):
     """Returns all the promotions for a bot on Fates List"""
-    promos = await get_promotions(bot_id)
+    db = request.app.worker_session.postgres
+    promos = await get_promotions(db, bot_id)
     if promos == []:
         return abort(404)
     return {"promotions": promos}
@@ -29,7 +30,8 @@ async def get_promotion(request:  Request, bot_id: int):
 )
 async def new_promotion(request: Request, bot_id: int, promo: BotPromotion):
     """Creates a promotion for a bot. Type can be 1 for announcement, 2 for promotion or 3 for generic"""
-    await add_promotion(bot_id, promo.title, promo.info, promo.css, promo.type)
+    db = request.app.worker_session.postgres
+    await add_promotion(db, bot_id, promo.title, promo.info, promo.css, promo.type)
     return api_success()
 
 @router.patch(
@@ -41,6 +43,7 @@ async def new_promotion(request: Request, bot_id: int, promo: BotPromotion):
 )
 async def edit_promotion(request: Request, bot_id: int, promo: BotPromotion, id: uuid.UUID):
     """Edits an promotion for a bot given its promotion ID."""
+    db = request.app.worker_session.postgres
     pid = await db.fetchrow("SELECT id FROM bot_promotions WHERE id = $1 AND bot_id = $2", id, bot_id)
     if pid is None:
         return api_error(
@@ -66,6 +69,7 @@ async def edit_promotion(request: Request, bot_id: int, promo: BotPromotion, id:
 )
 async def delete_promotion(request: Request, bot_id: int, id: uuid.UUID):
     """Deletes a bots promotion"""
+    db = request.app.worker_session.postgres
     eid = await db.fetchrow("SELECT id FROM bot_promotions WHERE id = $1", id)
     if eid is None:
         return api_error(

@@ -5,8 +5,8 @@ Fates List Templating System
 import markdown
 
 from .imports import *
-from .permissions import is_staff
 
+from lynxfall.utils.string import intl_text, ireplace, ireplacem, human_format
 
 # Template class renderer
 class templates():

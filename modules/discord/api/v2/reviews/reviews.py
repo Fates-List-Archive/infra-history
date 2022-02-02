@@ -50,6 +50,7 @@ async def get_all_reviews(request: Request, target_id: int, target_type: enums.R
 async def new_review(request: Request, user_id: int, data: BotReviewPartialExt):
     """target_id is who the review is targetted to, target_type is whether its a guild or bot, 0 means bot, 1 means server"""
     db = request.app.state.worker_session.postgres
+    redis = request.app.state.worker_session.redis
     if data.target_type == enums.ReviewType.server:
         check = await db.fetchval("SELECT guild_id FROM servers WHERE guild_id = $1", data.target_id)
         if not check:
@@ -96,6 +97,7 @@ async def new_review(request: Request, user_id: int, data: BotReviewPartialExt):
         await db.execute("UPDATE reviews SET replies = replies || $1 WHERE id = $2", [id], data.id)
         
     await add_ws_event(
+        redis,
         data.target_id,
         {
             "m": {
@@ -133,6 +135,8 @@ async def new_review(request: Request, user_id: int, data: BotReviewPartialExt):
 )
 async def edit_review(request: Request, user_id: int, id: uuid.UUID, data: BotReviewPartial):
     """Deletes a review. Note that the id and the reply flag is not honored for this endpoint"""
+    db = request.app.state.worker_session.postgres
+    redis = request.app.state.worker_session.redis
     if len(data.review) < minlength:
         return api_error(
             f"Reviews must be at least {minlength} characters long"
@@ -156,6 +160,7 @@ async def edit_review(request: Request, user_id: int, id: uuid.UUID, data: BotRe
     )
 
     await add_ws_event(
+        redis,
         check["target_id"],
         {
             "m": {
@@ -192,6 +197,8 @@ async def edit_review(request: Request, user_id: int, id: uuid.UUID, data: BotRe
     ]
 )
 async def delete_review(request: Request, user_id: int, id: uuid.UUID):
+    db = request.app.state.worker_session.postgres
+    redis = request.app.state.worker_session.redis
     check = await db.fetchrow(
         "SELECT reply, replies, target_id, target_type, star_rating FROM reviews WHERE id = $1 AND user_id = $2", 
         id, 
@@ -206,6 +213,7 @@ async def delete_review(request: Request, user_id: int, id: uuid.UUID):
         await db.execute("DELETE FROM reviews WHERE id = $1", review)
     
     await add_ws_event(
+        redis,
         check["target_id"],
         {
             "m": {
@@ -241,6 +249,8 @@ async def delete_review(request: Request, user_id: int, id: uuid.UUID):
 )
 async def vote_review_api(request: Request, user_id: int, rid: uuid.UUID, vote: BotReviewVote):
     """Creates a vote for a review"""
+    db = request.app.state.worker_session.postgres
+    redis = request.app.state.worker_session.redis
     bot_rev = await db.fetchrow("SELECT target_id, target_type, review_upvotes, review_downvotes, star_rating, reply FROM reviews WHERE id = $1", rid)
     if bot_rev is None:
         return api_error("You are not allowed to up/downvote this review (doesn't actually exist)")
@@ -262,6 +272,7 @@ async def vote_review_api(request: Request, user_id: int, rid: uuid.UUID, vote: 
     bot_rev[main_key].append(user_id)
     await db.execute("UPDATE reviews SET review_upvotes = $1, review_downvotes = $2 WHERE id = $3", bot_rev["review_upvotes"], bot_rev["review_downvotes"], rid)
     await add_ws_event(
+        redis,
         bot_rev["target_id"], 
         {
             "m": {

@@ -4,6 +4,7 @@ from .imports import *
 
 
 async def parse_reviews(worker_session, target_id: int, rev_id: uuid.uuid4 = None, page: int = None, recache: bool = False, in_recache: bool = False, target_type: enums.ReviewType = enums.ReviewType.bot, recache_from_rev_id: bool = False) -> List[dict]:
+    db = worker_session.postgres
     if recache:
         async def recache(target_id: int):
             if recache_from_rev_id:

@@ -9,6 +9,8 @@ def ip_check(request: Request) -> str:
     return request.client.host
 
 async def rl_key_func(request: Request) -> str:
+    db = request.app.state.worker_session.postgres
+
     if secure_strcmp(str(request.headers.get("FatesList-RateLimitBypass")), request.app.state.rl_key): # Check ratelimit key
         return None
     

@@ -14,7 +14,6 @@ class Login(BaseModel):
         
 class LoginInfo(BaseModel):
     scopes: list[str]
-    redirect: str | None = "/"
  
 class OAuthInfo(APIResponse):
     url: str | None = "/"

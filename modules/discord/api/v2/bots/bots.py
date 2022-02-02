@@ -18,6 +18,7 @@ router = APIRouter(
 
 @router.get("/{bot_id}/vpm")
 async def get_votes_per_month(request: Request, bot_id: int):
+    db = request.app.state.worker_session.postgres
     return await db.fetch("SELECT votes, epoch FROM bot_stats_votes_pm WHERE bot_id = $1", bot_id)
 
 @router.patch(
@@ -52,6 +53,7 @@ async def regenerate_bot_token(request: Request, bot_id: int):
         return res, json
     ```
     """
+    db = request.app.state.worker_session.postgres
     await db.execute("UPDATE bots SET api_token = $1 WHERE bot_id = $2", get_token(132), bot_id)
     return api_success()
 
@@ -90,6 +92,8 @@ async def fetch_random_bot(request: Request, bot_id: int, lang: str = "default")
         return api_error(
             "This bot cannot use the fetch random bot API"
         )
+
+    db = request.app.state.worker_session.postgres
 
     random_unp = await db.fetchrow(
         "SELECT description, banner_card, state, votes, guild_count, bot_id FROM bots WHERE (state = 0 OR state = 6) AND nsfw = false ORDER BY RANDOM() LIMIT 1"
@@ -139,8 +143,12 @@ async def fetch_bot(
     **Important note: the first owner may or may not be the main owner. 
     Use the `main` key instead of object order**
     """
+    worker_session = request.app.state.worker_session
+    db = worker_session.postgres
+    redis = worker_session.redis
+
     if not no_cache:
-        cache = await redis_db.get(f"botcache-{bot_id}-{compact}")
+        cache = await redis.get(f"botcache-{bot_id}-{compact}")
         if cache:
             data = orjson.loads(cache)
             data["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
@@ -176,7 +184,10 @@ async def fetch_bot(
         if owner["owner"] in _done: continue
         
         _done.append(owner["owner"])
-        user = await get_user(owner["owner"])
+        user = await get_user(
+            owner["owner"], 
+            worker_session=request.app.state.worker_session
+        )
         main = owner["main"]
 
         if not user: continue
@@ -192,16 +203,16 @@ async def fetch_bot(
 
     api_ret["features"] = [features[id] for id in api_ret["features"] if id in features]
 
-    api_ret["invite_link"] = await invite_bot(bot_id, api=True)
+    api_ret["invite_link"] = await invite_bot(db, redis, bot_id, api=True)
     
-    api_ret["user"] = await get_bot(bot_id)
+    api_ret["user"] = await get_bot(bot_id, worker_session=worker_session)
     
     api_ret["vanity"] = await db.fetchval(
         "SELECT vanity_url FROM vanity WHERE redirect = $1", 
         bot_id
     )
 
-    await redis_db.set(f"botcache-{bot_id}-{compact}", orjson.dumps(api_ret), ex=60*60*8)
+    await redis.set(f"botcache-{bot_id}-{compact}", orjson.dumps(api_ret), ex=60*60*8)
 
     api_ret["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
 
@@ -209,6 +220,8 @@ async def fetch_bot(
 
 @router.head("/{bot_id}")
 async def bot_exists(request: Request, bot_id: int):
+    db = request.app.state.worker_session.postgres
+    
     check = await db.fetchval("SELECT bot_id FROM bots WHERE bot_id = $1", bot_id)
     if not check:
         return PlainTextResponse("", status_code=404)
@@ -267,7 +280,7 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
             user_id = None
         
         if user_id:
-            auth = await user_auth_check(user_id, token)
+            auth = await user_auth_check(request, user_id, token)
     else:
         user_id = None
 
@@ -326,7 +339,10 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
         owners_lst = []
         for owner in owners:
             payload = {
-                "user": await get_user(owner["owner"], worker_session = worker_session),
+                "user": await get_user(
+                    owner["owner"], 
+                    worker_session = worker_session
+                ),
                 "main": owner["main"]
             }
             if owner["main"]: 
@@ -348,9 +364,9 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
         bot["user"] = bot_info
         bot["css"] = f"<style>{bot['css']}</style>"
                 
-        bot["commands"] = await get_bot_commands(bot_id, lang, None)
+        bot["commands"] = await get_bot_commands(db, bot_id, lang, None)
         
-        bot["tags"] = [tag for tag in tags_fixed if tag["id"] in bot["tags"]]
+        bot["tags"] = [tag for tag in request.app.state.worker_session.tags_fixed if tag["id"] in bot["tags"]]
 
         bot["features"] =  [features[id] for id in bot["features"] if id in features]
 
@@ -363,12 +379,12 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
         # Dont cache right now, previously was only cache for bots with more than 1000 votes
         # await redis.set(f"botpagecache-sunbeam:{bot_id}:{lang}", orjson.dumps(bot_cache), ex=60*60*4)
 
-    await add_ws_event(bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": str(user_id), "widget": False}}, timeout=None)
+    await add_ws_event(redis, bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": str(user_id), "widget": False}}, timeout=None)
     
     bot_cache["data"]["votes"] = await db.fetchval("SELECT votes FROM bots WHERE bot_id = $1", bot_cache["data"]["bot_id"])
     bot_cache["data"]["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
     data = bot_cache | {
-        "promos": await get_promotions(bot_id),
+        "promos": await get_promotions(db, bot_id),
         "replace_list": constants.long_desc_replace_tuple_sunbeam
     }
     return data
@@ -399,14 +415,16 @@ async def get_bot_invite(request: Request, bot_id: int, user_id: int = 0):
     """
     if not request.headers.get("Frostpaw"):
         return abort(404)
-    invite = await invite_bot(bot_id, user_id = user_id)
+    db = request.app.state.worker_session.postgres
+    redis = request.app.state.worker_session.redis
+    invite = await invite_bot(db, redis, bot_id, user_id = user_id)
     if invite is None:
         return abort(404)
     
     # Uncomment if sunbeam fails
     # JS sucks so much, its redirects don't work
     # id = uuid.uuid4()
-    #await redis_db.set(f"sunbeam-redirect-{id}", invite, ex=60*30)
+    #await redis.set(f"sunbeam-redirect-{id}", invite, ex=60*30)
     #return {"fallback": str(id), "invite": invite}
     return {"invite": invite}
 
@@ -446,8 +464,9 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
 
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
+    redis = worker_session.redis
 
-    check = await is_bot_admin(bot_id, user_id)
+    check = await is_bot_admin(bot_id, user_id, worker_session=worker_session)
     if (not check and bot_id !=
             798951566634778641):  # Fates list main bot is staff viewable
         return api_error("You are not allowed to edit this bot!", status_code=403)
@@ -509,8 +528,8 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
     bot["bot_id"] = str(bot_id)
 
     context = {
-        "perm": (await is_staff(None, user_id, 4))[1],
-        "tags": [tag["id"] for tag in tags_fixed],
+        "perm": (await is_staff(None, user_id, 4, redis=redis))[1],
+        "tags": [tag["id"] for tag in request.app.state.worker_session.tags_fixed],
         "features": list(features.keys()),
     }
 
@@ -521,6 +540,7 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
 
 @router.head("/{bot_id}", operation_id="bot_exists")
 async def bot_exists(request: Request, bot_id: int):
+    db = request.app.state.worker_session.postgres
     count = await db.fetchval("SELECT bot_id FROM bots WHERE bot_id = $1", bot_id)
     return PlainTextResponse("", status_code=200 if count else 404) 
 
@@ -540,7 +560,8 @@ async def bot_widget(request: Request, bt: BackgroundTasks, bot_id: int, format:
     operation_id="get_bot_ws_events"
 )
 async def get_bot_ws_events(request: Request, bot_id: int):
-    events = await redis_db.hget(f"bot-{bot_id}", key = "ws")
+    redis = request.app.state.worker_session.redis
+    events = await redis.hget(f"bot-{bot_id}", key = "ws")
     if events is None:
         events = {} # Nothing
     return orjson.loads(events) 
@@ -595,6 +616,8 @@ async def set_bot_stats(request: Request, bot_id: int, api: BotStats):
     return await _set_bot_stats(request, bot_id, api.dict())
 
 async def _set_bot_stats(request: Request, bot_id: int, api: dict, no_abuse_checks: bool = False):
+    db = request.app.state.worker_session.postgres
+
     stats_old = await db.fetchrow(
         "SELECT guild_count, shard_count, shards, user_count FROM bots WHERE bot_id = $1",
         bot_id

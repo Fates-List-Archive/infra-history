@@ -48,6 +48,7 @@ async def regenerate_server_token(request: Request, guild_id: int):
         return res, json
     ```
     """
+    db = request.app.state.worker_session.postgres
     await db.execute("UPDATE servers SET api_token = $1 WHERE guild_id = $2", get_token(256), guild_id)
     return api_success()
 
@@ -86,6 +87,8 @@ async def fetch_random_server(request: Request, guild_id: int, lang: str = "defa
         return api_error(
             "This guild cannot use the fetch random guild API"
         )
+
+    db = request.app.state.worker_session.postgres
 
     random_unp = await db.fetchrow(
         "SELECT description, banner_card, state, votes, guild_count, guild_id FROM servers WHERE (state = 0 OR state = 6) AND description IS NOT NULL ORDER BY RANDOM() LIMIT 1"
@@ -135,8 +138,11 @@ async def fetch_server(
     if len(str(guild_id)) not in [17, 18, 19, 20]:
         return abort(404)
 
+    db = request.app.state.worker_session.postgres
+    redis = request.app.state.worker_session.redis
+
     if not no_cache:
-        cache = await redis_db.get(f"guildcache-{guild_id}-{compact}-{sensitive}")
+        cache = await redis.get(f"guildcache-{guild_id}-{compact}-{sensitive}")
         if cache:
             return orjson.loads(cache)
     
@@ -151,7 +157,7 @@ async def fetch_server(
     api_ret = dict(api_ret)
 
     if sensitive:
-        await server_auth_check(guild_id, request.headers.get("Authorization", ""))
+        await server_auth_check(request, guild_id, request.headers.get("Authorization", ""))
         sensitive_dat = await db.fetchrow("SELECT invite_channel, user_whitelist, user_blacklist FROM servers WHERE guild_id = $1", guild_id)
         api_ret |= dict(sensitive_dat)
         api_ret["invite_channel"] = str(api_ret["invite_channel"]) if api_ret["invite_channel"] else None
@@ -173,7 +179,7 @@ async def fetch_server(
     )
     
     if not sensitive:
-        await redis_db.set(f"guildcache-{guild_id}-{compact}-{sensitive}", orjson.dumps(api_ret), ex=60*60*8)
+        await redis.set(f"guildcache-{guild_id}-{compact}-{sensitive}", orjson.dumps(api_ret), ex=60*60*8)
 
     return api_ret
 
@@ -182,6 +188,8 @@ async def get_server_page(request: Request, guild_id: int, lang: str = "en"):
     """
     Internally used by sunbeam for server page getting.
     """
+    db = request.app.state.worker_session.postgres
+    redis = request.app.state.worker_session.redis
     if not request.headers.get("Frostpaw"):
         return abort(404)
     data = await db.fetchrow(
@@ -204,7 +212,7 @@ async def get_server_page(request: Request, guild_id: int, lang: str = "en"):
     data["tags_fixed"] = [(await db.fetchrow("SELECT id, name, iconify_data FROM server_tags WHERE id = $1", id)) for id in data["_tags"]]
     context = {"type": "server", "replace_list": constants.long_desc_replace_tuple, "id": str(guild_id), "index": "/servers"}
     data["type"] = "server"
-    await add_ws_event(guild_id, {"m": {"e": enums.APIEvents.server_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}}, type = "server", timeout=None)
+    await add_ws_event(redis, guild_id, {"m": {"e": enums.APIEvents.server_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}}, type = "server", timeout=None)
     # Ensure server banner_page is disabled if not approved or certified
     if data["state"] not in (enums.BotState.approved, enums.BotState.certified, enums.BotState.private_viewable):
         data["banner"] = None
@@ -244,6 +252,7 @@ async def get_server_invite(request: Request, guild_id: int):
     **This API is only documented because it's in our FastAPI backend and
     to be complete**
     """
+    redis = request.app.state.worker_session.redis
     if not request.headers.get("Frostpaw"):
         return abort(404)
     auth = request.headers.get("Frostpaw-Auth", "")
@@ -253,10 +262,10 @@ async def get_server_invite(request: Request, guild_id: int):
             user_id = int(user_id)
         except Exception:
             return api_error("Invalid User ID specified, are you logged in?")
-        auth = await user_auth_check(user_id, token)
+        auth = await user_auth_check(request, user_id, token)
     else:
         user_id = 0
-    invite = await redis_ipc_new(redis_db, "GUILDINVITE", args=[str(guild_id), str(user_id)])
+    invite = await redis_ipc_new(redis, "GUILDINVITE", args=[str(guild_id), str(user_id)])
     if invite is None:
         return await get_server_invite(request, guild_id)
     invite = invite.decode("utf-8")
@@ -268,6 +277,7 @@ async def get_server_invite(request: Request, guild_id: int):
 
 @router.head("/{guild_id}", operation_id="server_exists")
 async def server_exists(request: Request, guild_id: int):
+    db = request.app.state.worker_session.postgres
     count = await db.fetchval("SELECT guild_id FROM servers WHERE guild_id = $1", guild_id)
     return PlainTextResponse("", status_code=200 if count else 404) 
 
@@ -287,7 +297,8 @@ async def server_widget(request: Request, bt: BackgroundTasks, guild_id: int, fo
     operation_id="get_server_ws_events"
 )
 async def get_server_ws_events(request: Request, guild_id: int):
-    events = await redis_db.hget(f"server-{guild_id}", key = "ws")
+    redis = request.app.state.worker_session.redis
+    events = await redis.hget(f"server-{guild_id}", key = "ws")
     if events is None:
         events = {} # Nothing
     return orjson.loads(events) 

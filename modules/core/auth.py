@@ -10,7 +10,8 @@ user_auth_header = APIKeyHeader(name="Authorization", description="These endpoin
 
 server_auth_header = APIKeyHeader(name="Authorization", description="These endpoints require a server token which you can get using /get API Token in your server. Same warnings and information from the other authentication types apply here. A prefix of ``Server`` before the server token is supported and can be used to avoid ambiguity but is not required.", scheme_name="Server")
 
-async def _bot_auth(bot_id: int, api_token: str):
+async def _bot_auth(request: Request, bot_id: int, api_token: str):
+    db = request.app.state.worker_session.postgres
     if isinstance(bot_id, int):
         pass
     elif bot_id.isdigit():
@@ -21,7 +22,8 @@ async def _bot_auth(bot_id: int, api_token: str):
         api_token = api_token.replace("Bot ", "", 1)
     return await db.fetchval("SELECT bot_id FROM bots WHERE bot_id = $1 AND api_token = $2", bot_id, str(api_token))
 
-async def _server_auth(server_id: int, api_token: str):
+async def _server_auth(request: Request, server_id: int, api_token: str):
+    db = request.app.state.worker_session.postgres
     if isinstance(server_id, int):
         pass
     elif server_id.isdigit():
@@ -32,7 +34,8 @@ async def _server_auth(server_id: int, api_token: str):
         api_token = api_token.replace("Server ", "", 1)
     return await db.fetchval("SELECT guild_id FROM servers WHERE guild_id = $1 AND api_token = $2", server_id, str(api_token))
 
-async def _user_auth(user_id: int, api_token: str):
+async def _user_auth(request: Request, user_id: int, api_token: str):
+    db = request.app.state.worker_session.postgres
     if isinstance(user_id, int):
         pass
     elif user_id.isdigit():
@@ -48,50 +51,50 @@ async def _user_auth(user_id: int, api_token: str):
         raise HTTPException(status_code=400, detail="This user has been banned from using the Fates List API")
     return user["user_id"]
 
-async def server_auth_check(guild_id: int, server_auth: str = Security(server_auth_header)):
+async def server_auth_check(request: Request, guild_id: int, server_auth: str = Security(server_auth_header)):
     if server_auth.startswith("Server "):
         server_auth = server_auth.replace("Server ", "")
-    id = await _server_auth(guild_id, server_auth)
+    id = await _server_auth(request, guild_id, server_auth)
     if id is None:
         raise HTTPException(status_code=401, detail="Invalid Server Token")
 
-async def bot_auth_check(bot_id: int, bot_auth: str = Security(bot_auth_header)):
+async def bot_auth_check(request: Request, bot_id: int, bot_auth: str = Security(bot_auth_header)):
     if bot_auth.startswith("Bot "):
         bot_auth = bot_auth.replace("Bot ", "", 1)
-    id = await _bot_auth(bot_id, bot_auth)
+    id = await _bot_auth(request, bot_id, bot_auth)
     if id is None:
         raise HTTPException(status_code=401, detail="Invalid Bot Token")
 
-async def user_auth_check(user_id: int, user_auth: str = Security(user_auth_header)):
+async def user_auth_check(request: Request, user_id: int, user_auth: str = Security(user_auth_header)):
     if user_auth.startswith("User "):
         user_auth = user_auth.replace("User ", "", 1)
-    id = await _user_auth(user_id, user_auth)
+    id = await _user_auth(request, user_id, user_auth)
     if id is None:
         raise HTTPException(status_code=401, detail=f"Invalid User Token")
 
-async def bot_user_auth_check(bot_id: int, user_id: Optional[int] = None, bot_auth: str = Security(bot_auth_header), user_auth: str = Security(user_auth_header)):
+async def bot_user_auth_check(request: Request, bot_id: int, user_id: Optional[int] = None, bot_auth: str = Security(bot_auth_header), user_auth: str = Security(user_auth_header)):
     if user_auth.startswith("User "):
         scheme = "User"
-        id = await _user_auth(user_id, user_auth)
+        id = await _user_auth(request, user_id, user_auth)
     else:
         scheme = "Bot"
-        id = await _bot_auth(bot_id, bot_auth)
+        id = await _bot_auth(request, bot_id, bot_auth)
     
     if not id:
         raise HTTPException(status_code=401, detail=f"Invalid {scheme} Token")
 
 # All bot_server auth endpoints must use target_id and probably uses target_type
-async def bot_server_auth_check(target_id: int, target_type: enums.ReviewType, bot_auth: str = Security(bot_auth_header), user_auth: str = Security(server_auth_header)):
+async def bot_server_auth_check(request: Request, target_id: int, target_type: enums.ReviewType, bot_auth: str = Security(bot_auth_header), server_auth: str = Security(server_auth_header)):
     if target_type == enums.ReviewType.server:
         if server_auth.startswith("Bot "):
             raise HTTPException(status_code=401, detail="Invalid token type. Did you use the correct target_type")
         scheme = "Server"
-        id = await _server_auth(target_id, server_auth)
+        id = await _server_auth(request, target_id, server_auth)
     else:
         if bot_auth.startswith("Server "):
             raise HTTPException(status_code=401, detail="Invalid token type. Did you use the correct target_type")
         scheme = "Bot"
-        id = await _bot_auth(target_id, bot_auth)
+        id = await _bot_auth(request, target_id, bot_auth)
 
     if not id:
         raise HTTPException(status_code=401, detail=f"Invalid {scheme} Token")

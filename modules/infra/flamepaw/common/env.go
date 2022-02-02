@@ -18,8 +18,8 @@ const version = "2"
 
 // Staff Verification Code (sigh, people don't read staff info anymore)
 func VerificationCode(userId string) string {
-	hasher := sha3.New512()
-	hasher.Write([]byte("Fidgetflake/" + userId))
+	hasher := sha3.New224()
+	hasher.Write([]byte("Shadowsight/BristleXRoot/" + userId))
 	sha := hex.EncodeToString(hasher.Sum(nil))
 	return sha
 }

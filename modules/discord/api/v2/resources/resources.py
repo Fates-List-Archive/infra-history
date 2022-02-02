@@ -15,6 +15,7 @@ router = APIRouter(
     operation_id="get_resources"
 )
 async def get_resources(request:  Request, target_id: int, target_type: enums.ReviewType, filter: Optional[str] = None, lang: str = "default"):
+    db = request.app.worker_session.postgres
     resources = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", target_id, target_type.value)
     if not resources:
         return abort(404)
@@ -37,7 +38,9 @@ async def add_resources(request: Request, target_id: int, target_type: enums.Rev
     """
     Adds a resource to your bot/guild. If it already exists, this will delete and readd the resource so it can be used to edit already existing resources
     """
-    await redis_db.delete(f"botpagecache:{target_id}")
+    db = request.app.worker_session.postgres
+    redis = request.app.worker_session.redis
+    await redis.delete(f"botpagecache:{target_id}")
     ids = []
     for resource in res.resources:
         if not resource.resource_link.startswith("https://"):
@@ -49,7 +52,7 @@ async def add_resources(request: Request, target_id: int, target_type: enums.Rev
         await db.execute("INSERT INTO resources (id, target_id, target_type, resource_title, resource_description, resource_link) VALUES ($1, $2, $3, $4, $5, $6)", id, target_id, target_type.value, resource.resource_title, resource.resource_description, resource.resource_link)
         ids.append(str(id))
     if target_type == enums.ReviewType.bot:
-        await bot_add_event(target_id, enums.APIEvents.resource_add, {"user": None, "id": ids})
+        await bot_add_event(redis, target_id, enums.APIEvents.resource_add, {"user": None, "id": ids})
     return api_success(id = ids)
 
 @router.delete(
@@ -71,11 +74,13 @@ async def delete_resources(request: Request, target_id: int, target_type: enums.
     If ids/names is provided, all resources with said ids/names will be deleted (this can be used together). 
     If nuke is provided, then all resources will deleted. Ids/names and nuke cannot be used at the same time
     """
-    await redis_db.delete(f"botpagecache:{target_id}")
+    db = request.app.worker_session.postgres
+    redis = request.app.worker_session.redis
+    await redis.delete(f"botpagecache:{target_id}")
     if resources.nuke:
         await db.execute("DELETE FROM resources WHERE target_id = $1 AND target_type = $2", target_id, target_type)
         if target_type == enums.ReviewType.bot:
-            await bot_add_event(bot_id, enums.APIEvents.resource_delete, {"user": None, "ids": [], "names": [], "nuke": True})
+            await bot_add_event(redis, target_id, enums.APIEvents.resource_delete, {"user": None, "ids": [], "names": [], "nuke": True})
         return api_success()
 
     for id in resources.ids:
@@ -84,5 +89,5 @@ async def delete_resources(request: Request, target_id: int, target_type: enums.
         await db.execute("DELETE FROM resources WHERE (resource_title = $1 OR resource_link = $1) AND target_id = $2 AND target_type = $3", name, target_id, target_type)
 
     if target_type == enums.ReviewType.bot:
-        await bot_add_event(target_id, enums.APIEvents.resource_delete, {"user": None, "ids": resources.ids, "names": resources.names, "nuke": False})
+        await bot_add_event(redis, target_id, enums.APIEvents.resource_delete, {"user": None, "ids": resources.ids, "names": resources.names, "nuke": False})
     return api_success()

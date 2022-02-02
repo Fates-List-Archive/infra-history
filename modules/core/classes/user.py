@@ -10,7 +10,7 @@ class User(DiscordUser):
     """A user on Fates List"""
     async def fetch(self):
         """Fetch a user object from our cache"""
-        return await get_user(self.id)
+        return await get_user(self.id, worker_session=self.worker_session)
 
     async def profile(self, bot_logs: bool = True, system_bots: bool = False):
         """Gets a users profile"""
@@ -45,7 +45,7 @@ class User(DiscordUser):
         for bot in _bots:
             if not system_bots and flags_check(bot["flags"], enums.BotFlag.system):
                 continue
-            bot_obj = Bot(id = bot["bot_id"], db = self.db)
+            bot_obj = Bot(id = bot["bot_id"], worker_session = self.worker_session)
             bots.append(dict(bot) | {"invite": await bot_obj.invite_url(), "user": await bot_obj.fetch()})
         
         approved_bots = [obj for obj in bots if obj["state"] in (enums.BotState.approved, enums.BotState.certified)]
@@ -54,12 +54,12 @@ class User(DiscordUser):
         user["bot_developer"] = approved_bots != []
         user["certified_developer"] = certified_bots != []                      
                          
-        on_server = await redis_ipc_new(redis_db, "ROLES", args=[str(self.id)])
+        on_server = await redis_ipc_new(self.redis, "ROLES", args=[str(self.id)])
         if on_server == b"-1" or not on_server:
             on_server = b""
-        user["badges"] = await Badge.from_user(self.id, on_server.decode("utf-8").split(" "), user["badges"], user["bot_developer"], user["certified_developer"])
+        user["badges"] = await Badge.from_user(self.id, on_server.decode("utf-8").split(" "), user["badges"], user["bot_developer"], user["certified_developer"], redis=self.redis)
 
-        packs_db = await db.fetch(
+        packs_db = await self.db.fetch(
             "SELECT id, icon, banner, created_at, owner, bots, description, name FROM bot_packs WHERE owner = $1",
             self.id
         )
@@ -68,8 +68,8 @@ class User(DiscordUser):
             resolved_bots = []
             ids = []
             for id in pack["bots"]:
-                bot = await get_bot(id)
-                bot["description"] = await db.fetchval("SELECT description FROM bots WHERE bot_id = $1", id)
+                bot = await get_bot(id, worker_session=self.worker_session)
+                bot["description"] = await self.db.fetchval("SELECT description FROM bots WHERE bot_id = $1", id)
                 resolved_bots.append(bot)
                 ids.append(str(id))
 

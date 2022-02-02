@@ -21,7 +21,7 @@ router = APIRouter(
     response_model = Profile,
 )
 async def fetch_user(request: Request, user_id: int, bot_logs: bool = False, system_bots: bool = False, worker_session = Depends(worker_session)):
-    user = await _User(id = user_id, db = worker_session.postgres).profile(bot_logs=bot_logs, system_bots=system_bots)
+    user = await _User(id = user_id, worker_session = worker_session).profile(bot_logs=bot_logs, system_bots=system_bots)
     if not user:
         return abort(404)
     return user
@@ -117,8 +117,9 @@ async def add_bot(
         Depends(user_auth_check)
     ]
 )
-async def bot_backup(user_id: int, bot_id: int):
+async def bot_backup(request: Request, user_id: int, bot_id: int):
     """Backs up a bot returning the backup. Backups are not stored"""
+    db = request.app.state.worker_session.postgres
     check = await db.fetchval("SELECT main FROM bot_owner WHERE owner = $1 AND bot_id = $2", user_id, bot_id)
     if check is None:
         return abort(401)
@@ -173,37 +174,40 @@ async def edit_bot(
 async def delete_bot(request: Request, user_id: int, bot_id: int):
     """Deletes a bot."""
     worker_session: FatesWorkerSession = request.app.state.worker_session
-    check = await worker_session.postgres.fetchval("SELECT main FROM bot_owner WHERE bot_id = $1 AND owner = $2", bot_id, user_id)
+    db = worker_session.postgres
+    redis = worker_session.redis 
+
+    check = await db.fetchval("SELECT main FROM bot_owner WHERE bot_id = $1 AND owner = $2", bot_id, user_id)
     if not check:
-        state = await worker_session.postgres.fetchval("SELECT state FROM bots WHERE bot_id = $1", bot_id)
+        state = await db.fetchval("SELECT state FROM bots WHERE bot_id = $1", bot_id)
         if state in (enums.BotState.approved, enums.BotState.certified):
             return api_error(
                 "You aren't the owner of this bot. Only main bot owners may delete bots and staff may only delete bots once they have been unverified/denied/banned"
             )
         
-    flags = await worker_session.postgres.fetchval("SELECT flags FROM bots WHERE bot_id = $1", bot_id)
+    flags = await db.fetchval("SELECT flags FROM bots WHERE bot_id = $1", bot_id)
     if flags_check(flags, (enums.BotFlag.edit_locked, enums.BotFlag.staff_locked)):
         return api_error(
             "This bot cannot be deleted as it has been locked. Join the support server and run /unlock <BOT> to unlock it."
         )
-    await worker_session.postgres.execute("DELETE FROM bots WHERE bot_id = $1", bot_id)
-    await worker_session.postgres.execute("DELETE FROM vanity WHERE redirect = $1", bot_id)
-    await worker_session.postgres.execute("DELETE FROM reviews WHERE target_id = $1 AND target_type = $2", bot_id, enums.ReviewType.bot)
+    await db.execute("DELETE FROM bots WHERE bot_id = $1", bot_id)
+    await db.execute("DELETE FROM vanity WHERE redirect = $1", bot_id)
+    await db.execute("DELETE FROM reviews WHERE target_id = $1 AND target_type = $2", bot_id, enums.ReviewType.bot)
 
     # Check all packs
-    packs = await worker_session.postgres.fetch("SELECT bots FROM bot_packs")
+    packs = await db.fetch("SELECT bots FROM bot_packs")
     pack_bot_delete = [] # Packs to delete the bot from
     for pack in packs:
         if bot_id in pack["bots"]:
             pack_bot_delete.append((pack["id"], [id for id in pack["bots"] if id in pack["bots"]])) # Get all bots in pack, then delete them all uaing executemany
-    await worker_session.postgres.executemany("UPDATE bot_packs SET bots = $2 WHERE id = $1", pack_bot_delete)
+    await db.executemany("UPDATE bot_packs SET bots = $2 WHERE id = $1", pack_bot_delete)
 
     delete_embed = discord.Embed(title="Bot Deleted :(", description=f"<@{user_id}> has deleted the bot <@{bot_id}>!", color=discord.Color.red())
     msg = {"content": "", "embed": delete_embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": []}
-    await redis_ipc_new(worker_session.redis, "SENDMSG", msg=msg, timeout=None)
+    await redis_ipc_new(redis, "SENDMSG", msg=msg, timeout=None)
 
-    await bot_add_event(bot_id, enums.APIEvents.bot_delete, {"user": user_id})    
-    await worker_session.redis.delete(f"botpagecache:{bot_id}")
+    await bot_add_event(redis, bot_id, enums.APIEvents.bot_delete, {"user": user_id})    
+    await redis.delete(f"botpagecache:{bot_id}")
     return api_success(status_code = 202)
 
 @router.patch(
@@ -230,9 +234,11 @@ async def transfer_bot_ownership(
     be staff unlocked first
     """
     worker_session: FatesWorkerSession = request.app.state.worker_session
+    db = worker_session.postgres
+    redis = worker_session.redis
     transfer.new_owner = int(transfer.new_owner)
-    head_admin, _, _ = await is_staff(staff_roles, user_id, 6)
-    main_owner = await worker_session.postgres.fetchval(
+    head_admin, _, _ = await is_staff(staff_roles, user_id, 6, redis=redis)
+    main_owner = await db.fetchval(
         "SELECT main FROM bot_owner WHERE bot_id = $1 AND owner = $2", 
         bot_id, 
         user_id
@@ -243,7 +249,7 @@ async def transfer_bot_ownership(
                 "You aren't the owner of this bot. Only main bot owners and head admins may transfer bot ownership"
             )
     
-        count = await worker_session.postgres.fetchval(
+        count = await db.fetchval(
             "SELECT bot_id FROM bot_owner WHERE bot_id = $1 AND owner = $2", 
             bot_id, 
             transfer.new_owner
@@ -254,19 +260,19 @@ async def transfer_bot_ownership(
             )
             
     elif not main_owner:
-        check = await is_staff_unlocked(bot_id, user_id)
+        check = await is_staff_unlocked(bot_id, user_id, redis)
         if not check:
             return api_error(
                 "You must staff unlock this bot to transfer ownership"
             )
     
-    check = await get_user(transfer.new_owner)
+    check = await get_user(transfer.new_owner, worker_session=worker_session)
     if not check:
         return api_error(
             "Specified user is not an actual user"
         )
 
-    flags = await worker_session.postgres.fetchval(
+    flags = await db.fetchval(
         "SELECT flags FROM bots WHERE bot_id = $1", 
         bot_id
     )
@@ -275,7 +281,7 @@ async def transfer_bot_ownership(
             "This bot cannot be edited as it has been locked. Join our support server and run /unlock <BOT> to unlock it."
         )
 
-    async with worker_session.postgres.acquire() as conn:
+    async with db.acquire() as conn:
         async with conn.transaction() as tr:
             await conn.execute(
                 "UPDATE bot_owner SET main = false WHERE main = true AND bot_id = $1", 
@@ -301,7 +307,7 @@ async def transfer_bot_ownership(
         color=discord.Color.green()
     )
     msg = {"content": "", "embed": embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": []}
-    await redis_ipc_new(worker_session.redis, "SENDMSG", msg=msg, timeout=None)
+    await redis_ipc_new(redis, "SENDMSG", msg=msg, timeout=None)
     await bot_add_event(bot_id, enums.APIEvents.bot_transfer, {"user": user_id, "new_owner": transfer.new_owner})    
     return api_success()
 
@@ -325,7 +331,7 @@ async def appeal_bot(request: Request, user_id: int, bot_id: int, data: BotAppea
         )
     db = request.app.state.worker_session.postgres
 
-    check = await is_bot_admin(bot_id, user_id) # Check for owner
+    check = await is_bot_admin(bot_id, user_id, worker_session=request.app.state.worker_session) # Check for owner
     if not check:
         return api_error("You aren't the owner of this bot.")
 
@@ -380,7 +386,7 @@ async def certify_bot_request(request: Request, bot_id: int, user_id: int, data:
 
     db = request.app.state.worker_session.postgres
     
-    check = await is_bot_admin(bot_id, user_id) # Check for owner
+    check = await is_bot_admin(bot_id, user_id, worker_session=request.app.state.worker_session) # Check for owner
     if not check:
         return api_error("You aren't the owner of this bot.")
 

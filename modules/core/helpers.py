@@ -7,6 +7,7 @@ import json
 import typing
 
 import asyncpg
+import aioredis
 import bleach
 import markdown
 from modules.models import constants
@@ -68,7 +69,7 @@ def id_check(check_t: str):
     return user
 
 
-async def default_server_desc(name: str, guild_id: int):
+async def default_server_desc(db: asyncpg.Pool, name: str, guild_id: int):
     name_split = name.split(" ")
     descs = (
         lambda: name +
@@ -97,7 +98,7 @@ def worker_session(request: Request):
     return request.app.state.worker_session
 
 
-async def get_promotions(bot_id: int) -> list:
+async def get_promotions(db: asyncpg.Pool, bot_id: int) -> list:
     api_data = await db.fetch(
         "SELECT id, title, info, css, type FROM bot_promotions WHERE bot_id = $1",
         bot_id,
@@ -105,9 +106,12 @@ async def get_promotions(bot_id: int) -> list:
     return api_data
 
 
-async def get_bot_commands(bot_id: int,
-                           lang: str,
-                           filter: Optional[str] = None) -> dict:
+async def get_bot_commands(
+    db: asyncpg.Pool,
+    bot_id: int,
+    lang: str,
+    filter: Optional[str] = None
+) -> dict:
     await db.execute("DELETE FROM bot_commands WHERE cmd_groups = $1",
                      [])  # Remove unneeded commands
     if filter:
@@ -140,29 +144,14 @@ async def get_bot_commands(bot_id: int,
             cmd_dict[group].append(_cmd)
     return cmd_dict
 
-
-async def add_maint(bot_id: int, type: int, reason: str):
-    maints = await db.fetchrow(
-        "SELECT bot_id FROM bot_maint WHERE bot_id = $1", bot_id)
-    if maints is None:
-        return await db.execute(
-            "INSERT INTO bot_maint (bot_id, reason, type, epoch) VALUES ($1, $2, $3, $4)",
-            bot_id,
-            reason,
-            type,
-            time.time(),
-        )
-    await db.execute(
-        "UPDATE bot_maint SET reason = $1, type = $2, epoch = $3 WHERE bot_id = $4",
-        reason,
-        type,
-        time.time(),
-        bot_id,
-    )
-
-
-async def add_promotion(bot_id: int, title: str, info: str, css: str,
-                        type: int):
+async def add_promotion(
+    db: asyncpg.Pool,
+    bot_id: int, 
+    title: str, 
+    info: str, 
+    css: str,
+    type: int
+):
     if css is not None:
         css = css.replace("</style", "").replace("<script", "")
     info = info.replace("</style", "").replace("<script", "")
@@ -176,7 +165,13 @@ async def add_promotion(bot_id: int, title: str, info: str, css: str,
     )
 
 
-async def invite_bot(bot_id: int, user_id=None, api=False):
+async def invite_bot(
+    db: asyncpg.Pool,
+    redis: aioredis.Connection,
+    bot_id: int, 
+    user_id: int | None = None, 
+    api: bool = False
+):
     bot = await db.fetchrow(
         "SELECT invite, invite_amount FROM bots WHERE bot_id = $1", bot_id)
     if bot is None:
@@ -193,6 +188,7 @@ async def invite_bot(bot_id: int, user_id=None, api=False):
             bot_id,
         )
     await add_ws_event(
+        redis,
         bot_id,
         {
             "m": {
@@ -208,13 +204,13 @@ async def invite_bot(bot_id: int, user_id=None, api=False):
 
 
 # Check vanity of bot
-async def vanity_bot(vanity: str) -> Optional[list]:
+async def vanity_bot(db: asyncpg.Pool, redis: aioredis.Connection, vanity: str) -> Optional[list]:
     """Checks and returns the vanity of the bot, otherwise returns None"""
 
     if vanity in reserved_vanity or vanity.startswith("_"):  # Check if vanity is reserved and if so, return None
         return None
 
-    cache = await redis_db.get(vanity + "-v1")
+    cache = await redis.get(vanity + "-v1")
     if cache:
         data = cache.decode("utf-8").split(" ")
         type = enums.Vanity(int(data[0])).name
@@ -228,7 +224,7 @@ async def vanity_bot(vanity: str) -> Optional[list]:
     if t is None:
         return None  # No vanity found
 
-    await redis_db.set(vanity, f"{t['type']} {t['redirect']}", ex=60 * 4)
+    await redis.set(vanity, f"{t['type']} {t['redirect']}", ex=60 * 4)
 
     type = enums.Vanity(t["type"]).name  # Get type using Vanity enum
     if type == "server":
@@ -245,6 +241,7 @@ async def parse_index_query(
     """
     Parses a index query to a list of partial bots
     """
+    db = worker_session.postgres
     lst = []
     for bot in fetch:
         banner_replace_tup = (
@@ -271,6 +268,7 @@ async def parse_index_query(
             bot_obj |= bot_obj["user"]
             if not bot_obj["description"]:
                 bot_obj["description"] = await default_server_desc(
+                    db,
                     bot_obj["user"]["username"], bot["guild_id"])
             lst.append(bot_obj)
         else:
@@ -324,23 +322,6 @@ async def do_index_query(
     logger.debug(base_query, add_query, end_query)
     fetch = await db.fetch(" ".join((base_query, add_query, end_query)))
     return await parse_index_query(worker_session, fetch, type=type, **kwargs)
-
-
-async def vanity_check(id, vanity):
-    """Check if a vanity exists or not given a id and a vanity"""
-    if vanity.replace(" ", "") == "":
-        return False
-    vanity_check = await db.fetchrow(
-        "SELECT DISTINCT vanity_url FROM vanity WHERE lower(vanity_url) = $1 AND redirect != $2",
-        vanity.replace(" ", "").lower(),
-        id,
-    )  # Get distinct vanitiss
-    if (vanity_check is not None
-            or vanity.replace("", "").lower() in reserved_vanity
-            or "/" in vanity.replace("", "").lower()):
-        return True
-    return False
-
 
 def sanitize_bot(bot: dict, lang: str) -> dict:
     bot["description"] = bleach.clean(ireplacem(constants.long_desc_replace_tuple_sunbeam, intl_text(bot["description"], lang)), strip=True, tags=["strong", "em"])

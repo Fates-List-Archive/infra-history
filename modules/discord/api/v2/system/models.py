@@ -39,7 +39,7 @@ class FilteredBotTag(BaseModel):
 
 class PartialBotQueue(BaseModel):
     user: BaseUser | None = BaseUser()
-    prefix: str
+    prefix: str | None = None
     invite: str
     description: str
     state: enums.BotState

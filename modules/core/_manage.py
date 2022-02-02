@@ -163,15 +163,6 @@ def site_run():
         logger.info(f"Site killed due to {type(exc).__name__}: {exc}")
         sys.exit(0)
 
-
-def site_manager():
-    """Start the manager bot"""
-    os.environ["MANAGER_BOT"] = "1"
-    if 'config' in sys.modules:
-        del sys.modules["config"]
-    from modules.infra.manager.main import run
-    run()
-
 def site_enum2html():
     """Converts the enums in modules/models/enums.py into markdown. Mainly for apidocs creation"""
     enums = importlib.import_module("modules.models.enums")

@@ -205,6 +205,7 @@ class FatesWorkerSession(Singleton):  # pylint: disable=too-many-instance-attrib
         self.oauth = oauth
         self.worker_count = worker_count
         self.tags = {}
+        self.tags_fixed = []
 
         # Record basic stats and initially set workers to None
         self.start_time = time.time()
@@ -313,8 +314,6 @@ async def init_fates_worker(app, session_id, workers):
 
 async def finish_init(app, session_id, workers, dbs):
     """Finish site init"""
-    builtins.db = dbs["postgres"]
-    builtins.redis_db = dbs["redis"]
     logger.success("Connected to postgres and redis")
 
     app.state.worker_session = FatesWorkerSession(
@@ -358,6 +357,7 @@ async def finish_init(app, session_id, workers, dbs):
     builtins.TAGS = tags # TODO: Remove this
     app.state.worker_session.tags = tags
     builtins.tags_fixed = calc_tags(tags)
+    app.state.worker_session.tags_fixed = calc_tags(tags)
 
     # Setup sentry
     sentry_sdk.init(sentry_dsn)  # pylint: disable=abstract-class-instantiated
@@ -460,7 +460,7 @@ async def catclient(workers, session):
                 pass  # Ignore the rest for now
 
 
-async def vote_reminder(session):
+async def vote_reminder(session: FatesWorkerSession):
     """Vote reminders task"""
     if session.primary_worker():
         events = importlib.import_module("modules.core.events")
@@ -473,6 +473,7 @@ async def vote_reminder(session):
         for reminder in reminders:
             logger.debug(f"Got reminder {reminder}")
             await bot_add_event(
+                session.redis,
                 reminder["bot_id"], 
                 enums.APIEvents.vote_reminder, 
                 {"user": str(reminder["user_id"])}

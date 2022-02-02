@@ -26,9 +26,10 @@ def get_uptime():
     response_model=AddBotInfo,
 )
 async def add_bot_info(request: Request, user_id: int):
+    redis = request.app.state.worker_session.redis
     context = {
-        "perm": (await is_staff(None, user_id, 4))[1],
-        "tags": [tag["id"] for tag in tags_fixed],
+        "perm": (await is_staff(None, user_id, 4, redis=redis))[1],
+        "tags": [tag["id"] for tag in request.app.state.worker_session.tags_fixed],
         "features": list(features.keys()),
     }
     return context
@@ -190,6 +191,7 @@ async def stats_page(request: Request, full: bool = False):
     Returns the full set of botlist stats
     """
     worker_session = request.app.state.worker_session
+    db = worker_session.postgres
     certified = await do_index_query(state = [enums.BotState.certified], limit = None, worker_session = worker_session) 
     bot_amount = await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
     queue = await do_index_query(state = [enums.BotState.pending], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
@@ -257,7 +259,8 @@ async def check_staff_member(request: Request,
                              user_id: int,
                              min_perm: int = 2):
     """Admin route to check if a user is staff or not"""
-    staff = await is_staff(staff_roles, user_id, min_perm, json=True)
+    redis = request.app.state.worker_session.redis
+    staff = await is_staff(staff_roles, user_id, min_perm, redis=redis, json=True)
     return {"staff": staff[0], "perm": staff[1], "sm": staff[2]}
 
 
@@ -276,13 +279,16 @@ async def get_bots_filtered(
     """
     API to get all bots filtered by its state
 
-    **Warning: This api does not guarantee you will get the same 
-    number of bots as what you put in limit and may add more 
-    but not less. If you don't want this, specify only one state
-    to ensure you are not requesting bots paginated commonly
-    across multiple set states**
+    Limit must be less than or equal to 100
+
+    **This API now guarantees that the bot list is only what you
+    request**
     """
+    if limit > 100:
+        return api_error("Limit must be less than or equal to 100")
+
     db = worker_session.postgres
+    redis = worker_session.redis
 
     bots = []
 
@@ -297,21 +303,22 @@ async def get_bots_filtered(
             )
             bots += _bots
 
-    for s in state:
-        _bots = await db.fetch(
-            f"SELECT bot_id, guild_count, website, discord AS support, votes, long_description, prefix, description, state FROM bots WHERE state = $1 ORDER BY created_at ASC {paginator}",
-            s,
-        )
-        bots += _bots
+    state_str = f"WHERE state = {state[0]}"
+    for s in state[1:]:
+        state_str += f" OR state = {s}"
+    _bots = await db.fetch(
+        f"SELECT bot_id, guild_count, website, discord AS support, votes, long_description, prefix, description, state FROM bots {state_str} ORDER BY created_at ASC {paginator}",
+    )
+    bots += _bots
 
     return {
         "bots": [{
             "user":
-            await get_bot(bot["bot_id"]),
+            await get_bot(bot["bot_id"], worker_session=worker_session),
             "prefix":
             bot["prefix"],
             "invite":
-            await invite_bot(bot["bot_id"], api=True),
+            await invite_bot(db, redis, bot["bot_id"], api=False),
             "description": bot["description"],
             "state": bot["state"],
             "guild_count": bot["guild_count"],
@@ -344,7 +351,9 @@ async def get_vanity(request: Request, vanity: str):
     
     This is used by sunbeam in handling vanities
     """
-    vb = await vanity_bot(vanity)
+    db = request.app.state.worker_session.postgres
+    redis = request.app.state.worker_session.redis
+    vb = await vanity_bot(db, redis, vanity)
     logger.trace(f"Vanity is {vanity} and vb is {vb}")
     if vb is None:
         return abort(404)
@@ -365,7 +374,7 @@ async def get_index(request: Request,
     certified_bots = await do_index_query(worker_session, add_query = "ORDER BY votes DESC", state = [6], type=type)
 
     if type == enums.ReviewType.bot:
-        tags = tags_fixed
+        tags = request.app.state.worker_session.tags_fixed
     else:
         tags = await db.fetch("SELECT id, name, iconify_data, owner_guild FROM server_tags")
 
@@ -379,7 +388,8 @@ async def get_index(request: Request,
 
     return base_json
 
-async def pack_search(q: str):
+async def pack_search(worker_session, q: str):
+    db = worker_session.postgres
     packs_db = await db.fetch(
         """
         SELECT DISTINCT bot_packs.id, bot_packs.icon, bot_packs.banner, 
@@ -402,7 +412,7 @@ async def pack_search(q: str):
         resolved_bots = []
         ids = []
         for id in pack["bots"]:
-            bot = await get_bot(id)
+            bot = await get_bot(id, worker_session=worker_session)
             bot["description"] = await db.fetchval("SELECT description FROM bots WHERE bot_id = $1", id)
             resolved_bots.append(bot)
             ids.append(str(id))
@@ -413,7 +423,7 @@ async def pack_search(q: str):
             "description": pack["description"],
             "bots": ids,
             "resolved_bots": resolved_bots,
-            "owner": await get_user(pack["owner"]),
+            "owner": await get_user(pack["owner"], worker_session=worker_session),
             "icon": pack["icon"],
             "banner": pack["banner"],
             "created_at": pack["created_at"]
@@ -433,11 +443,12 @@ async def search_list(request: Request, q: str):
     """
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
+    redis = worker_session.redis
     
     if q == "":
         return abort(404)
     
-    cache = await redis_db.get(f"search:{q}")
+    cache = await redis.get(f"search:{q}")
     if cache:
         return orjson.loads(cache)
 
@@ -461,7 +472,7 @@ async def search_list(request: Request, q: str):
         enums.BotState.certified
     )
 
-    data["tags"]["bots"] = tags_fixed
+    data["tags"]["bots"] = request.app.state.worker_session.tags_fixed
     
     data["servers"] = await db.fetch(
         """SELECT DISTINCT servers.guild_id,
@@ -478,7 +489,7 @@ async def search_list(request: Request, q: str):
 
     data["tags"]["servers"] = await db.fetch("SELECT id, name, iconify_data, owner_guild FROM server_tags")
     
-    data["packs"] = await pack_search(q)
+    data["packs"] = await pack_search(worker_session, q)
 
     profiles = await db.fetch(
         """SELECT DISTINCT users.user_id, users.description FROM users 
@@ -514,7 +525,7 @@ async def search_list(request: Request, q: str):
     data["tags"]["servers"] = [dict(obj) for obj in data["tags"]["servers"]]
     data["features"] = features
 
-    await redis_db.set(f"search:{q}", orjson.dumps(data), ex=60*5)
+    await redis.set(f"search:{q}", orjson.dumps(data), ex=60*5)
 
     return data
 
@@ -522,12 +533,15 @@ async def search_list(request: Request, q: str):
 async def search_by_tag(request: Request, 
                         tag: str,
                         target_type: enums.SearchType):
+
+    db = request.app.state.worker_session.postgres
+
     if target_type == enums.SearchType.bot:
         fetch = await db.fetch(
             "SELECT DISTINCT bots.bot_id, bots.description, bots.state, bots.banner_card AS banner, bots.votes, bots.guild_count FROM bots INNER JOIN bot_tags ON bot_tags.bot_id = bots.bot_id WHERE bot_tags.tag = $1 AND (bots.state = 0 OR bots.state = 6) ORDER BY bots.votes DESC LIMIT 15",
             tag,
         )
-        tags = tags_fixed  # Gotta love python
+        tags = request.app.state.worker_session.tags_fixed  # Gotta love python
     else:
         fetch = await db.fetch(
             "SELECT DISTINCT guild_id, description, state, banner_card AS banner, votes, guild_count FROM servers WHERE state = 0 AND tags && $1",

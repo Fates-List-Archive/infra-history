@@ -30,6 +30,8 @@ class Badge(BaseModel):
         badges: list[str] | None = None,
         bot_dev: bool | None = False,
         cert_dev: bool | None = False,
+        *,
+        redis
     ):
         """Make badges from a user given the member, badges and bots"""
         if badges is None:
@@ -43,7 +45,7 @@ class Badge(BaseModel):
         badges = badges if badges else []
 
         # A discord.Member is part of the support server
-        user_flags["staff"] = (await is_staff(staff_roles, id, 2))[0]
+        user_flags["staff"] = (await is_staff(staff_roles, id, 2, redis=redis))[0]
         if [role for role in roles if role]:
             user_flags["discord_member"] = True
 
