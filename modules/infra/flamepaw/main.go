@@ -3,7 +3,6 @@ package main
 import (
 	"flamepaw/cli"
 	"flamepaw/common"
-	"flamepaw/tests"
 	"os"
 	"os/exec"
 	"strings"
@@ -25,7 +24,7 @@ func main() {
 	if common.CliCmd == "server" {
 		cli.Server()
 	} else if common.CliCmd == "test" {
-		tests.Test()
+		cli.Test()
 	} else {
 		cmdFunc := strings.Replace(common.CliCmd, ".", "_", -1)
 		pyCmd := "from modules.core._manage import " + cmdFunc + "; " + cmdFunc + "()"

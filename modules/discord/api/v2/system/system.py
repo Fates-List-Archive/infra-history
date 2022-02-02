@@ -35,7 +35,7 @@ async def add_bot_info(request: Request, user_id: int):
 
 @router.get(
     "/_sunbeam/reviews/{target_id}",
-    response_model=HTMLAPIResponse
+    response_model=HTMLAPIResponse,
 )
 async def review_page(
     request: Request, 
@@ -49,6 +49,8 @@ async def review_page(
 
     **html** - The html to render in iframe
     """
+    if target_id > INT64_MAX:
+        return api_error("id out of int64 range")
     page = page if page else 1
     reviews = await parse_reviews(request.app.state.worker_session, target_id, page=page, target_type=target_type)
     context = {

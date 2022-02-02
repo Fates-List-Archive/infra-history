@@ -8,17 +8,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	siteUrl = "https://fateslist.xyz"
-)
+var TestsDone int
+var TestsSuccess int
 
-var testsDone int
-var testsSuccess int
-
-func testURLStatus(method string, url string, statusCode ...int) bool {
+// Simple command tester
+func TestURLStatus(method string, url string, statusCode ...int) bool {
 	log.Info("Testing " + url + " with method " + method)
-	testsDone += 1
-	url = siteUrl + url
+	TestsDone += 1
 	client := http.Client{Timeout: 15 * time.Second}
 	var resp *http.Response
 	var err error
@@ -37,7 +33,7 @@ func testURLStatus(method string, url string, statusCode ...int) bool {
 		return false
 	}
 
-	if resp.Request.URL.String() == siteUrl+"/maint/page" {
+	if resp.StatusCode == 408 {
 		log.Error("FAIL: Got maintainance page")
 		return false
 	}
@@ -69,6 +65,6 @@ func testURLStatus(method string, url string, statusCode ...int) bool {
 	}
 
 	log.Info("PASS: With status code " + strconv.Itoa(resp.StatusCode))
-	testsSuccess += 1
+	TestsSuccess += 1
 	return true
 }
