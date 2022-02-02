@@ -199,7 +199,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 							},
 							{
 								Name:  "Pusher",
-								Value: "[" + "" + gh.Pusher.Name + "]" + "(" + "https://github.com/" + gh.Pusher.Name + ")",
+								Value: fmt.Sprintf("[%s](%s)", gh.Pusher.Name, "https://github.com/"+gh.Pusher.Name),
 							},
 						},
 					},
