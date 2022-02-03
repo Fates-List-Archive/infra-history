@@ -56,7 +56,7 @@ async def _user_fetch(
 
     logger.debug(f"Making API call to get user {user_id}")
     cmd_id = uuid.uuid4()
-    data = await redis_ipc_new(redis, "GETCH", args=[str(user_id)])
+    data = await redis_ipc_new(redis, "GETCH", args=[str(user_id)], worker_session=worker_session)
     if data is None or data == b'-2':
         # If the data is in cache in any way, return it if user does not exist.
         # dragon can be down

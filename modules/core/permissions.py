@@ -37,7 +37,7 @@ async def is_staff(staff_json: dict | None, user_id: int, base_perm: int, json: 
     if user_id < 0: 
         staff_perm = None
     else:
-        staff_perm = await redis_ipc_new(redis, "GETPERM", args=[str(user_id)])
+        staff_perm = await redis_ipc_new(redis, "GETPERM", args=[str(user_id)], worker_session=worker_session)
     if not staff_perm:
         staff_perm = {"fname": "Unknown", "id": "0", "staff_id": "0", "perm": 0}
     else:

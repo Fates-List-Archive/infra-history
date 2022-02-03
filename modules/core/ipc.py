@@ -4,8 +4,22 @@ import uuid
 import warnings
 from typing import Sequence
 import orjson
+from loguru import logger
 
-async def redis_ipc_new(redis, cmd: str, msg: str = None, timeout: int = 30, args: Sequence[str] = None, no_wait: bool = False):
+async def redis_ipc_new(
+    redis,
+    cmd: str, 
+    msg: str = None, 
+    timeout: int = 30, 
+    args: Sequence[str] = None, 
+    no_wait: bool = False,
+    *,
+    worker_session = None
+):
+    if worker_session:
+        app = worker_session.app
+    else:
+        logger.debug("No worker_session passed to redis_ipc_new")
     args = args if args else []
     cmd_id = str(uuid.uuid4())
     if msg:
@@ -25,14 +39,16 @@ async def redis_ipc_new(redis, cmd: str, msg: str = None, timeout: int = 30, arg
             data = await redis.get(id)
             if data is not None:
                 try:
-                    app.state.worker_session.up = True # If we have data, then IPC is up
+                    if worker_session:
+                        app.state.worker_session.up = True # If we have data, then IPC is up
                 except AttributeError:
                     pass
                 return data
 
         if not no_wait:
-            await app.state.wait_for_ipc()
-            return await redis_ipc_new(redis, cmd, msg=msg, timeout=timeout, args=args.split(" "), no_wait=True)
+            if worker_session:
+                await app.state.wait_for_ipc()
+            return await redis_ipc_new(redis, cmd, msg=msg, timeout=timeout, args=args.split(" "), no_wait=True, worker_session=worker_session)
 
     if timeout:
         return await wait(cmd_id)

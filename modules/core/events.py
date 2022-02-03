@@ -16,7 +16,7 @@ async def add_ws_event(redis: aioredis.Connection, target: int, ws_event: dict, 
         ws_event["m"] = {}
     ws_event["m"]["eid"] = id
     ws_event["m"]["ts"] = time.time()
-    await redis_ipc_new(redis, "ADDWSEVENT", msg=ws_event, args=[str(target), str(id), "1" if type == "bot" else "0"], timeout=timeout)
+    asyncio.create_task(redis_ipc_new(redis, "ADDWSEVENT", msg=ws_event, args=[str(target), str(id), "1" if type == "bot" else "0"], timeout=timeout))
 
 async def bot_get_events(bot_id: int, filter: list = None, exclude: list = None):
     # As a replacement/addition to webhooks, we have API events as well to allow you to quickly get old and new events with their epoch
@@ -30,4 +30,4 @@ async def bot_add_event(redis: aioredis.Connection, bot_id: int, event: int, con
         raise TypeError("Event must be a dict")
 
     event_time = time.time()
-    asyncio.create_task(add_ws_event(redis, bot_id, {"ctx": context, "m": {"t": t if t else -1, "ts": event_time, "e": event}}))
+    await add_ws_event(redis, bot_id, {"ctx": context, "m": {"t": t if t else -1, "ts": event_time, "e": event}})

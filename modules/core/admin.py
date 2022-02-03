@@ -275,7 +275,7 @@ class BotActions():
         add_embed.add_field(name="Guild Count (approx.)", value=approx_guild_count)
         msg = {"content": f"<@&{staff_ping_add_role}>", "embed": add_embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": [str(staff_ping_add_role)]}
         if not self.system_bot:
-            await redis_ipc_new(self.redis, "SENDMSG", msg=msg, timeout=None)
+            await redis_ipc_new(self.redis, "SENDMSG", msg=msg, timeout=None, worker_session=self.worker_session)
 
 
     async def edit_bot(self):
@@ -331,4 +331,4 @@ class BotActions():
         )
         msg = {"content": "", "embed": edit_embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": []}
         if not self.system_bot:
-            await redis_ipc_new(self.redis, "SENDMSG", msg=msg, timeout=None)
+            await redis_ipc_new(self.redis, "SENDMSG", msg=msg, timeout=None, worker_session=self.worker_session)

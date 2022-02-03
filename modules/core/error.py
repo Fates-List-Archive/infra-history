@@ -6,6 +6,7 @@ from http import HTTPStatus
 from .imports import *
 from .ipc import redis_ipc_new
 from .templating import *
+from loguru import logger
 
 
 def etrace(ex):
@@ -17,7 +18,8 @@ def etrace(ex):
 class WebError():
     @staticmethod
     async def log(request, exc, error_id, curr_time):
-        redis = request.app.state.worker_session.redis
+        worker_session = request.app.state.worker_session
+        redis = worker_session.redis
         try:
             fl_info = f"Error ID: {error_id}\n\n" # Initial header
             fl_info += etrace(exc)
@@ -34,7 +36,7 @@ class WebError():
 
         **Time When Error Happened**: {curr_time}""") 
          
-        await redis_ipc_new(redis, "SENDMSG", msg = {"content": msg, "file_name": f"{error_id}.txt", "file_content": fl_info, "channel_id": str(site_errors_channel)})
+        await redis_ipc_new(redis, "SENDMSG", msg = {"content": msg, "file_name": f"{error_id}.txt", "file_content": fl_info, "channel_id": str(site_errors_channel)}, worker_session=worker_session)
 
         # Reraise exception
         try:

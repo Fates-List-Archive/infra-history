@@ -54,7 +54,7 @@ class User(DiscordUser):
         user["bot_developer"] = approved_bots != []
         user["certified_developer"] = certified_bots != []                      
                          
-        on_server = await redis_ipc_new(self.redis, "ROLES", args=[str(self.id)])
+        on_server = await redis_ipc_new(self.redis, "ROLES", args=[str(self.id)], worker_session=self.worker_session)
         if on_server == b"-1" or not on_server:
             on_server = b""
         user["badges"] = await Badge.from_user(self.id, on_server.decode("utf-8").split(" "), user["badges"], user["bot_developer"], user["certified_developer"], redis=self.redis)

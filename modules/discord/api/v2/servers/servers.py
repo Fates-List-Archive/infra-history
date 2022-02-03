@@ -252,7 +252,8 @@ async def get_server_invite(request: Request, guild_id: int):
     **This API is only documented because it's in our FastAPI backend and
     to be complete**
     """
-    redis = request.app.state.worker_session.redis
+    worker_session = request.app.state.worker_session
+    redis = worker_session.redis
     if not request.headers.get("Frostpaw"):
         return abort(404)
     auth = request.headers.get("Frostpaw-Auth", "")
@@ -265,7 +266,7 @@ async def get_server_invite(request: Request, guild_id: int):
         auth = await user_auth_check(request, user_id, token)
     else:
         user_id = 0
-    invite = await redis_ipc_new(redis, "GUILDINVITE", args=[str(guild_id), str(user_id)])
+    invite = await redis_ipc_new(redis, "GUILDINVITE", args=[str(guild_id), str(user_id)], worker_session=worker_session)
     if invite is None:
         return await get_server_invite(request, guild_id)
     invite = invite.decode("utf-8")

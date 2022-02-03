@@ -238,7 +238,7 @@ async def get_botlist_stats(request: Request,
         "SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
     if not worker_session.workers or worker_session.worker_count != len(
             worker_session.workers):
-        workers = await redis_ipc_new(worker_session.redis, "WORKERS")
+        workers = await redis_ipc_new(worker_session.redis, "WORKERS", worker_session=worker_session)
         if not workers:
             return abort(503)
         worker_session.workers = orjson.loads(workers)

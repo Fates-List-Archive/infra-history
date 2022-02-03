@@ -204,7 +204,7 @@ async def delete_bot(request: Request, user_id: int, bot_id: int):
 
     delete_embed = discord.Embed(title="Bot Deleted :(", description=f"<@{user_id}> has deleted the bot <@{bot_id}>!", color=discord.Color.red())
     msg = {"content": "", "embed": delete_embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": []}
-    await redis_ipc_new(redis, "SENDMSG", msg=msg, timeout=None)
+    await redis_ipc_new(redis, "SENDMSG", msg=msg, timeout=None, worker_session=worker_session)
 
     await bot_add_event(redis, bot_id, enums.APIEvents.bot_delete, {"user": user_id})    
     await redis.delete(f"botpagecache:{bot_id}")
@@ -307,7 +307,7 @@ async def transfer_bot_ownership(
         color=discord.Color.green()
     )
     msg = {"content": "", "embed": embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": []}
-    await redis_ipc_new(redis, "SENDMSG", msg=msg, timeout=None)
+    await redis_ipc_new(redis, "SENDMSG", msg=msg, timeout=None, worker_session=worker_session)
     await bot_add_event(bot_id, enums.APIEvents.bot_transfer, {"user": user_id, "new_owner": transfer.new_owner})    
     return api_success()
 
@@ -362,7 +362,7 @@ async def appeal_bot(request: Request, user_id: int, bot_id: int, data: BotAppea
     resubmit_embed.add_field(name="Resubmission", value = str(state == enums.BotState.denied))
     resubmit_embed.add_field(name=appeal_title, value = data.appeal)
     msg = {"content": f"<@&{staff_ping_add_role}>", "embed": resubmit_embed.to_dict(), "channel_id": str(appeals_channel), "mention_roles": [str(staff_ping_add_role)]}
-    await redis_ipc_new(request.app.state.worker_session.redis, "SENDMSG", msg=msg, timeout=None)
+    await redis_ipc_new(request.app.state.worker_session.redis, "SENDMSG", msg=msg, timeout=None, worker_session=request.app.state.worker_session)
     return api_success()
 
 @router.post(
@@ -424,7 +424,7 @@ async def certify_bot_request(request: Request, bot_id: int, user_id: int, data:
     resubmit_embed.add_field(name="Bot ID", value = str(bot_id))
     resubmit_embed.add_field(name="Message", value = data.appeal)
     msg = {"content": f"<@&{staff_ping_add_role}>", "embed": resubmit_embed.to_dict(), "channel_id": str(appeals_channel), "mention_roles": [str(staff_ping_add_role)]}
-    await redis_ipc_new(request.app.state.worker_session.redis, "SENDMSG", msg=msg, timeout=None)
+    await redis_ipc_new(request.app.state.worker_session.redis, "SENDMSG", msg=msg, timeout=None, worker_session=request.app.state.worker_session)
     return api_success()
 
 @router.get(

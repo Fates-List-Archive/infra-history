@@ -88,10 +88,11 @@ async def get_staff_app_questions(request: Request):
     ],
 )
 async def post_staff_app(request: Request, app: StaffAppCreate, user_id: int):
-    redis = request.app.state.worker_session.redis
+    worker_session = request.app.state.worker_session
+    redis = worker_session.redis
     user = await get_user(
         user_id, 
-        worker_session=request.app.state.worker_session
+        worker_session=worker_session
     )
     if not user:
         return abort(404)
@@ -137,7 +138,8 @@ async def post_staff_app(request: Request, app: StaffAppCreate, user_id: int):
             "embed": embed.to_dict(),
             "channel_id": str(staff_apps_channel),
             "mention_roles": [str(staff_ping_add_role)]
-        }
+        },
+        worker_session=worker_session
     )
 
     await redis_ipc_new(

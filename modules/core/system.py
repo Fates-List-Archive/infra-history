@@ -14,6 +14,7 @@ from http import HTTPStatus
 import aioredis
 import asyncpg
 import sentry_sdk
+from fastapi import FastAPI
 from fastapi.exceptions import (HTTPException, RequestValidationError,
                                 ValidationError)
 from fastapi.middleware.gzip import GZipMiddleware
@@ -193,6 +194,7 @@ class FatesWorkerSession(Singleton):  # pylint: disable=too-many-instance-attrib
     def __init__(
         self,
         *, 
+        app: FastAPI,
         session_id: str,
         postgres: asyncpg.Pool,
         redis: aioredis.Connection,
@@ -206,6 +208,7 @@ class FatesWorkerSession(Singleton):  # pylint: disable=too-many-instance-attrib
         self.worker_count = worker_count
         self.tags = {}
         self.tags_fixed = []
+        self.app = app
 
         # Record basic stats and initially set workers to None
         self.start_time = time.time()
@@ -265,10 +268,7 @@ async def init_fates_worker(app, session_id, workers):
     if os.environ.get("PROFILE"):
         app.add_middleware(CProfileMiddleware, enable=True, server_app=app, filename="flprofile.pstats", strip_dirs=False, sort_by='cumulative')
         app.state.cprof = app.user_middleware[0]
-    # This is still builtins for backward compatibility. 
-    # ========================================================
-    # Move all code to use worker session. All new code should 
-    # always use worker session instead of builtins
+
     dbs = await setup_db()
 
     # Wait for redis ipc to come up
@@ -317,6 +317,7 @@ async def finish_init(app, session_id, workers, dbs):
     logger.success("Connected to postgres and redis")
 
     app.state.worker_session = FatesWorkerSession(
+        app=app,
         session_id=session_id,
         postgres=dbs["postgres"],
         redis=dbs["redis"],
