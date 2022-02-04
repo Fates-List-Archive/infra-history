@@ -141,9 +141,11 @@ func setupCommands() {
 				log.Debug("Using user from member cache")
 				user = member.User
 			} else {
-				user, err = common.DiscordMain.User(cmd[2])
+				var t string
+				user, err, t = common.FetchUserRNG(cmd[2])
+				log.Info("Fetching user from API: " + t)
 				if err != nil {
-					log.Warn(err)
+					log.Warn(err, " ["+t+"]")
 					return "-1"
 				}
 			}

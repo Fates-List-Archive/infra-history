@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/Fates-List/discordgo"
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fastjson"
 	"golang.org/x/crypto/sha3"
@@ -32,6 +33,7 @@ var (
 var (
 	MainBotToken            string
 	ServerBotToken          string
+	fetchBot1Token          string // Used for fetching
 	ClientSecret            string
 	GHWebhookSecret         string
 	VoteTokenAccessKey      string
@@ -101,6 +103,7 @@ func init() {
 	MainBotToken = fastjson.GetString(secretsJson, "token_main")
 	ClientSecret = fastjson.GetString(secretsJson, "client_secret")
 	ServerBotToken = fastjson.GetString(secretsJson, "token_server")
+	fetchBot1Token = fastjson.GetString(secretsJson, "token_fetch_bot_1")
 	JAPIKey = fastjson.GetString(secretsJson, "japi_key")
 	GHWebhookSecret = fastjson.GetString(secretsJson, "gh_webhook_secret")
 	VoteTokenAccessKey = fastjson.GetString(secretsJson, "vote_token_access_key")
@@ -144,4 +147,12 @@ func init() {
 	permInit()
 
 	log.Info("Environment setup successfully!")
+}
+
+func init() {
+	var err error
+	fetchBot1, err = discordgo.New("Bot " + fetchBot1Token)
+	if err != nil {
+		panic(err)
+	}
 }

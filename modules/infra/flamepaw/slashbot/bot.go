@@ -279,20 +279,20 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 		return
 	}
 
-	if len(content) > 2000 {
+	if len(content) > 1900 {
 		log.Info("Sending large content of length: " + strconv.Itoa(len(content)))
 		var offset int = 0
-		pos := [2]int{0, 2000}
+		pos := [2]int{0, 1900}
 		countedChars := 0
 		sendIResponseComplex(discord, i, "defer", clean, flags, []string{}, embeds, 0)
 		for countedChars < len(content) {
 			sendIResponseComplex(discord, i, content[pos[0]:pos[1]], clean, flags, []string{}, embeds, 0)
 
-			// Switch {0, 2000} to {2000, XYZ}
-			offset = int(math.Min(2000, float64(len(content)-pos[0]))) // Find new offset to use
+			// Switch {0, 1900} to {1900, XYZ}
+			offset = int(math.Min(1900, float64(len(content)-pos[0]))) // Find new offset to use
 			pos[0] += offset
-			countedChars += 2000
-			pos[1] += int(math.Min(2000, float64(len(content)-countedChars)))
+			countedChars += 1900
+			pos[1] += int(math.Min(1900, float64(len(content)-countedChars)))
 		}
 
 		if len(largeContent) == 0 {

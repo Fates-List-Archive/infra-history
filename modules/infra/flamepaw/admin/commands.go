@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flamepaw/common"
 	"flamepaw/slashbot"
 	"flamepaw/types"
@@ -93,6 +94,38 @@ func UpdateBotLogs(ctx context.Context, postgres *pgxpool.Pool, userId string, b
 // Admin OP Getter
 func CmdInit() map[string]types.SlashCommand {
 	// Mock is only here for registration, actual code is on slashbot
+
+	commands["MEASUREAPI"] = AdminOp{
+		InternalName: "apim",
+		Cooldown:     types.CooldownNone,
+		Description:  "Measure API response times",
+		Event:        types.EventNone,
+		MinimumPerm:  4,
+		SlashRaw:     true,
+		SlashOptions: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "user",
+				Description: "The user to give coins to",
+				Required:    true,
+			},
+		},
+		Handler: func(context types.SlashContext) string {
+			userVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "user", false)
+			user, ok := userVal.(string)
+			if !ok {
+				return "Invalid user"
+			}
+			currTimeJAPI := time.Now().Unix()
+			japiJson, err, t := common.FetchUserRNG(user)
+			if err == nil {
+				err = errors.New("No errors")
+			}
+			timeJAPI := time.Now().Unix() - currTimeJAPI
+			slashbot.SendIResponse(common.DiscordMain, context.Interaction, "JAPI JSON:\n"+spew.Sdump(japiJson)+"\n**Errors** "+err.Error()+"\n**Time taken** "+strconv.FormatInt(timeJAPI, 10)+"\n**Type** "+t, false)
+			return "nop"
+		},
+	}
 
 	commands["GIVECOINS"] = AdminOp{
 		InternalName: "givecoins",
