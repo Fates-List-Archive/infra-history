@@ -204,11 +204,12 @@ async def invite_bot(
 
 
 # Check vanity of bot
-async def vanity_bot(db: asyncpg.Pool, redis: aioredis.Connection, vanity: str) -> Optional[list]:
+async def vanity_bot(db: asyncpg.Pool, redis: aioredis.Connection, vanity: str, ignore_prefix=False) -> Optional[list]:
     """Checks and returns the vanity of the bot, otherwise returns None"""
 
-    if vanity in reserved_vanity or vanity.startswith("_"):  # Check if vanity is reserved and if so, return None
-        return None
+    if not ignore_prefix:
+        if vanity in reserved_vanity or vanity.startswith("_"):  # Check if vanity is reserved and if so, return None
+            return None
 
     cache = await redis.get(vanity + "-v1")
     if cache:

@@ -31,6 +31,7 @@ class ProfileData(BaseModel):
     description: str | None = "This user prefers to be a enigma"
     user_css: str | None = ""
     profile_css: str | None = ""
+    vote_reminder_channel: str | None = ""
     js_allowed: bool
     bot_developer: bool
     certified_developer: bool

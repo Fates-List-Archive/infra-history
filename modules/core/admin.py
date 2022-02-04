@@ -161,8 +161,8 @@ class BotActions():
             self.privacy_policy = self.privacy_policy.replace("http://", "https://") # Force https on privacy policy
             if not self.privacy_policy.startswith("https://"): # Make sure we actually have a HTTPS privacy policy
                 return "Your privacy policy must be a proper URL starting with https://. URLs which start with http:// will be automatically converted to HTTPS while adding"
-        check = await vanity_bot(self.db, self.redis, self.vanity)
-        if check and check[0] != self.bot_id:
+        check = await vanity_bot(self.db, self.redis, self.vanity, ignore_prefix=True)
+        if check and check[0] != self.bot_id or self.vanity in reserved_vanity:
             return f"The custom vanity URL you are trying to get is already in use or is reserved ({check})"
         if self.webhook_secret and len(self.webhook_secret) < 8:
             return "Your webhook secret must be at least 8 characters long"
