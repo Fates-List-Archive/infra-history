@@ -5,6 +5,11 @@ from aenum import Enum, IntEnum
 from pydantic import BaseModel
 
 
+class VoteReminderMode(IntEnum):
+    _init_ = "value __doc__"
+    disable = 0, "Disable vote reminders"
+    enable = 1, "Enable vote reminders"
+
 class WidgetFormat(Enum):
     _init_ = "value __doc__"
     json = "json", "JSON Widget"

@@ -15,7 +15,24 @@ class UpdateUserPreferences(BaseModel):
     profile_css: str | None = None
     user_css: str | None = None
     site_lang: enums.SiteLang | None = None
+    vote_reminder_channel: str | None = None
 
+    @validator("vote_reminder_channel")
+    def channel_id_validator(cls, v):
+        if v and not v.isdigit():
+            raise ValueError("Invalid channel ID.")
+        return v
+
+
+class UpdateVoteReminders(BaseModel):
+    mode: enums.VoteReminderMode
+    bot_id: str
+
+    @validator("bot_id")
+    def bot_id_validator(cls, v):
+        if not v.isdigit():
+            raise ValueError("Invalid bot ID.")
+        return v
 
 class BotMeta(BaseModel):
     """

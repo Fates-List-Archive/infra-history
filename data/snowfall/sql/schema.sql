@@ -156,7 +156,9 @@ CREATE TABLE users (
     profile_css text not null default '',
     state integer default 0, -- 0 = No Ban, 1 = Global Ban
     coins INTEGER DEFAULT 0,
-    js_allowed BOOLEAN DEFAULT false
+    js_allowed BOOLEAN DEFAULT false,
+    vote_reminders bigint[] not null default '{}',
+    vote_reminder_channel bigint
 );
 
 CREATE TABLE user_bot_logs (
