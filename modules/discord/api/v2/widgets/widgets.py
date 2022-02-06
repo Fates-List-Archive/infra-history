@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 import io, textwrap, aiofiles
 from starlette.concurrency import run_in_threadpool
 from math import floor
+from jinja2 import Environment, BaseLoader, select_autoescape
 
 from ..base import API_VERSION
 
@@ -14,13 +15,41 @@ router = APIRouter(
     tags = [f"API v{API_VERSION} - Widgets"],
 )
 
-
 from colour import Color
 
 def hex_to_rgb(value):
     value = value.lstrip('H')
     lv = len(value)
     return tuple(int(value[i:i+lv//3], 16) for i in range(0, lv, lv//3))
+
+widgets_html_template = """
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend+Deca&display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/1/1.0.7/iconify.min.js"></script>
+    <style>h5, div, span, p {font-family: 'Lexend Deca', sans-serif;}</style>
+</head>
+<a href="https://fateslist.xyz/{{type}}/{{id}}">
+    <div style="display: inline-block; background: {{bgcolor.replace('H', '#', 1) or '#111112'}};width: 300px; height: 175px;">
+        <div style="margin-bottom: 2px;">
+            <div style="display: block;">
+                <h5 style="color: white; margin-left: 7px; margin-top: 2px;"><strong>{{user.username}}</strong></h5>
+                <img loading="lazy" src="{{user.avatar}}" style="border-radius: 50px 50px 50px 50px; margin: 0 3px auto; text-align: center; width: 100px; height: 100px; display: inline-flex; float: left">
+            </div>
+            <div style="margin-left: 10px;">
+                <p class="text-center" style="color: {{textcolor.replace('H', '#', 1) or 'white'}};"><span class="iconify i-m3" data-icon="fa-solid:server" data-inline="false"></span><span style="margin-left: 5px;">{{human_format(bot.guild_count)}}</span><br/></p>
+                <p class="text-center" style="color: {{textcolor.replace('H', '#', 1) or 'white'}};"><span class="iconify i-m3" data-icon="fa-solid:thumbs-up" data-inline="false"></span><span style="margin-left: 5px;">{{human_format(bot.votes)}}</span></p>
+            </div>
+        </div><br/>
+        <p style="padding: 3px; color: white; opacity: 0.98; margin-top: 2px;">Fates List</p>
+    </div>
+</a>
+"""
+
+env = Environment(
+    loader=BaseLoader,
+    autoescape=select_autoescape(),
+    enable_async=True,
+).from_string(widgets_html_template.replace("\n", ""), globals={"human_format": human_format})
 
 def is_color_like(c):
     try:
@@ -31,7 +60,6 @@ def is_color_like(c):
         return True
     except ValueError: # The color code was not found
         return False
-
 
 @router.get("/{target_id}", operation_id="get_widget")
 async def get_widget(
@@ -50,7 +78,7 @@ async def get_widget(
     """
     Returns a widget
 
-    **For colors (bgcolor, textcolor), use H for html hex instead of #**
+    **For colors (bgcolor, textcolor), use H for html hex instead of #.\nExample: H123456**
 
     cd - A custom description you wish to set for the widget
 
@@ -121,7 +149,8 @@ async def get_widget(
         return data
 
     if format == enums.WidgetFormat.html:
-        return await templates.TemplateResponse("widget.html", {"request": request, "textcolor": textcolor, "bgcolor": bgcolor} | data)
+        rendered = await env.render_async(**{"textcolor": textcolor, "bgcolor": bgcolor, "id": target_id, "type": target_type.name} | data)
+        return HTMLResponse(rendered)
 
     if format in (enums.WidgetFormat.png, enums.WidgetFormat.webp):
         # Check if in cache

@@ -17,7 +17,6 @@ from .auth import *
 from .cache import *
 from .events import *
 from .imports import *
-from .templating import *
 
 from lynxfall.utils.string import ireplacem, intl_text
 

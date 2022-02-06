@@ -20,7 +20,6 @@ from fastapi.exceptions import (HTTPException, RequestValidationError,
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import PlainTextResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
 from fastapi_cprofile.profiler import CProfileMiddleware
 from fastapi.routing import APIRoute
 from lynxfall.core.classes import Singleton
@@ -221,9 +220,6 @@ class FatesWorkerSession(Singleton):  # pylint: disable=too-many-instance-attrib
         # Used in shutdown to check if already dead
         self.dying = False
         
-        # Templating
-        self.templates = Jinja2Templates(directory="data/templates")
-
     def publish_workers(self, workers):
         """Publish workers"""
         self.workers = workers

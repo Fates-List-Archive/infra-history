@@ -11,4 +11,3 @@ from .permissions import *  # Import permission functions
 from .ratelimits import *  # Import ratelimit handler
 from .reviews import *  # Import review parser
 from .system import *  # System module
-from .templating import *  # Import the HTML templating system
