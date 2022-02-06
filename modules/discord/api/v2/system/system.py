@@ -35,54 +35,6 @@ async def add_bot_info(request: Request, user_id: int):
     return context
 
 @router.get(
-    "/_sunbeam/reviews/{target_id}",
-    response_model=HTMLAPIResponse,
-)
-async def review_page(
-    request: Request, 
-    target_id: int, 
-    target_type: enums.ReviewType,
-    page: int = 1, 
-    user_id: int | None = 0,
-):
-    """
-    Returns:
-
-    **html** - The html to render in iframe
-    """
-    if target_id > INT64_MAX:
-        return api_error("id out of int64 range")
-    page = page if page else 1
-    reviews = await parse_reviews(request.app.state.worker_session, target_id, page=page, target_type=target_type)
-    context = {
-        "id": str(target_type),
-        "user_id": str(user_id),
-        "type": "bot" if target_type == enums.ReviewType.bot else "server",
-        "reviews": {
-            "average_rating": float(reviews[1])
-        },
-    }
-    data = {
-        "bot_reviews": reviews[0], 
-        "average_rating": reviews[1], 
-        "total_reviews": reviews[2], 
-        "review_page": page, 
-        "total_review_pages": reviews[3], 
-        "per_page": reviews[4],
-    }
-
-    template = await templates.TemplateResponse(
-        "reviews.html", 
-        {
-            "request": request, 
-            "data": {
-                "user": {}
-            }
-        } | data, 
-        context = context)
-    return {"html": template.body}
-
-@router.get(
     "/_sunbeam/troubleshoot",
     response_model=Troubleshoot
 )
