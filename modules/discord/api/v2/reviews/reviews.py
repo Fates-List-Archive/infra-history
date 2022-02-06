@@ -135,7 +135,7 @@ async def new_review(request: Request, user_id: int, data: BotReviewPartialExt):
     ]
 )
 async def edit_review(request: Request, user_id: int, id: uuid.UUID, data: BotReviewPartial):
-    """Deletes a review. Note that the id and the reply flag is not honored for this endpoint"""
+    """Deletes a review. Note that the (body) id, target_id, target_type and the reply flags are not honored for this endpoint"""
     db = request.app.state.worker_session.postgres
     redis = request.app.state.worker_session.redis
     if len(data.review) < minlength:

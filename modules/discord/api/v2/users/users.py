@@ -392,7 +392,7 @@ async def appeal_bot(request: Request, user_id: int, bot_id: int, data: BotAppea
 
 
     resubmit_embed = discord.Embed(title=title, color=0x00ff00)
-    bot = await get_bot(bot_id)
+    bot = await get_bot(bot_id, worker_session=request.app.state.worker_session)
     resubmit_embed.add_field(name="Username", value = bot['username'])
     resubmit_embed.add_field(name="Bot ID", value = str(bot_id))
     resubmit_embed.add_field(name="Resubmission", value = str(state == enums.BotState.denied))
@@ -455,7 +455,7 @@ async def certify_bot_request(request: Request, bot_id: int, user_id: int, data:
         )
 
     resubmit_embed = discord.Embed(title="Certification Request", color=0x00ff00)
-    bot = await get_bot(bot_id)
+    bot = await get_bot(bot_id, worker_session=request.app.state.worker_session)
     resubmit_embed.add_field(name="Username", value = bot['username'])
     resubmit_embed.add_field(name="Bot ID", value = str(bot_id))
     resubmit_embed.add_field(name="Message", value = data.appeal)
