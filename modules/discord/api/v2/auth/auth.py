@@ -16,19 +16,12 @@ router = APIRouter(
 )
 
 @router.post("/oauth", response_model = OAuthInfo)
-async def get_login_link(request: Request, data: LoginInfo, worker_session = Depends(worker_session)):
-    oauth = worker_session.oauth
-    url = await oauth.discord.get_auth_url(
-        data.scopes,
-    )
-
-    # Workaround for sunbeam
-    if request.headers.get("Frostpaw"):
-        url.url = url.url.replace("https://fateslist.xyz", request.headers.get("Frostpaw-Server", "https://sunbeam.fateslist.xyz")).replace("/static/login-finish.html", "/frostpaw/login", 1)
-    else:
-        return api_error("Unsupported auth method")
-
-    return api_success(url = url.url, state=url.state)
+async def get_login_link(request: Request):
+    if not request.headers.get("Frostpaw-Server"):
+        return abort(404)
+    state = str(uuid.uuid4())
+    url = f"https://discord.com/oauth2/authorize?client_id={discord_client_id}&redirect_uri={request.headers.get('Frostpaw-Server')}/frostpaw/login&state={state}&scope=identify&response_type=code"
+    return api_success(url = url, state=state)
 
 @router.post("/users", response_model = LoginResponse)
 async def login_user(request: Request, response: Response, data: Login, worker_session = Depends(worker_session)):
