@@ -130,7 +130,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 
 	document("GET", "/api/dragon/ping", "ping_server", "Ping the server", nil, types.APIResponse{})
 	router.GET("/ping", func(c *gin.Context) {
-		apiReturn(c, 404, true, nil, nil)
+		apiReturn(c, 200, true, nil, nil)
 	})
 
 	document("GET", "/api/dragon/__stats", "get_stats", "Get stats of websocket server", nil, nil)

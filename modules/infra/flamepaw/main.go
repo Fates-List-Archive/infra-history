@@ -3,14 +3,47 @@ package main
 import (
 	"flamepaw/cli"
 	"flamepaw/common"
+	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
+	"runtime"
 	"strings"
+	"syscall"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
+	go func() {
+		// Based on answers to this stackoverflow question:
+		// https://stackoverflow.com/questions/19094099/how-to-dump-goroutine-stacktraces
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGQUIT)
+		for {
+			<-sigs
+
+			fmt.Fprintln(os.Stderr, "=== received SIGQUIT ===")
+			fmt.Fprintln(os.Stderr, "*** goroutine dump...")
+
+			var buf []byte
+			var bufsize int
+			var stacklen int
+
+			// Create a stack buffer of 1MB and grow it to at most 100MB if
+			// necessary
+			for bufsize = 1e6; bufsize < 100e6; bufsize *= 2 {
+				buf = make([]byte, bufsize)
+				stacklen = runtime.Stack(buf, true)
+				if stacklen < bufsize {
+					break
+				}
+			}
+			fmt.Fprintln(os.Stderr, string(buf[:stacklen]))
+			fmt.Fprintln(os.Stderr, "*** end of dump")
+		}
+	}()
+
 	lvl, ok := os.LookupEnv("LOG_LEVEL")
 	if !ok {
 		lvl = "debug"
