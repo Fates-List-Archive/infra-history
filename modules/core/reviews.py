@@ -7,18 +7,11 @@ async def parse_reviews(worker_session, target_id: int, rev_id: uuid.uuid4 = Non
     db = worker_session.postgres
     if recache:
         async def recache(target_id: int):
-            if recache_from_rev_id:
-                tgt_data = await worker_session.postgres.fetchrow("SELECT target_id, target_type FROM reviews WHERE id = $1", target_id)
-                if tgt_data:
-                    target_id, target_type = tgt_data["target_id"], tgt_data["target_type"]
-                else:
-                    return
+            target_type = await db.fetchval("SELECT bot_id FROM bots WHERE bot_id = $1", target_id)
+            if not target_type:
+                target_type = enums.ReviewType.server
             else:
-                target_type = await db.fetchval("SELECT bot_id FROM bots WHERE bot_id = $1", target_id)
-                if not target_type:
-                    target_type = enums.ReviewType.server
-                else:
-                    target_type = enums.ReviewType.bot
+                target_type = enums.ReviewType.bot
 
             logger.warning(str(target_id) + str(target_type))
 

@@ -119,6 +119,7 @@ async def new_review(request: Request, user_id: int, data: BotReviewPartialExt):
     await parse_reviews(
         request.app.state.worker_session, 
         data.target_id,
+        target_type=data.target_type,
         recache = True,
     )
 
@@ -180,9 +181,9 @@ async def edit_review(request: Request, user_id: int, id: uuid.UUID, data: BotRe
     # Recache reviews
     await parse_reviews(
         request.app.state.worker_session, 
-        id, 
+        check["target_id"],
+        target_type=check["target_type"],
         recache = True,
-        recache_from_rev_id=True
     )
 
     return api_success()
@@ -232,9 +233,9 @@ async def delete_review(request: Request, user_id: int, id: uuid.UUID):
     # Recache reviews
     await parse_reviews(
         request.app.state.worker_session, 
-        str(id), 
+        check["target_id"],
+        target_type=check["target_type"],
         recache = True,
-        recache_from_rev_id=True
     )
 
     return api_success()    
