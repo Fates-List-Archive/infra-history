@@ -1,6 +1,17 @@
 {
 	"partners": [
 		{
+			"id": "fluxpoint",
+			"name": "Fluxpoint Development",
+			"owner": "190590364871032834",
+			"image": "https://fluxpoint.dev/img/icons/fluxpoint.png",
+			"description": "A community for developers, gamers and anime nerds that enjoy doing what we love!",
+			"links": {
+				"discord": "https://discord.gg/fluxpoint",
+				"website": "https://fluxpoint.dev"
+			}
+		},
+		{
 			"id": "anti-raid",
 			"name": "AntiRaid",
 			"owner": "775855009421066262",
@@ -27,7 +38,7 @@
 			"name": "Voltic Development",
 			"owner": "116730818822537225",
 			"image": "https://cdn.discordapp.com/attachments/933050504995545190/937916242470252554/vd_staff23.png",
-			"description": "A place you can call home. Need help with what you are working on?\nCome join us and ask the community, We all have the same goal & that is to become developers in whatever programming language! Then show of what you are been working on",
+			"description": "A place you can call home. We all have the same goal & that is to become developers!",
 			"links": {
 				"discord": "https://discord.gg/Q6ZSW63Fpw",
 				"website": "https://voltic.thedev.id/"

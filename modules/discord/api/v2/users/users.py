@@ -1,13 +1,9 @@
-from lxml.html.clean import Cleaner
-
 from modules.core import *
 from modules.core.classes import User as _User, Profile
 from fastapi import APIRouter
 
 from ..base import API_VERSION, responses
 from .models import APIResponse, IDResponse, BotMeta, BotPackPartial, enums, BaseUser, UpdateUserPreferences, OwnershipTransfer, BotAppeal, BotVoteCheck, UpdateVoteReminders
-
-cleaner = Cleaner(remove_unknown_tags=False)
 
 router = APIRouter(
     prefix = f"/api/v{API_VERSION}/users",

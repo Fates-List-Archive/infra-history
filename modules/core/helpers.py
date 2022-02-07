@@ -11,7 +11,6 @@ import aioredis
 import bleach
 import markdown
 from modules.models import constants
-from lxml.html.clean import Cleaner
 
 from .auth import *
 from .cache import *
@@ -32,8 +31,6 @@ banner_replace_tuple = (
     ("file://", ""),
 )
 ldesc_replace_tuple = (("window.location", ""), ("document.ge", ""))
-
-cleaner = Cleaner(remove_unknown_tags=False)
 
 def flags_check(locks, check_locks):
     """Check if a particular lock is present in a bots locks"""

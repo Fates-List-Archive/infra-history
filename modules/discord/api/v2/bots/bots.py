@@ -7,8 +7,6 @@ from fastapi.responses import PlainTextResponse
 from ..base import API_VERSION
 from .models import APIResponse, Bot, BotRandom, BotStats, SettingsPage
 
-cleaner = Cleaner(remove_unknown_tags=False)
-
 router = APIRouter(
     prefix = f"/api/v{API_VERSION}/bots",
     include_in_schema = True,
@@ -662,7 +660,7 @@ async def _set_bot_stats(request: Request, bot_id: int, api: dict, no_abuse_chec
     try:
         if state != enums.BotState.certified and not no_abuse_checks:
             async with aiohttp.ClientSession() as sess:
-                async with sess.get(f"https://japi.rest/discord/v1/application/{app_id}", timeout=15, headers=headers) as resp:
+                async with sess.get(f"https://japi.rest/discord/v1/application/{app_id}", headers=headers) as resp:
                     if resp.status != 200:
                         return api_error("Our anti-abuse provider is down right now. Please contact Fates List Support if this happens when you try again!")
                     app = await resp.json()

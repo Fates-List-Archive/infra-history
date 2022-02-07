@@ -17,30 +17,32 @@ router = APIRouter(
 
 from colour import Color
 
+# Convert hexcode to rgb for pillow
 def hex_to_rgb(value):
     value = value.lstrip('H')
     lv = len(value)
     return tuple(int(value[i:i+lv//3], 16) for i in range(0, lv, lv//3))
 
+# Widget template
 widgets_html_template = """
 <head>
     <link href="https://fonts.googleapis.com/css2?family=Lexend+Deca&display=swap" rel="stylesheet">
     <script src="https://code.iconify.design/1/1.0.7/iconify.min.js"></script>
-    <style>h5, div, span, p {font-family: 'Lexend Deca', sans-serif;}</style>
+    <style>h5,div,span,p{font-family:'Lexend Deca',sans-serif;}</style>
 </head>
 <a href="https://fateslist.xyz/{{type}}/{{id}}">
-    <div style="display: inline-block; background: {{bgcolor.replace('H', '#', 1) or '#111112'}};width: 300px; height: 175px;">
-        <div style="margin-bottom: 2px;">
-            <div style="display: block;">
-                <h5 style="color: white; margin-left: 7px; margin-top: 2px;"><strong>{{user.username}}</strong></h5>
-                <img loading="lazy" src="{{user.avatar}}" style="border-radius: 50px 50px 50px 50px; margin: 0 3px auto; text-align: center; width: 100px; height: 100px; display: inline-flex; float: left">
+    <div style="display:inline-block;background:{{bgcolor.replace('H', '#', 1) or '#111112'}};width:300px;height:175px;">
+        <div style="margin-bottom:2px;">
+            <div style="display:block;">
+                <h5 style="color:white;margin-left:7px;margin-top:2px;"><strong>{{user.username}}</strong></h5>
+                <img loading="lazy" src="{{user.avatar}}" style="border-radius:50px 50px 50px 50px;margin: 0 3px auto;text-align:center;width:100px;height:100px;display:inline-flex;float:left">
             </div>
-            <div style="margin-left: 10px;">
-                <p class="text-center" style="color: {{textcolor.replace('H', '#', 1) or 'white'}};"><span class="iconify i-m3" data-icon="fa-solid:server" data-inline="false"></span><span style="margin-left: 5px;">{{human_format(bot.guild_count)}}</span><br/></p>
-                <p class="text-center" style="color: {{textcolor.replace('H', '#', 1) or 'white'}};"><span class="iconify i-m3" data-icon="fa-solid:thumbs-up" data-inline="false"></span><span style="margin-left: 5px;">{{human_format(bot.votes)}}</span></p>
+            <div style="margin-left:10px;">
+                <p style="color:{{textcolor.replace('H', '#', 1) or 'white'}};"><span class="iconify" data-icon="fa-solid:server"></span><span style="margin-left:5px;">{{human_format(bot.guild_count)}}</span><br/></p>
+                <p style="color:{{textcolor.replace('H', '#', 1) or 'white'}};"><span class="iconify" data-icon="fa-solid:thumbs-up"></span><span style="margin-left:5px;">{{human_format(bot.votes)}}</span></p>
             </div>
         </div><br/>
-        <p style="padding: 3px; color: white; opacity: 0.98; margin-top: 2px;">Fates List</p>
+        <p style="padding:3px;color:white;opacity:0.98;margin-top:2px;">Fates List</p>
     </div>
 </a>
 """
@@ -49,7 +51,7 @@ env = Environment(
     loader=BaseLoader,
     autoescape=select_autoescape(),
     enable_async=True,
-).from_string(widgets_html_template.replace("\n", ""), globals={"human_format": human_format})
+).from_string(widgets_html_template.replace("\n", "").replace("  ", ""), globals={"human_format": human_format})
 
 def is_color_like(c):
     try:
@@ -80,9 +82,11 @@ async def get_widget(
 
     **For colors (bgcolor, textcolor), use H for html hex instead of #.\nExample: H123456**
 
-    cd - A custom description you wish to set for the widget
+    - cd - A custom description you wish to set for the widget
 
-    desc_length - Set this to anything less than 0 to try and use full length (may 500), otherwise this sets the length of description to usr
+    - desc_length - Set this to anything less than 0 to try and use full length (may 500), otherwise this sets the length of description to use.
+
+    **Using 0 for desc_length will disable description**
 
     no_cache - If this is set to true, cache will not be used but will still be updated. If using cd, set this option to true and cache the image yourself
     Note that no_cache is slow and may lead to ratelimits and/or your got being banned if used excessively
@@ -92,16 +96,20 @@ async def get_widget(
     elif not textcolor:
         textcolor = "black"
 
+    # HTML shouldn't have any changes to bgcolor
     if format != enums.WidgetFormat.html:
         if bgcolor.startswith("H"):
+            # Hex code starting with H, make it rgb
             bgcolor = hex_to_rgb(bgcolor)
         else:
+            # Converting 'deep sky blue' to 'deepskyblue'
             if not is_color_like(str(bgcolor)):
                 return api_error("Invalid bgcolor")
             if isinstance(bgcolor, str):
                 bgcolor=bgcolor.split('.')[0]
                 bgcolor = floor(int(bgcolor)) if bgcolor.isdigit() or bgcolor.isdecimal() else bgcolor
         
+        # HTML shouldn't have any changes to textcolor
         if textcolor.startswith("H"):
             textcolor = hex_to_rgb(textcolor)
         else:
@@ -194,18 +202,18 @@ async def get_widget(
             return im
         widget_img.paste(remove_transparency(fates_pil, bgcolor),(10,152))
     
-        #pasting votes logo
-        try:
-            widget_img.paste(Image.alpha_composite(avatar_pil_bg, votes_pil),(120,115))
-        except:
-            widget_img.paste(votes_pil,(120,115))
-    
         #pasting servers logo
-        try:
-            widget_img.paste(Image.alpha_composite(avatar_pil_bg, server_pil),(120,95))
-        except:
-            widget_img.paste(server_pil,(120,95))
+        widget_img.paste(
+            server_pil,
+            (120, 95) if desc_length != 0 else (120, 30)
+        )
 
+        #pasting votes logo
+        widget_img.paste(
+            votes_pil,
+            (120, 115) if desc_length != 0 else (120, 50)
+        )
+    
         font = os.path.join("data/static/LexendDeca-Regular.ttf")
 
         def get_font(string: str, d):
@@ -251,33 +259,32 @@ async def get_widget(
                     d.textsize(str(bot_obj['username']))[0],
                     widget_img.size[0]
                 ),
-                5
-            ), 
+            5), 
             str(bot_obj['username']), 
             fill=textcolor,
             font=ImageFont.truetype(
                 font,
                 16,
-                layout_engine=ImageFont.LAYOUT_RAQM
-                )
+                layout_engine=ImageFont.LAYOUT_RAQM)
             )
     
         bot["description"] = bot["description"].encode("ascii", "ignore").decode()
 
-        #description
-        wrapper = textwrap.TextWrapper(width=15)
-        text = cd or (bot["description"][:desc_length] if desc_length > 0 else bot["description"])
-        word_list = wrapper.wrap(text=str(text))
-        d.text(
-            (120,30), 
-            str("\n".join(word_list)), 
-            fill=textcolor,
-            font=get_font(str("\n".join(word_list)),d)
-        )
+        # description
+        if desc_length != 0: 
+            wrapper = textwrap.TextWrapper(width=15)
+            text = cd or (bot["description"][:desc_length] if desc_length > 0 else bot["description"])
+            word_list = wrapper.wrap(text=str(text))
+            d.text(
+                (120,30), 
+                str("\n".join(word_list)), 
+                fill=textcolor,
+                font=get_font(str("\n".join(word_list)),d)
+            )
     
         #server count
         d.text(
-            (140,94), 
+            (140,94) if desc_length != 0 else (140,30), 
             human_format(bot["guild_count"]), 
             fill=textcolor,
             font=get_font(human_format(bot["guild_count"]),d)
@@ -285,7 +292,7 @@ async def get_widget(
     
         #votes
         d.text(
-            (140,114),
+            (140,114) if desc_length != 0 else (140,50),
             human_format(bot["votes"]), 
             fill=textcolor,
             font=get_font(human_format(bot['votes']),d)

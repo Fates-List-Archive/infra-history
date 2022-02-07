@@ -1,13 +1,10 @@
-from lxml.html.clean import Cleaner
-
 from modules.core import *
 from lynxfall.utils.string import human_format
 from fastapi.responses import PlainTextResponse
 
 from ..base import API_VERSION
 from .models import APIResponse, Guild, GuildRandom
-
-cleaner = Cleaner(remove_unknown_tags=False)
+import bleach
 
 router = APIRouter(
     prefix = f"/api/v{API_VERSION}/guilds",
@@ -101,7 +98,7 @@ async def fetch_random_server(request: Request, guild_id: int, lang: str = "defa
         "votes": human_format(bot["votes"]),
         "guild_count": human_format(bot["guild_count"])
     }
-    bot["description"] = cleaner.clean_html(intl_text(bot["description"], lang)) # Prevent XSS attacks in short description
+    bot["description"] = bleach.clean(intl_text(bot["description"], lang)) # Prevent XSS attacks in short description
     if not bot["banner_card"]: # Ensure banner is always a string
         bot["banner_card"] = "" 
     return bot

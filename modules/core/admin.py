@@ -130,10 +130,10 @@ class BotActions():
                     return f"Your {banner_name} does not use the secure protocol (https://). Please change it" # Check banner and ensure HTTPS
                 try:
                     async with aiohttp.ClientSession() as sess:
-                        async with sess.head(banner, timeout=30) as res:
+                        async with sess.head(banner) as res:
                             if res.status != 200:
                                 # Banner URL does not support head, try get
-                                async with sess.get(banner, timeout=30) as res_fallback:
+                                async with sess.get(banner) as res_fallback:
                                     if res_fallback.status != 200:
                                         return f"Could not download {banner_name} using either GET or HEAD! Is your URL correct?"
                                     imgres = res_fallback

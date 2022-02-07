@@ -1,11 +1,12 @@
-cython 
+#cython - install manually 
+fastapi
 lxml 
 typer
 bleach 
 aenum 
 aio-pika  
 gunicorn 
-uvicorn[standard]==0.14.0
+uvicorn[standard]==0.17.4
 orjson  
 lxml 
 sentry_sdk
@@ -36,5 +37,5 @@ git+https://github.com/aaugustin/websockets
 git+https://github.com/EQUENOS/dislash.py
 #git+https://github.com/MagicStack/asyncpg # py3.11 not yet supported, manually build from git and remove cython version check (use cython from git as well)
 #git+https://github.com/MagicStack/uvloop # same as above
-git+https://github.com/huonw/fastapi@clone-cache-conversion
+#git+https://github.com/huonw/fastapi@clone-cache-conversion
 git+https://github.com/samuelcolvin/pydantic

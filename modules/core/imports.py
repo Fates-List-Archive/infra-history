@@ -11,7 +11,6 @@ from typing import List, Optional, Union
 
 import aiohttp
 import disnake as discord
-import lxml
 import orjson
 from aioredis.exceptions import ConnectionError as ServerConnectionClosedError
 from fastapi import APIRouter, BackgroundTasks, Depends, File

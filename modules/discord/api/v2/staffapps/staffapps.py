@@ -1,8 +1,6 @@
 import base64
 from modules.core import *
 
-import pytz
-
 from ..base import API_VERSION
 
 from .models import StaffAppCreate, StaffAppQuestions, StaffAppQuestion, APIResponse
