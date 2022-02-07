@@ -403,6 +403,11 @@ func CmdInit() map[string]types.SlashCommand {
 			if err != nil {
 				return err.Error()
 			}
+
+			keys := context.Redis.Keys(context.Context, "vote_lock:*").Val()
+
+			context.Redis.Del(context.Context, keys...)
+
 			embed := discordgo.MessageEmbed{
 				URL:         "https://fateslist.xyz",
 				Title:       "All Bot Votes Reset",

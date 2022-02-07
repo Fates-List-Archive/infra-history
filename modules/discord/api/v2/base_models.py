@@ -83,3 +83,8 @@ class BasePager(BaseModel):
 
     class Config:
         fields = {'from_': 'from'}
+
+class GCVFormat(BaseModel):
+    """Represents a formatted for client data"""
+    guild_count: str
+    votes: str

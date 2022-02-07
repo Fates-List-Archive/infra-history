@@ -340,7 +340,7 @@ async def transfer_bot_ownership(
     )
     msg = {"content": "", "embed": embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": []}
     await redis_ipc_new(redis, "SENDMSG", msg=msg, timeout=None, worker_session=worker_session)
-    await bot_add_event(bot_id, enums.APIEvents.bot_transfer, {"user": user_id, "new_owner": transfer.new_owner})    
+    await bot_add_event(redis, bot_id, enums.APIEvents.bot_transfer, {"user": user_id, "new_owner": transfer.new_owner})    
     return api_success()
 
 @router.post(

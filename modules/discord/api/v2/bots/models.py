@@ -9,12 +9,7 @@ from modules.discord.api.v2.system.models import BotFeature
 
 from modules.models import enums
 
-from ..base_models import APIResponse, BaseUser
-
-class GCVFormat(BaseModel):
-    """Represents a formatted for client data"""
-    guild_count: str
-    votes: str
+from ..base_models import APIResponse, BaseUser, GCVFormat
 
 class BotRandom(BaseModel):
     """

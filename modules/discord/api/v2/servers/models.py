@@ -6,12 +6,7 @@ from pydantic import BaseModel
 
 import modules.models.enums as enums
 
-from ..base_models import APIResponse, BaseUser
-
-class GCVFormat(BaseModel):
-    """Represents a formatted for client data"""
-    guild_count: str
-    votes: str
+from ..base_models import APIResponse, BaseUser, GCVFormat
 
 class GuildRandom(BaseModel):
     """
