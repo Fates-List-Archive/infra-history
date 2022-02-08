@@ -427,6 +427,20 @@ func CmdInit() map[string]types.SlashCommand {
 		},
 	}
 
+	commands["PANICCHECK"] = AdminOp{
+		InternalName: "paniccheck",
+		Cooldown:     types.CooldownNone,
+		Description:  "Test golang panics",
+		MinimumPerm:  5,
+		Event:        types.EventNone,
+		SlashRaw:     true,
+		SlashOptions: []*discordgo.ApplicationCommandOption{},
+		Server:       common.StaffServer,
+		Handler: func(context types.SlashContext) string {
+			panic("Test panic")
+		},
+	}
+
 	commands["GETACCESS"] = AdminOp{
 		InternalName: "getaccess",
 		Cooldown:     types.CooldownBan,

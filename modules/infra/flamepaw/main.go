@@ -3,7 +3,6 @@ package main
 import (
 	"flamepaw/cli"
 	"flamepaw/common"
-	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -15,6 +14,7 @@ import (
 )
 
 func main() {
+	defer common.PanicDump()
 	go func() {
 		// Based on answers to this stackoverflow question:
 		// https://stackoverflow.com/questions/19094099/how-to-dump-goroutine-stacktraces
@@ -23,8 +23,8 @@ func main() {
 		for {
 			<-sigs
 
-			fmt.Fprintln(os.Stderr, "=== received SIGQUIT ===")
-			fmt.Fprintln(os.Stderr, "*** goroutine dump...")
+			log.Error("=== received SIGQUIT ===")
+			log.Error("*** goroutine dump...")
 
 			var buf []byte
 			var bufsize int
@@ -39,8 +39,9 @@ func main() {
 					break
 				}
 			}
-			fmt.Fprintln(os.Stderr, string(buf[:stacklen]))
-			fmt.Fprintln(os.Stderr, "*** end of dump")
+			os.WriteFile("modules/infra/flamepaw/dump-"+common.CatName+".txt", buf[:stacklen], 0644)
+			log.Error(string(buf[:stacklen]))
+			log.Error("*** end of dump...")
 		}
 	}()
 

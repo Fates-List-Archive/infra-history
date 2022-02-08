@@ -94,6 +94,8 @@ func SlashHandler(
 	db *pgxpool.Pool,
 	i *discordgo.Interaction,
 ) {
+	defer common.PanicDump()
+
 	if i.Type != discordgo.InteractionApplicationCommand && i.Type != discordgo.InteractionApplicationCommandAutocomplete {
 		// Not yet supported
 		return
