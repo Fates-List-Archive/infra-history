@@ -239,6 +239,7 @@ func MessageHandler(
 		rdb.Set(ctx, "redeem:"+i.Member.User.ID, "1", time.Hour*24)
 		slashbot.SendIResponseEphemeral(common.DiscordMain, i, "You have redeemed your daily free upvote successfully", false)
 	} else if data.CustomID == "get-old-roles" {
+		slashbot.SendIResponseEphemeral(common.DiscordMain, i, "defer", false)
 		bots, err := db.Query(ctx, "SELECT bots.bot_id::text, bots.state FROM bots INNER JOIN bot_owner ON bot_owner.bot_id = bots.bot_id WHERE bot_owner.owner = $1", i.Member.User.ID)
 		if err != nil {
 			slashbot.SendIResponseEphemeral(common.DiscordMain, i, err.Error(), false)

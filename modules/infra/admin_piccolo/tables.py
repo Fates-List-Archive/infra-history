@@ -8,7 +8,6 @@ from piccolo.table import Table
 
 from modules.models import enums
 
-
 class Vanity(Table, tablename="vanity"):
     vanity_url = Text(unique=True, required=True)
     type = Integer(choices = enums.Vanity)
@@ -25,8 +24,10 @@ class User(Table, tablename="users"):
     api_token = Text()
 
 class Bot(Table, tablename="bots"):
+    bot_id = BigInt(primary_key=True)
+    client_id = BigInt()
     username_cached = Text()
-    verifier = BigInt()
+    verifier = BigInt(null=True)
     state = Integer(choices = enums.BotState, default = 1)
     description = Text()
     long_description_type = Integer(default = 0, choices = enums.LongDescType)
@@ -40,14 +41,16 @@ class Bot(Table, tablename="bots"):
     created_at = Timestamptz(default = datetime.datetime.now())
     webhook_type = Integer(choices = enums.WebhookType)
     webhook = Text()
+    webhook_secret = Secret()
     bot_library = Text()
     css = Text(default = "")
     prefix = Varchar(length = 13)
-    di_text = Text(help_text = "Discord Integration Text")
+    di_text = Text(help_text = "Discord Integration Text (unused)")
     website = Text()
     discord = Text()
     banner_card = Text()
     banner_page = Text()
+    keep_banner_decor = Boolean(default = True)
     github = Text()
     donate = Text()
     privacy_policy = Text()
@@ -57,12 +60,26 @@ class Bot(Table, tablename="bots"):
     invite = Text()
     invite_amount = Integer(default = 0)
     features = Array(base_column = Text(), default = [])
+    flags = Array(base_column = Integer(), default = [])
+    uptime_checks_total = BigInt()
+    uptime_checks_failed = BigInt()
 
 class BotTag(Table, tablename="bot_tags"):
     bot_id = ForeignKey(references=Bot)
     tag = Text(null = False)
 
-class Review(Table, tablename="reviews"):
+class BotListTags(Table, tablename="bot_list_tags"):
+    id = Text(null = False, unique=True, primary_key=True)
+    icon = Text(null = False, unique=True)
+
+class ServerTags(Table, tablename="server_tags"):
+    # id TEXT NOT NULL UNIQUE, name TEXT NOT NULL UNIQUE, iconify_data TEXT NOT NULL, owner_guild BIGINT NOT NULL
+    id = Text(null = False, unique=True, primary_key=True)
+    name = Text(null = False, unique = True)
+    iconify_data = Text(null = False)
+    owner_guild = BigInt(null = False)
+
+class Reviews(Table, tablename="reviews"):
     """Never ever make reviews on your own through this panel"""
     id = UUID(primary_key=True)
     target_type = Integer(choices=enums.ReviewType)

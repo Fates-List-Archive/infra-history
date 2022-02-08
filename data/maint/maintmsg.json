@@ -2,7 +2,7 @@
 	"done": false, 
 	"reason": "Fates List is down for maintenance",
 	"_info": {
-		"expected": "true",
+		"expected": true,
 		"incidents": {
 			"7ed7d5d0-9d47-4bde-8a27-102c57fbf25b": {
 				"name": "Test incident",

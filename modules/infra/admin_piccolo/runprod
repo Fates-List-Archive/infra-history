@@ -1,1 +1,2 @@
-python -m uvicorn app:app --port 10000 --host 0.0.0.0
+cd ~/FatesList
+MAIN_TOKEN="" CLIENT_SECRET="" python -m uvicorn modules.infra.admin_piccolo.app:app --port 10000 --host 0.0.0.0
