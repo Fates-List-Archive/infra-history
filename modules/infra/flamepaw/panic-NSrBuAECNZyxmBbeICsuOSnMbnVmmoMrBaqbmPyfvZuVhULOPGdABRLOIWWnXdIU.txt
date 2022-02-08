@@ -1,0 +1,17 @@
+(string) (len=10) "Test panic"
+
+goroutine 220 [running]:
+runtime/debug.Stack()
+	/home/meow/src/go/src/runtime/debug/stack.go:24 +0x65
+flamepaw/common.PanicDump()
+	/home/meow/FatesList/modules/infra/flamepaw/common/misc.go:16 +0x7c
+panic({0xcdf520, 0xf57390})
+	/home/meow/src/go/src/runtime/panic.go:844 +0x258
+flamepaw/admin.CmdInit.func7({{0xf63100, 0xc0000a6000}, 0xc000ba2080, 0xc0003fa0e0, 0xc0005c06c0, 0xc000667a40, 0x40e00000, 0x3, 0x0, 0x0, ...})
+	/home/meow/FatesList/modules/infra/flamepaw/admin/commands.go:440 +0x27
+flamepaw/admin.slashIr.func1({{0xf63100, 0xc0000a6000}, 0xc000ba2080, 0xc0003fa0e0, 0xc0005c06c0, 0xc000667a40, 0x40e00000, 0x3, 0x0, 0x0, ...})
+	/home/meow/FatesList/modules/infra/flamepaw/admin/ir.go:181 +0xeb8
+flamepaw/slashbot.SlashHandler({0xf63100, 0xc0000a6000}, 0xc0003e3c00, 0xc0005c06c0, 0xc0003fa0e0, 0xc000ba2080)
+	/home/meow/FatesList/modules/infra/flamepaw/slashbot/bot.go:197 +0xeb5
+created by flamepaw/cli.Server.func8
+	/home/meow/FatesList/modules/infra/flamepaw/cli/cli.go:249 +0x2bb
