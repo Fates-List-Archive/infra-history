@@ -80,21 +80,22 @@ var staffAppQuestions = []staffAppPages{
 	},
 	{
 		Title: "Personality",
-		Pre:   "This section is just to see how well you can communicate with other people.",
+		Pre:   "This section is just to see how well you can communicate with other people and argue with completely random points. You will need to use Google here. If you dont understand something, look up each name on the internet",
 		Questions: []staffApp{
 			{
-				ID:        "favcat",
-				Title:     "Favorite Cat",
-				Question:  "What is a better sounding name for a cat: Frostpaw or Flamepaw? Why?",
+				ID:        "sumcat",
+				Title:     "Summarize",
+				Question:  "Summarize the life on one cat from: Mistystar, Graystripe, Frostpaw, Flamepaw or Sunbeam?",
 				MinLength: 10,
-				MaxLength: 30,
+				MaxLength: 4000,
+				Paragraph: true,
 			},
 			{
 				ID:        "webserver",
 				Title:     "Webserver",
-				Question:  "What is your favorite webserver? (e.g. Apache, Nginx, None, etc.)",
+				Question:  "What is your favorite webserver? (e.g. Apache, Nginx etc.)",
 				MinLength: 10,
-				MaxLength: 30,
+				MaxLength: 4000,
 				Paragraph: true,
 			},
 			{
@@ -296,13 +297,13 @@ func SendRolesMessage(s *discordgo.Session, m *discordgo.Ready) {
 	})
 
 	s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
-		Content: "Click the button below to test out our new experiment (baypaw)",
+		Content: "Click the button below to start a staff application",
 		Components: []discordgo.MessageComponent{
 			discordgo.ActionsRow{
 				Components: []discordgo.MessageComponent{
 					discordgo.Button{
 						CustomID: "baypaw-modal::0",
-						Label:    "Baypaw",
+						Label:    "Apply",
 					},
 				},
 			},
