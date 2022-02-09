@@ -2,10 +2,12 @@ package supportsystem
 
 import (
 	"context"
+	"encoding/json"
 	"flamepaw/common"
 	"flamepaw/slashbot"
 	"flamepaw/types"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +18,96 @@ import (
 
 	"github.com/Fates-List/discordgo"
 )
+
+type staffAppPages struct {
+	Title     string     `json:"title"`
+	Pre       string     `json:"pre"`
+	Questions []staffApp `json:"questions"`
+}
+
+type staffApp struct {
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	Question  string `json:"question"`
+	MinLength int    `json:"min_length"`
+	MaxLength int    `json:"max_length"`
+	Paragraph bool   `json:"paragraph"`
+}
+
+var baypawApps = map[string]map[string]interface{}{}
+
+var staffAppQuestions = []staffAppPages{
+	{
+		Title: "Basics",
+		Questions: []staffApp{
+			{
+				ID:        "tz",
+				Title:     "Time Zone",
+				Question:  "Please enter your timezone (the 3 letter code).",
+				MinLength: 3,
+				MaxLength: 3,
+			},
+			{
+				ID:        "age",
+				Title:     "Age (14+ only!)",
+				Question:  "What is your age? Will be investigated",
+				MinLength: 2,
+				MaxLength: 2,
+			},
+			{
+				ID:        "lang",
+				Title:     "Languages",
+				Question:  "What languages do you know?",
+				MinLength: 10,
+				MaxLength: 100,
+			},
+			{
+				ID:        "history",
+				Title:     "History",
+				Question:  "Have you ever been demoted due to inactivity? If so, why?",
+				MinLength: 10,
+				MaxLength: 100,
+			},
+			{
+				ID:        "why",
+				Title:     "Motivation",
+				Question:  "Why do you want to be a bot reviewer and how much experience do you have?",
+				Paragraph: true,
+				MinLength: 30,
+				MaxLength: 4000,
+			},
+		},
+	},
+	{
+		Title: "Personality",
+		Pre:   "This section is just to see how well you can communicate with other people.",
+		Questions: []staffApp{
+			{
+				ID:        "favcat",
+				Title:     "Favorite Cat",
+				Question:  "What is a better sounding name for a cat: Frostpaw or Flamepaw? Why?",
+				MinLength: 10,
+				MaxLength: 30,
+			},
+			{
+				ID:        "webserver",
+				Title:     "Webserver",
+				Question:  "What is your favorite webserver? (e.g. Apache, Nginx, None, etc.)",
+				MinLength: 10,
+				MaxLength: 30,
+				Paragraph: true,
+			},
+			{
+				ID:        "agreement",
+				Title:     "Agreement",
+				Question:  "Do you understand that being staff here is a privilege and that you may demoted without warning.",
+				MinLength: 5,
+				MaxLength: 30,
+				Paragraph: true,
+			},
+		},
+	},
+}
 
 var rolesMsg *discordgo.Message
 var rolesMenu = []discordgo.MessageComponent{
@@ -62,6 +154,34 @@ var rolesMenu = []discordgo.MessageComponent{
 			},
 		},
 	},
+}
+
+var staffAppComponents [][]discordgo.MessageComponent = make([][]discordgo.MessageComponent, len(staffAppQuestions))
+
+func init() {
+	for i, page := range staffAppQuestions {
+		for _, v := range page.Questions {
+			var style discordgo.TextInputStyle
+			if v.Paragraph {
+				style = discordgo.TextInputStyleParagraph
+			} else {
+				style = discordgo.TextInputStyleShort
+			}
+			staffAppComponents[i] = append(staffAppComponents[i], discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.TextInput{
+						CustomID:    v.ID,
+						Style:       style,
+						Label:       v.Title,
+						Placeholder: v.Question,
+						Required:    true,
+						MinLength:   v.MinLength,
+						MaxLength:   v.MaxLength,
+					},
+				},
+			})
+		}
+	}
 }
 
 // Returns true if added, false if removed
@@ -174,6 +294,113 @@ func SendRolesMessage(s *discordgo.Session, m *discordgo.Ready) {
 			},
 		},
 	})
+
+	s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
+		Content: "Click the button below to test out our new experiment (baypaw)",
+		Components: []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						CustomID: "baypaw-modal::0",
+						Label:    "Baypaw",
+					},
+				},
+			},
+		},
+	})
+	slashbot.AddModalHandler("baypaw-modal", func(context types.SlashContext) string {
+		log.Info(context.ModalContext)
+		pageInt, err := strconv.Atoi(context.ModalContext)
+
+		if pageInt == 0 {
+			baypawApps[context.User.ID] = map[string]interface{}{}
+		} else {
+			_, ok := baypawApps[context.User.ID]
+			if !ok {
+				return ""
+			}
+		}
+
+		log.Info(baypawApps[context.User.ID])
+
+		var questionCollector func(c []discordgo.MessageComponent)
+
+		questionCollector = func(c []discordgo.MessageComponent) {
+			for _, v := range c {
+				switch vSwitch := v.(type) {
+				case *discordgo.ActionsRow:
+					questionCollector(vSwitch.Components)
+				case *discordgo.TextInput:
+					baypawApps[context.User.ID][vSwitch.CustomID] = vSwitch.Value
+				}
+			}
+		}
+
+		questionCollector(context.ModalData.Components)
+
+		if pageInt+1 == len(staffAppQuestions) {
+			qibliData := map[string]interface{}{
+				"app":          baypawApps[context.User.ID],
+				"questions":    staffAppQuestions,
+				"app_version":  "2",
+				"user":         context.User,
+				"qibli_format": "2",
+			}
+
+			qibliDataJsonB, err := json.Marshal(qibliData)
+			if err != nil {
+				log.Error(err)
+				slashbot.SendIResponseEphemeral(common.DiscordMain, context.Interaction, err.Error(), false)
+			}
+
+			qibliDataJson := string(qibliDataJsonB)
+
+			qibliStorId := common.CreateUUID()
+
+			context.Redis.Set(context.Context, "sapp:"+qibliStorId, qibliDataJson, time.Hour*24*7)
+
+			common.DiscordMain.ChannelMessageSendComplex("936265871784018010", &discordgo.MessageSend{
+				Embed: &discordgo.MessageEmbed{
+					Title: "Staff Application - Qibli",
+					URL:   "https://fateslist.xyz/frostpaw/qibli?data=" + qibliStorId,
+				},
+				File: &discordgo.File{
+					Name:        "qibli.json",
+					ContentType: "application/json",
+					Reader:      strings.NewReader(qibliDataJson),
+				},
+			})
+
+			slashbot.SendIResponseEphemeral(common.DiscordMain, context.Interaction, "Staff app submitted!", false)
+			return ""
+		}
+
+		if err != nil {
+			log.Error(err)
+			slashbot.SendIResponseEphemeral(common.DiscordMain, context.Interaction, err.Error(), false)
+			return ""
+		}
+		slashbot.SendIResponseFull(
+			common.DiscordMain,
+			context.Interaction,
+			"OK, we've saved your responses to this pane *temporarily*.\n\n**"+staffAppQuestions[pageInt+1].Pre+"**\n\nClick "+staffAppQuestions[pageInt+1].Title+" to go to the next section.",
+			false,
+			1<<6,
+			[]string{},
+			nil,
+			[]discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							CustomID: "baypaw-modal::" + strconv.Itoa(pageInt+1),
+							Label:    staffAppQuestions[pageInt+1].Title,
+						},
+					},
+				},
+			},
+		)
+		return ""
+	})
 }
 
 func MessageHandler(
@@ -184,6 +411,23 @@ func MessageHandler(
 	i *discordgo.Interaction,
 ) {
 	data := i.MessageComponentData()
+	if strings.HasPrefix(data.CustomID, "baypaw-modal") {
+		page := strings.Split(data.CustomID, "::")[1]
+		pageInt, err := strconv.Atoi(page)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		err = slashbot.SendModal(
+			discord,
+			i,
+			staffAppQuestions[pageInt].Title,
+			"baypaw-modal",
+			page,
+			staffAppComponents[pageInt],
+		)
+		log.Error(err)
+	}
 	if data.CustomID == "roles" {
 		givenRoles := []string{}
 		takenRoles := []string{}

@@ -6,7 +6,7 @@ import (
 
 var botWhitelist map[string]bool
 
-// Silverpelt staff server protection
+// Silverpelt staff server protection (No longer used due to Flamepaw server merge)
 func SilverpeltStaffServerProtect(discord *discordgo.Session, userID string) {
 	//check, ok := botWhitelist[userID]
 	//if !ok || !check {

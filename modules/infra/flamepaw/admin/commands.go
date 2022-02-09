@@ -358,7 +358,6 @@ func CmdInit() map[string]types.SlashCommand {
 		Cooldown:     types.CooldownNone,
 		Description:  "Reset votes for all bots on the list",
 		MinimumPerm:  6,
-		ReasonNeeded: false,
 		Event:        types.EventNone,
 		SlashRaw:     true,
 		SlashOptions: []*discordgo.ApplicationCommandOption{
@@ -441,6 +440,21 @@ func CmdInit() map[string]types.SlashCommand {
 		},
 	}
 
+	commands["LYNXRESET"] = AdminOp{
+		InternalName: "lynxreset",
+		Cooldown:     types.CooldownBan,
+		Description:  "Reset Lynx Creds",
+		MinimumPerm:  5,
+		Event:        types.EventNone,
+		Server:       common.StaffServer,
+		SlashRaw:     true,
+		Handler: func(context types.SlashContext) string {
+			context.Postgres.Exec(context.Context, "DELETE FROM piccolo_user WHERE username = $1", context.User.Username)
+			context.Postgres.Exec(context.Context, "UPDATE users SET api_token = $1 WHERE user_id = $2", common.RandString(101), context.User.ID)
+			return "Go to https://lynx.fateslist.xyz to get new credentials"
+		},
+	}
+
 	commands["GETACCESS"] = AdminOp{
 		InternalName: "getaccess",
 		Cooldown:     types.CooldownBan,
@@ -450,82 +464,54 @@ func CmdInit() map[string]types.SlashCommand {
 		SlashRaw:     true,
 		Event:        types.EventNone,
 		Server:       common.StaffServer,
-		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "verify-code",
-				Description: "The verification code",
-				Required:    true,
-			},
-		},
-		Handler: func(context types.SlashContext) string {
-			if context.StaffPerm < 2 {
-				return "You are not a Fates List Staff Member"
-			}
-
-			common.DiscordMain.GuildMemberRoleAdd(common.StaffServer, context.User.ID, common.AccessGrantedRole)
-			// Get correct role with needed perm
-			for _, v := range common.StaffRoles {
-				if v.Perm == context.StaffPerm {
-					common.DiscordMain.GuildMemberRoleAdd(common.StaffServer, context.User.ID, v.StaffID)
+		ModalResponses: map[string]types.SlashHandler{
+			"staff_verify": func(context types.SlashContext) string {
+				if context.StaffPerm < 2 {
+					return "You are not a Fates List Staff Member"
 				}
-			}
 
-			verifyVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "verify-code", false)
-			verify, ok := verifyVal.(string)
+				verifyVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "verify-code", false)
+				verify, ok := verifyVal.(string)
 
-			if !ok {
-				return "You did not input a verification code"
-			}
+				if !ok {
+					return "You did not input a verification code"
+				}
 
-			if verify != common.VerificationCode(context.User.ID) {
-				return "Incorrect verification code!"
-			}
+				if verify != common.VerificationCode(context.User.ID) {
+					return "Incorrect verification code!"
+				}
 
-			// Set verification code with 7 day expiry
-			context.Redis.Set(context.Context, "staffverify:"+context.User.ID, verify, 0)
+				common.DiscordMain.GuildMemberRoleAdd(common.StaffServer, context.User.ID, common.AccessGrantedRole)
+				// Get correct role with needed perm
+				for _, v := range common.StaffRoles {
+					if v.Perm == context.StaffPerm {
+						common.DiscordMain.GuildMemberRoleAdd(common.StaffServer, context.User.ID, v.StaffID)
+					}
+				}
 
-			return "Welcome back... master!"
-		},
-	}
+				// Set verification code with 14 day expiry
+				context.Redis.Set(context.Context, "staffverify:"+context.User.ID, verify, 24*14*time.Hour)
 
-	commands["WHITELISTBOT"] = AdminOp{
-		InternalName: "whitelistbot",
-		Cooldown:     types.CooldownLock,
-		Description:  "Adds a bot to the Fates List staff server whitelist temporarily so it can be added",
-		MinimumPerm:  4,
-		Event:        types.EventNone,
-		Server:       common.StaffServer,
-		SlashRaw:     true,
-		ReasonNeeded: true,
-		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionUser,
-				Name:        "bot",
-				Description: "The bot to whitelist",
-				Required:    true,
-			},
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "reason",
-				Description: "Why do you wish for this bot to be whitelisted. May be audited in the future!",
-				Required:    true,
+				return "Welcome back... master!"
 			},
 		},
 		Handler: func(context types.SlashContext) string {
-			userVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "bot", false)
-			user, ok := userVal.(*discordgo.User)
-			if !ok {
-				return "This user could not be found..."
-			} else if !user.Bot {
-				return "You can only whitelist bots! Users arent affected by Silverpelt Bot Defense!"
-			}
-			botWhitelist[user.ID] = true
-			time.AfterFunc(1*time.Minute, func() {
-				log.Info("Removed user " + user.ID + " from whitelist")
-				botWhitelist[user.ID] = false
+			err := slashbot.SendModal(common.DiscordMain, context.Interaction, "Staff Verification", "staff_verify", "_", []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:    "verify-code",
+							Label:       "Verification Code",
+							Style:       discordgo.TextInputStyleParagraph,
+							Placeholder: "Read the staff guide and enter the code",
+							Required:    true,
+							MinLength:   10,
+						},
+					},
+				},
 			})
-			return "Done"
+			log.Error(err)
+			return "See modal, if you can't see it, upgrade your discord client"
 		},
 	}
 
@@ -604,17 +590,8 @@ func CmdInit() map[string]types.SlashCommand {
 		Cooldown:     types.CooldownBan,
 		Description:  "Resets votes for a single bot",
 		MinimumPerm:  4,
-		ReasonNeeded: true,
 		Event:        types.EventVoteReset,
-		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "reason",
-				Description: "Reason for resetting the votes for this bot",
-				Required:    true,
-			},
-		},
-		Server: common.StaffServer,
+		Server:       common.StaffServer,
 		Handler: func(context types.SlashContext) string {
 			embed := discordgo.MessageEmbed{
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
@@ -644,20 +621,11 @@ func CmdInit() map[string]types.SlashCommand {
 
 	// Requeue
 	commands["REQUEUE"] = AdminOp{
-		InternalName: "requeue",
-		Cooldown:     types.CooldownRequeue,
-		Description:  "Requeue a bot",
-		MinimumPerm:  3,
-		ReasonNeeded: true,
-		Event:        types.EventBotRequeue,
-		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "reason",
-				Description: "Reason for requeuing the bot",
-				Required:    true,
-			},
-		},
+		InternalName:  "requeue",
+		Cooldown:      types.CooldownRequeue,
+		Description:   "Requeue a bot",
+		MinimumPerm:   3,
+		Event:         types.EventBotRequeue,
 		Server:        common.TestServer,
 		Autocompleter: autocompleter(types.BotStateDenied.Int()),
 		Handler: func(context types.SlashContext) string {
@@ -695,7 +663,6 @@ func CmdInit() map[string]types.SlashCommand {
 		Cooldown:      types.CooldownNone,
 		Description:   "Claim a bot",
 		MinimumPerm:   2,
-		ReasonNeeded:  false,
 		Event:         types.EventBotClaim,
 		SlashOptions:  []*discordgo.ApplicationCommandOption{},
 		Server:        common.TestServer,
@@ -738,7 +705,6 @@ func CmdInit() map[string]types.SlashCommand {
 		Cooldown:      types.CooldownNone,
 		Description:   "Unclaim a bot",
 		MinimumPerm:   2,
-		ReasonNeeded:  false,
 		Event:         types.EventBotUnclaim,
 		SlashOptions:  []*discordgo.ApplicationCommandOption{},
 		Server:        common.TestServer,
@@ -777,20 +743,11 @@ func CmdInit() map[string]types.SlashCommand {
 
 	// Ban
 	commands["BAN"] = AdminOp{
-		InternalName: "ban",
-		Cooldown:     types.CooldownBan,
-		Description:  "Bans a bot",
-		MinimumPerm:  3,
-		ReasonNeeded: true,
-		Event:        types.EventBotBan,
-		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "reason",
-				Description: "Reason to ban the bot",
-				Required:    true,
-			},
-		},
+		InternalName:  "ban",
+		Cooldown:      types.CooldownBan,
+		Description:   "Bans a bot",
+		MinimumPerm:   3,
+		Event:         types.EventBotBan,
 		Server:        common.StaffServer,
 		Autocompleter: autocompleter(types.BotStateApproved.Int()),
 		Handler: func(context types.SlashContext) string {
@@ -838,22 +795,14 @@ func CmdInit() map[string]types.SlashCommand {
 
 	// Unban
 	commands["UNBAN"] = AdminOp{
-		InternalName: "unban",
-		Cooldown:     types.CooldownBan,
-		Description:  "Unbans a bot",
-		MinimumPerm:  3,
-		ReasonNeeded: true,
-		Event:        types.EventBotUnban,
-		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "reason",
-				Description: "Reason to unban the bot",
-				Required:    true,
-			},
-		},
-		Server:        common.StaffServer,
-		Autocompleter: autocompleter(types.BotStateBanned.Int()),
+		InternalName:           "unban",
+		Cooldown:               types.CooldownBan,
+		Description:            "Unbans a bot",
+		MinimumPerm:            3,
+		Event:                  types.EventBotUnban,
+		Server:                 common.StaffServer,
+		ModalReasonPlaceholder: "Reason for unbanning",
+		Autocompleter:          autocompleter(types.BotStateBanned.Int()),
 		Handler: func(context types.SlashContext) string {
 			embed := discordgo.MessageEmbed{
 				URL:         "https://fateslist.xyz/bot/" + context.Bot.ID,
@@ -890,15 +839,15 @@ func CmdInit() map[string]types.SlashCommand {
 
 	// Certify
 	commands["CERTIFY"] = AdminOp{
-		InternalName:  "certify",
-		Cooldown:      types.CooldownNone,
-		Description:   "Certifies a bot",
-		MinimumPerm:   5,
-		ReasonNeeded:  false,
-		Event:         types.EventBotCertify,
-		SlashOptions:  []*discordgo.ApplicationCommandOption{},
-		Server:        common.StaffServer,
-		Autocompleter: autocompleter(types.BotStateApproved.Int()),
+		InternalName:           "certify",
+		Cooldown:               types.CooldownNone,
+		Description:            "Certifies a bot",
+		MinimumPerm:            5,
+		Event:                  types.EventBotCertify,
+		SlashOptions:           []*discordgo.ApplicationCommandOption{},
+		Server:                 common.StaffServer,
+		ModalReasonPlaceholder: "Certification feedback",
+		Autocompleter:          autocompleter(types.BotStateApproved.Int()),
 		Handler: func(context types.SlashContext) string {
 			var errors string = "OK. "
 			if context.BotState != types.BotStateApproved {
@@ -910,6 +859,12 @@ func CmdInit() map[string]types.SlashCommand {
 				Title:       "Bot Certified",
 				Description: context.Bot.Mention() + " has been certified by " + context.User.Mention() + ". Congratulations on your accompishment :heart:",
 				Color:       embedColorGood,
+				Fields: []*discordgo.MessageEmbedField{
+					{
+						Name:  "Extra Info/Reason",
+						Value: context.Reason,
+					},
+				},
 			}
 			_, err := common.DiscordMain.ChannelMessageSendComplex(common.SiteLogs, &discordgo.MessageSend{
 				Content: "<@" + context.Owner + ">",
@@ -973,20 +928,11 @@ func CmdInit() map[string]types.SlashCommand {
 
 	// Uncertify
 	commands["UNCERTIFY"] = AdminOp{
-		InternalName: "uncertify",
-		Cooldown:     types.CooldownNone,
-		Description:  "Uncertifies a bot.",
-		MinimumPerm:  5,
-		ReasonNeeded: true,
-		Event:        types.EventBotUncertify,
-		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "reason",
-				Description: "Reason for uncertifying this bot",
-				Required:    true,
-			},
-		},
+		InternalName:  "uncertify",
+		Cooldown:      types.CooldownNone,
+		Description:   "Uncertifies a bot.",
+		MinimumPerm:   5,
+		Event:         types.EventBotUncertify,
 		Server:        common.StaffServer,
 		Autocompleter: autocompleter(types.BotStateCertified.Int()),
 		Handler: func(context types.SlashContext) string {
@@ -1038,15 +984,8 @@ func CmdInit() map[string]types.SlashCommand {
 		Cooldown:     types.CooldownNone,
 		Description:  "Approves a bot",
 		MinimumPerm:  2,
-		ReasonNeeded: true,
 		Event:        types.EventBotApprove,
 		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "reason",
-				Description: "Feedback about the bot and/or a welcome message",
-				Required:    true,
-			},
 			/* DG1 {
 				Type:        discordgo.ApplicationCommandOptionInteger,
 				Name:        "guild_count",
@@ -1171,20 +1110,11 @@ func CmdInit() map[string]types.SlashCommand {
 
 	// Denies a bot
 	commands["DENY"] = AdminOp{
-		InternalName: "deny",
-		Cooldown:     types.CooldownNone,
-		Description:  "Denies a bot",
-		MinimumPerm:  2,
-		ReasonNeeded: true,
-		Event:        types.EventBotDeny,
-		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "reason",
-				Description: "Reason for denying the bot",
-				Required:    true,
-			},
-		},
+		InternalName:  "deny",
+		Cooldown:      types.CooldownNone,
+		Description:   "Denies a bot",
+		MinimumPerm:   2,
+		Event:         types.EventBotDeny,
 		Server:        common.TestServer,
 		Autocompleter: autocompleter(types.BotStateUnderReview.Int()),
 		Handler: func(context types.SlashContext) string {
@@ -1228,20 +1158,11 @@ func CmdInit() map[string]types.SlashCommand {
 
 	// Unverifies a bot
 	commands["UNVERIFY"] = AdminOp{
-		InternalName: "unverify",
-		Cooldown:     types.CooldownNone,
-		Description:  "Unverifies a bot",
-		MinimumPerm:  2,
-		ReasonNeeded: true,
-		Event:        types.EventBotUnverify,
-		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "reason",
-				Description: "Reason for unverifying the bot",
-				Required:    true,
-			},
-		},
+		InternalName:  "unverify",
+		Cooldown:      types.CooldownNone,
+		Description:   "Unverifies a bot",
+		MinimumPerm:   2,
+		Event:         types.EventBotUnverify,
 		Server:        common.StaffServer,
 		Autocompleter: autocompleter(types.BotStateApproved.Int()),
 		Handler: func(context types.SlashContext) string {
@@ -1286,7 +1207,6 @@ func CmdInit() map[string]types.SlashCommand {
 		Cooldown:      types.CooldownNone,
 		Description:   "Staff locks a bot",
 		MinimumPerm:   2,
-		ReasonNeeded:  false,
 		Event:         types.EventStaffLock,
 		SlashOptions:  []*discordgo.ApplicationCommandOption{},
 		Server:        common.StaffServer,
@@ -1329,20 +1249,11 @@ func CmdInit() map[string]types.SlashCommand {
 	}
 
 	commands["STAFFUNLOCK"] = AdminOp{
-		InternalName: "staffunlock",
-		Cooldown:     types.CooldownNone,
-		Description:  "Staff unlocks a bot",
-		MinimumPerm:  2,
-		ReasonNeeded: true,
-		Event:        types.EventStaffUnlock,
-		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "reason",
-				Description: "Reason you need to staff unlock the bot, is publicly visible",
-				Required:    true,
-			},
-		},
+		InternalName:  "staffunlock",
+		Cooldown:      types.CooldownNone,
+		Description:   "Staff unlocks a bot",
+		MinimumPerm:   2,
+		Event:         types.EventStaffUnlock,
 		Server:        common.StaffServer,
 		Autocompleter: autocompleter(types.BotStateApproved.Int()),
 		Handler: func(context types.SlashContext) string {

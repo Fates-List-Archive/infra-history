@@ -50,7 +50,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         )
 
         if not check:
-            return HTMLResponse("<h1>You do not have permission to access this page</h1>")
+            return HTMLResponse("<h1>Login and logout of Fates List to continue</h1>")
 
         _, perm, _ = await is_staff(None, int(request.scope["sunbeam_user"]["user"]["id"]), 2, redis=app.state.redis)
 
@@ -80,10 +80,6 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         except Exception as exc:
             print(exc)
         
-        if request.url.path == "/reset":
-            await app.state.db.execute("DELETE FROM piccolo_user WHERE username = $1", username)
-            return HTMLResponse("Reset creds")
-
         response = await call_next(request)
 
         if not response.status_code < 400:

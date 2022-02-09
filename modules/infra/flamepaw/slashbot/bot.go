@@ -22,9 +22,18 @@ var (
 	iResponseMap     map[string]*time.Timer        = make(map[string]*time.Timer) // Interaction response map to check if interaction has been responded to
 	commandNameCache map[string]string             = make(map[string]string)
 	commands         map[string]types.SlashCommand = make(map[string]types.SlashCommand)
+	modalCmds        map[string]types.SlashCommand = make(map[string]types.SlashCommand)
 	mockGuild        string                        // The guild to mock if set
 	mockUser         string                        // The user to mock if set
 )
+
+func AddModalHandler(id string, handler types.SlashHandler) {
+	modalCmds[id] = types.SlashCommand{
+		Name:        id,
+		Description: "Modal command",
+		Handler:     handler,
+	}
+}
 
 func SetupSlash(discord *discordgo.Session, cmdInit types.SlashFunction) {
 	commandsIr := cmdInit()
@@ -96,7 +105,7 @@ func SlashHandler(
 ) {
 	defer common.PanicDump()
 
-	if i.Type != discordgo.InteractionApplicationCommand && i.Type != discordgo.InteractionApplicationCommandAutocomplete {
+	if i.Type != discordgo.InteractionApplicationCommand && i.Type != discordgo.InteractionApplicationCommandAutocomplete && i.Type != discordgo.InteractionModalSubmit {
 		// Not yet supported
 		return
 	}
@@ -111,6 +120,32 @@ func SlashHandler(
 	_, _, staffPerm := common.GetPerms(discord, i.Member.User.ID, 2)
 
 	serverPerm := getTopServerPerm(discord, i)
+
+	if i.Type == discordgo.InteractionModalSubmit {
+		data := i.ModalSubmitData()
+		splitId := strings.Split(data.CustomID, "::")
+		customId, contextStr := splitId[0], splitId[1]
+		modalCmd, ok := modalCmds[customId]
+		if !ok {
+			return
+		}
+		contextData := types.SlashContext{
+			Context:      context.Background(),
+			Postgres:     db,
+			Redis:        rdb,
+			Interaction:  i,
+			AppCmdData:   nil,
+			ModalData:    &data,
+			ModalContext: contextStr,
+			User:         i.Member.User,
+			StaffPerm:    staffPerm,
+			ServerPerm:   serverPerm,
+			MockMode:     mockMode,
+		}
+		ret := modalCmd.Handler(contextData)
+		SendIResponse(discord, i, ret, true)
+		return
+	}
 
 	var appCmdData = i.ApplicationCommandData()
 
@@ -268,15 +303,38 @@ func getTopServerPerm(discord *discordgo.Session, i *discordgo.Interaction) int 
 }
 
 func SendIResponse(discord *discordgo.Session, i *discordgo.Interaction, content string, clean bool, largeContent ...string) {
-	sendIResponseComplex(discord, i, content, clean, 0, largeContent, nil, 0)
+	sendIResponseComplex(discord, i, content, clean, 0, largeContent, nil, []discordgo.MessageComponent{}, 0)
 }
 
 func SendIResponseEphemeral(discord *discordgo.Session, i *discordgo.Interaction, content string, clean bool, largeContent ...string) {
-	sendIResponseComplex(discord, i, content, clean, 1<<6, largeContent, nil, 0)
+	sendIResponseComplex(discord, i, content, clean, 1<<6, largeContent, nil, []discordgo.MessageComponent{}, 0)
 }
 
-func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, content string, clean bool, flags uint64, largeContent []string, embeds []*discordgo.MessageEmbed, tries int) {
+func SendIResponseFull(discord *discordgo.Session, i *discordgo.Interaction, content string, clean bool, flags uint64, largeContent []string, embeds []*discordgo.MessageEmbed, components []discordgo.MessageComponent) {
+	sendIResponseComplex(discord, i, content, clean, flags, largeContent, embeds, components, 0)
+}
+
+func SendModal(discord *discordgo.Session, i *discordgo.Interaction, title string, customId string, context string, components []discordgo.MessageComponent) error {
+	err := discord.InteractionRespond(i, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: &discordgo.InteractionResponseData{
+			CustomID:   customId + "::" + context,
+			Title:      title,
+			Components: components,
+		},
+	})
+	iResponseMap[i.Token] = time.AfterFunc(15*time.Minute, func() {
+		delete(iResponseMap, i.Token)
+	})
+	return err
+}
+
+func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, content string, clean bool, flags uint64, largeContent []string, embeds []*discordgo.MessageEmbed, components []discordgo.MessageComponent, tries int) {
 	// Sends a response to a interaction using iResponseMap as followup if needed. If clean is set, iResponseMap is cleaned out
+	if len(content) == 0 && len(largeContent) == 0 && len(embeds) == 0 {
+		return
+	}
+
 	if tries > 10 {
 		return
 	}
@@ -286,9 +344,9 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 		var offset int = 0
 		pos := [2]int{0, 1900}
 		countedChars := 0
-		sendIResponseComplex(discord, i, "defer", clean, flags, []string{}, embeds, 0)
+		sendIResponseComplex(discord, i, "defer", clean, flags, []string{}, embeds, components, 0)
 		for countedChars < len(content) {
-			sendIResponseComplex(discord, i, content[pos[0]:pos[1]], clean, flags, []string{}, embeds, 0)
+			sendIResponseComplex(discord, i, content[pos[0]:pos[1]], clean, flags, []string{}, embeds, components, 0)
 
 			// Switch {0, 1900} to {1900, XYZ}
 			offset = int(math.Min(1900, float64(len(content)-pos[0]))) // Find new offset to use
@@ -349,10 +407,11 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 			}
 		}
 		_, err := discord.ChannelMessageSendComplex(chanId, &discordgo.MessageSend{
-			Content:   content,
-			Files:     files,
-			Embeds:    embeds,
-			Reference: ref,
+			Content:    content,
+			Files:      files,
+			Embeds:     embeds,
+			Reference:  ref,
+			Components: components,
 		})
 		if err != nil {
 			log.Error(err)
@@ -363,10 +422,11 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 	t, ok := iResponseMap[i.Token]
 	if ok && content != "nop" {
 		_, err := discord.FollowupMessageCreate(discord.State.User.ID, i, true, &discordgo.WebhookParams{
-			Content: content,
-			Flags:   flags,
-			Files:   files,
-			Embeds:  embeds,
+			Content:    content,
+			Flags:      flags,
+			Files:      files,
+			Embeds:     embeds,
+			Components: components,
 		})
 		if err != nil {
 			log.Error(err.Error())
@@ -377,10 +437,11 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 			err = discord.InteractionRespond(i, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: content,
-					Flags:   flags,
-					Files:   files,
-					Embeds:  embeds,
+					Content:    content,
+					Flags:      flags,
+					Files:      files,
+					Embeds:     embeds,
+					Components: components,
 				},
 			})
 		} else {
@@ -398,7 +459,7 @@ func sendIResponseComplex(discord *discordgo.Session, i *discordgo.Interaction, 
 			})
 			if err != nil {
 				log.Error(err)
-				sendIResponseComplex(discord, i, "Something happened!\nError: "+err.Error(), false, flags, []string{}, nil, tries+1)
+				sendIResponseComplex(discord, i, "Something happened!\nError: "+err.Error(), false, flags, []string{}, nil, []discordgo.MessageComponent{}, tries+1)
 			}
 		}
 	}
@@ -424,9 +485,31 @@ func recovery() {
 	}
 }
 
+// Loop recursively over all components
+func tryGetArg(argName string, components []discordgo.MessageComponent) interface{} {
+	for _, component := range components {
+		switch v := component.(type) {
+		case *discordgo.ActionsRow:
+			recursed := tryGetArg(argName, v.Components)
+			if recursed != nil {
+				return recursed
+			}
+		case *discordgo.TextInput:
+			if v.CustomID == argName {
+				return v.Value
+			}
+		}
+	}
+	return nil
+}
+
 // Gets an argument, if possibleLink is set, this will convert the possible link using common/converters.go if possible
 func GetArg(discord *discordgo.Session, i *discordgo.Interaction, name string, possibleLink bool) interface{} {
 	defer recovery()
+	if i.Type == discordgo.InteractionModalSubmit {
+		modalData := i.ModalSubmitData()
+		return tryGetArg(name, modalData.Components)
+	}
 	appCmdData := i.ApplicationCommandData()
 	for _, v := range appCmdData.Options {
 		if v.Name == name {

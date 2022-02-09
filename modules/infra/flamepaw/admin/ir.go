@@ -20,8 +20,19 @@ func Prepend[T any](items []T, item T) []T {
 	return append([]T{item}, items...)
 }
 
+type irModalData struct {
+	context types.SlashContext
+	adminOp AdminOp
+	botId   string
+}
+
+var contexts map[string]irModalData = make(map[string]irModalData)
+
 func slashIr() map[string]types.SlashCommand {
 	// Add the slash commands IR for use in slashbot. Is used internally by CmdInit
+
+	slashbot.AddModalHandler("admin-ir", FinalHandler)
+
 	botIdOption := discordgo.ApplicationCommandOption{
 		Type:        discordgo.ApplicationCommandOptionUser,
 		Name:        "bot",
@@ -38,6 +49,9 @@ func slashIr() map[string]types.SlashCommand {
 
 	var commandsToRet map[string]types.SlashCommand = make(map[string]types.SlashCommand)
 	for cmdName, v := range commands {
+		for key, handler := range v.ModalResponses {
+			slashbot.AddModalHandler(key, handler)
+		}
 		if !v.SlashRaw {
 			var add discordgo.ApplicationCommandOption
 			if v.Autocompleter != nil {
@@ -98,13 +112,6 @@ func slashIr() map[string]types.SlashCommand {
 					botId = botUser.ID
 				}
 
-				reasonVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "reason", true)
-				reason, ok := reasonVal.(string)
-
-				if !ok {
-					reason = ""
-				}
-
 				if context.MockMode {
 					return "Please exit mock mode and try again!"
 				}
@@ -118,10 +125,6 @@ func slashIr() map[string]types.SlashCommand {
 
 				if context.StaffPerm < adminOp.MinimumPerm {
 					return "This operation requires perm: " + strconv.Itoa(int(adminOp.MinimumPerm)) + " but you only have perm number " + strconv.Itoa(int(context.StaffPerm)) + ".\nUser ID: " + context.User.ID
-				}
-
-				if adminOp.ReasonNeeded && len(reason) < 3 {
-					return "You must specify a reason for doing this!"
 				}
 
 				var state pgtype.Int4
@@ -172,51 +175,116 @@ func slashIr() map[string]types.SlashCommand {
 					context.Bot = bot
 				}
 
-				context.Reason = reason
-
-				if context.Reason == "" && !adminOp.SlashRaw {
-					context.Reason = "No reason specified"
-				}
-
-				opRes := adminOp.Handler(context)
-
-				if !adminOp.SlashRaw && (opRes == "" || strings.HasPrefix(opRes, "OK.")) && adminOp.Event != types.EventNone {
-					eventId := common.CreateUUID()
-					event := map[string]interface{}{
-						"ctx": map[string]interface{}{
-							"user":   context.User.ID,
-							"reason": &context.Reason,
-						},
-						"m": map[string]interface{}{
-							"event": adminOp.Event,
-							"user":  context.User.ID,
-							"ts":    float64(time.Now().Second()),
-							"eid":   eventId,
-							"t":     -1,
-						},
-					}
-
-					// Add event
-					var err error
-					_, err = context.Postgres.Exec(context.Context, "INSERT INTO bot_api_event (bot_id, event, type, context, id) VALUES ($1, $2, $3, $4, $5)", botId, adminOp.Event, -1, event, eventId)
-
-					if err != nil {
-						log.Warning(err)
-					}
-					go common.AddWsEvent(context.Context, context.Redis, "bot-"+context.Bot.ID, eventId, event)
-				}
-
 				if !adminOp.SlashRaw {
-					if opRes != "" {
-						opRes += "\nState On Run: " + context.BotState.Str() + "\nBot owner: " + context.Owner
-					} else {
-						opRes = "OK."
+					id := common.RandString(64)
+					contexts[id] = irModalData{
+						context: context,
+						adminOp: adminOp,
+						botId:   botId,
 					}
-				}
 
-				return opRes
+					var reason string
+					if len(adminOp.ModalReasonPlaceholder) > 0 {
+						reason = "Reason"
+					} else {
+						reason = "Reason for this action"
+					}
+
+					modal := []discordgo.MessageComponent{
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.TextInput{
+									CustomID:    "reason",
+									Label:       "Reason",
+									Style:       discordgo.TextInputStyleParagraph,
+									Placeholder: reason,
+									Required:    true,
+									MinLength:   3,
+									MaxLength:   1024,
+								},
+							},
+						},
+					}
+
+					if len(adminOp.ExtraModals) > 0 {
+						modal = append(modal, adminOp.ExtraModals...)
+					}
+
+					err := slashbot.SendModal(
+						common.DiscordMain,
+						context.Interaction,
+						"Admin Operation",
+						"admin-ir",
+						id,
+						modal,
+					)
+					log.Error(err)
+				} else {
+					return adminOp.Handler(context)
+				}
+				return "See modal, if you can't see it, upgrade your discord client"
 			},
 		}
 	}
 	return commandsToRet
+}
+
+func FinalHandler(modalCtx types.SlashContext) string {
+	reasonVal := slashbot.GetArg(common.DiscordMain, modalCtx.Interaction, "reason", true)
+	reason, ok := reasonVal.(string)
+
+	if !ok {
+		return "No reason specified!"
+	}
+
+	irModalDat, ok := contexts[modalCtx.ModalContext]
+
+	if !ok {
+		return "No modal data found!"
+	}
+
+	context := irModalDat.context
+	adminOp := irModalDat.adminOp
+	botId := irModalDat.botId
+
+	context.Reason = reason
+	context.ModalInteraction = modalCtx.Interaction
+
+	opRes := adminOp.Handler(context)
+
+	if !adminOp.SlashRaw && (opRes == "" || strings.HasPrefix(opRes, "OK.")) && adminOp.Event != types.EventNone {
+		eventId := common.CreateUUID()
+		event := map[string]interface{}{
+			"ctx": map[string]interface{}{
+				"user":   context.User.ID,
+				"reason": &context.Reason,
+			},
+			"m": map[string]interface{}{
+				"event": adminOp.Event,
+				"user":  context.User.ID,
+				"ts":    float64(time.Now().Second()),
+				"eid":   eventId,
+				"t":     -1,
+			},
+		}
+
+		// Add event
+		var err error
+		_, err = context.Postgres.Exec(context.Context, "INSERT INTO bot_api_event (bot_id, event, type, context, id) VALUES ($1, $2, $3, $4, $5)", botId, adminOp.Event, -1, event, eventId)
+
+		if err != nil {
+			log.Warning(err)
+		}
+		go common.AddWsEvent(context.Context, context.Redis, "bot-"+context.Bot.ID, eventId, event)
+	}
+
+	if !adminOp.SlashRaw {
+		if opRes != "" {
+			opRes += "\nState On Run: " + context.BotState.Str() + "\nBot owner: " + context.Owner
+		} else {
+			opRes = "OK."
+		}
+	}
+
+	return opRes
 }

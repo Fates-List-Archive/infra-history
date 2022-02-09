@@ -25,7 +25,7 @@ staff_app_questions = StaffAppQuestions(
         StaffAppQuestion(
             id="age",
             title="Age",
-            question="What is your age? Just the number Do not lie, we will investigate and find out!",
+            question="What is your age? Just the number. Do not lie, we will investigate and find out!",
             minlength=2,
             maxlength=3,
         ),

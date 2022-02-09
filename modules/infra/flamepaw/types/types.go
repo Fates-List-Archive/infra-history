@@ -314,6 +314,9 @@ type SlashContext struct {
 	Owner            string           // This is filled out/only given by admin bot IR
 	ActionTargetType ActionTargetType // This is filled out/only given by admin bot IR | This is either bot or server
 	AppCmdData       *discordgo.ApplicationCommandInteractionData
+	ModalData        *discordgo.ModalSubmitInteractionData
+	ModalContext     string
+	ModalInteraction *discordgo.Interaction // This is filled out/only given by admin bot IR | Modal interaction
 }
 
 type SlashFunction func() map[string]SlashCommand
