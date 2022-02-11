@@ -350,6 +350,7 @@ var (
 	CooldownReset    = CooldownBucket{Name: "Reset Bucket", InternalName: "reset", Time: 60 * 1.0}
 	CooldownLock     = CooldownBucket{Name: "Lock Bucket", InternalName: "lock", Time: 60 * 2.0}
 	CooldownDelete   = CooldownBucket{Name: "Delete Bucket", InternalName: "delete", Time: 60 * 3.5}
+	CooldownVote     = CooldownBucket{Name: "Vote Bucket", InternalName: "vote", Time: 60 * 0.1}
 	CooldownNone     = CooldownBucket{Name: "No cooldown", InternalName: "", Time: 0.0}
 )
 

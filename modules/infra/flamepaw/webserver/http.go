@@ -112,6 +112,96 @@ func addUserVote(db *pgxpool.Pool, redis *redis.Client, userID string, botID str
 	}
 }
 
+func VoteBot(db *pgxpool.Pool, redis *redis.Client, userID string, botID string, test bool) (bool, string) {
+	key := "vote_lock:" + userID
+	check := redis.PTTL(ctx, key).Val()
+
+	var debug string
+	if common.Debug {
+		debug = "**DEBUG (for nerds)**\nRedis TTL: " + strconv.FormatInt(check.Milliseconds(), 10) + "\nKey: " + key + "\nTest: " + strconv.FormatBool(test)
+	}
+
+	if check.Milliseconds() == 0 || test {
+		var votesDb pgtype.Int8
+		var flags pgtype.Int4Array
+
+		err := db.QueryRow(ctx, "SELECT flags, votes FROM bots WHERE bot_id = $1", botID).Scan(&flags, &votesDb)
+
+		if err == pgx.ErrNoRows {
+			return false, "No bot found?"
+		} else if err != nil {
+			return false, err.Error()
+		}
+
+		for _, v := range flags.Elements {
+			if int(v.Int) == types.BotFlagSystem.Int() {
+				return false, "You can't vote for system bots!"
+			}
+		}
+
+		if test {
+			go addUserVote(db, redis, userID, botID)
+		} else {
+			userID = "519850436899897346"
+		}
+
+		votes := votesDb.Int + 1
+
+		eventId := common.CreateUUID()
+
+		voteEvent := map[string]interface{}{
+			"votes": votes,
+			"id":    userID,
+			"ctx": map[string]interface{}{
+				"user":  userID,
+				"votes": votes,
+				"test":  test,
+			},
+			"m": map[string]interface{}{
+				"e":    types.EventBotVote,
+				"user": userID,
+				"t":    -1,
+				"ts":   float64(time.Now().Unix()) + 0.001, // Make sure its a float by adding 0.001
+				"eid":  eventId,
+			},
+		}
+
+		vote_b, err := json.Marshal(voteEvent)
+		if err != nil {
+			log.Error(err)
+			return false, "Could not create vote webhook... Please contact us on our support server for more information: " + err.Error()
+		}
+
+		voteStr := string(vote_b)
+
+		go common.AddWsEvent(ctx, redis, "bot-"+botID, eventId, voteEvent)
+
+		go func() {
+			ok, webhookType, secret, webhookURL := common.GetWebhook(ctx, "bots", botID, db)
+
+			if ok {
+				if webhookType == types.DiscordWebhook {
+					go common.SendIntegration(common.DiscordMain, userID, botID, webhookURL, int(votes))
+				} else {
+					go common.WebhookReq(ctx, db, eventId, webhookURL, secret, voteStr, 0)
+				}
+				log.Debug("Got webhook type of " + strconv.Itoa(int(webhookType)))
+			}
+
+			if !test {
+				redis.Set(ctx, key, 0, 8*time.Hour)
+			}
+		}()
+
+		return true, "You have successfully voted for this bot :).\n\nPro Tip: You can vote for bots directly on your server using Squirrelflight, join our support server for more information but Squirreflight also supports vote reminders as well!"
+	} else {
+		hours := check / time.Hour
+		mins := (check - (hours * time.Hour)) / time.Minute
+		secs := (check - (hours*time.Hour + mins*time.Minute)) / time.Second
+		return false, fmt.Sprintf("Please wait %02d hours, %02d minutes %02d seconds before trying to vote for bots\n\n%s", hours, mins, secs, debug)
+	}
+}
+
 func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 	hub := newHub(db, redis)
 	go hub.run()
@@ -570,96 +660,11 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			"test":    vote.Test,
 		}).Info("User vote")
 
-		key := "vote_lock:" + vote.UserID
-		check := redis.PTTL(ctx, key).Val()
-
-		var debug string
-		if common.Debug {
-			debug = "**DEBUG (for nerds)**\nRedis TTL: " + strconv.FormatInt(check.Milliseconds(), 10) + "\nKey: " + key + "\nTest: " + strconv.FormatBool(vote.Test)
-		}
-
-		if check.Milliseconds() == 0 || vote.Test {
-			var votesDb pgtype.Int8
-			var flags pgtype.Int4Array
-
-			err := db.QueryRow(ctx, "SELECT flags, votes FROM bots WHERE bot_id = $1", vote.BotID).Scan(&flags, &votesDb)
-
-			if err == pgx.ErrNoRows {
-				apiReturn(c, 400, false, "No bot found?", nil)
-				return
-			} else if err != nil {
-				apiReturn(c, 400, false, err.Error(), nil)
-				return
-			}
-
-			for _, v := range flags.Elements {
-				if int(v.Int) == types.BotFlagSystem.Int() {
-					apiReturn(c, 400, false, "You can't vote for system bots!", nil)
-					return
-				}
-			}
-
-			if !vote.Test {
-				go addUserVote(db, redis, vote.UserID, vote.BotID)
-			} else {
-				vote.UserID = "519850436899897346"
-			}
-
-			votes := votesDb.Int + 1
-
-			eventId := common.CreateUUID()
-
-			voteEvent := map[string]interface{}{
-				"votes": votes,
-				"id":    vote.UserID,
-				"ctx": map[string]interface{}{
-					"user":  vote.UserID,
-					"votes": votes,
-					"test":  vote.Test,
-				},
-				"m": map[string]interface{}{
-					"e":    types.EventBotVote,
-					"user": vote.UserID,
-					"t":    -1,
-					"ts":   float64(time.Now().Unix()) + 0.001, // Make sure its a float by adding 0.001
-					"eid":  eventId,
-				},
-			}
-
-			vote_b, err := json.Marshal(voteEvent)
-			if err != nil {
-				log.Error(err)
-				apiReturn(c, 400, false, "Could not create vote webhook... Please contact us on our support server for more information: "+err.Error(), nil)
-				return
-			}
-
-			voteStr := string(vote_b)
-
-			go common.AddWsEvent(ctx, redis, "bot-"+vote.BotID, eventId, voteEvent)
-
-			go func() {
-				ok, webhookType, secret, webhookURL := common.GetWebhook(ctx, "bots", vote.BotID, db)
-
-				if ok {
-					if webhookType == types.DiscordWebhook {
-						go common.SendIntegration(common.DiscordMain, vote.UserID, vote.BotID, webhookURL, int(votes))
-					} else {
-						go common.WebhookReq(ctx, db, eventId, webhookURL, secret, voteStr, 0)
-					}
-					log.Debug("Got webhook type of " + strconv.Itoa(int(webhookType)))
-				}
-
-				if !vote.Test {
-					redis.Set(ctx, key, 0, 8*time.Hour)
-				}
-			}()
-
-			apiReturn(c, 200, true, "You have successfully voted for this bot :).\n\nPro Tip: You can vote for bots directly on your server using Squirrelflight, join our support server for more information but Squirreflight also supports vote reminders as well!", nil)
+		ok, res := VoteBot(db, redis, vote.UserID, vote.BotID, vote.Test)
+		if ok {
+			apiReturn(c, 200, true, res, nil)
 		} else {
-			hours := check / time.Hour
-			mins := (check - (hours * time.Hour)) / time.Minute
-			secs := (check - (hours*time.Hour + mins*time.Minute)) / time.Second
-			apiReturn(c, 429, false, fmt.Sprintf("Please wait %02d hours, %02d minutes %02d seconds before trying to vote for bots", hours, mins, secs), debug)
+			apiReturn(c, 400, false, res, nil)
 		}
 	})
 

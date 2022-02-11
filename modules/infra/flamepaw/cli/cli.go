@@ -7,6 +7,7 @@ import (
 	"flamepaw/ipc"
 	"flamepaw/serverlist"
 	"flamepaw/slashbot"
+	"flamepaw/squirrelflight"
 	"flamepaw/supportsystem"
 	"flamepaw/tests"
 	"flamepaw/types"
@@ -103,6 +104,14 @@ func Server() {
 
 	// For now, if we don't get the guild members intent in the future, this will be replaced with approx guild count
 	discordServerBot.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages
+
+	// Squirrelflight
+	common.DiscordSquirrelflight, err = discordgo.New("Bot " + common.SquirrelflightToken)
+	if err != nil {
+		panic(err)
+	}
+
+	common.DiscordSquirrelflight.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages
 
 	// Be prepared to remove this handler if we don't get priv intents
 	memberHandler := func(s *discordgo.Session, m *discordgo.Member) {
@@ -272,7 +281,16 @@ func Server() {
 		// Parse the interaction
 		var name string
 		var options []*discordgo.ApplicationCommandInteractionDataOption
-		if strings.HasPrefix(m.Message.Content, "%") {
+
+		prefix := "%"
+		if n == 2 {
+			prefix = "+"
+		}
+
+		if strings.HasPrefix(m.Message.Content, prefix) {
+			m.Message.Content = strings.ReplaceAll(m.Message.Content, " :", ":")
+			m.Message.Content = strings.ReplaceAll(m.Message.Content, ": ", ":")
+			m.Message.Content = strings.ReplaceAll(m.Message.Content, "  ", " ")
 			cmdList := strings.Split(m.Message.Content, " ")
 			name = cmdList[0][1:]
 			for i, v := range cmdList {
@@ -296,12 +314,20 @@ func Server() {
 			return
 		}
 
+		users := map[string]*discordgo.User{}
+
+		for _, member := range m.Message.Mentions {
+			users[member.ID] = member
+		}
+
 		spoofInteraction := &discordgo.Interaction{
 			Type: discordgo.InteractionApplicationCommand,
 			Data: discordgo.ApplicationCommandInteractionData{
-				ID:       m.Message.ID,
-				Name:     name,
-				Resolved: &discordgo.ApplicationCommandInteractionDataResolved{}, // empty for now
+				ID:   m.Message.ID,
+				Name: name,
+				Resolved: &discordgo.ApplicationCommandInteractionDataResolved{
+					Users: users,
+				}, // empty for now
 				TargetID: m.Message.ID,
 				Options:  options,
 			},
@@ -323,9 +349,16 @@ func Server() {
 		prefixSupport(s, m, 1)
 	})
 
+	common.DiscordSquirrelflight.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i.Interaction, 2) })
+	common.DiscordSquirrelflight.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		log.Info("Am here")
+		prefixSupport(s, m, 2)
+	})
+
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i.Interaction, 0) })
 	discordServerBot.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i.Interaction, 1) })
 	discordServerBot.AddHandler(func(s *discordgo.Session, gc *discordgo.GuildCreate) {
+		defer func() { recover() }()
 		if common.IPCOnly {
 			return
 		}
@@ -360,6 +393,11 @@ func Server() {
 		panic(err)
 	}
 
+	err = common.DiscordSquirrelflight.Open()
+	if err != nil {
+		panic(err)
+	}
+
 	go slashbot.SetupSlash(discord, admin.CmdInit)
 	go slashbot.SetupSlash(discordServerBot, serverlist.CmdInit)
 
@@ -373,6 +411,10 @@ func Server() {
 	if !common.IPCOnly {
 		os.Remove("/home/meow/fatesws.sock")
 	}
+
+	// Start VR and squirrelflight CmdInit
+	go squirrelflight.StartVR(ctx, db, rdb)
+	go slashbot.SetupSlash(common.DiscordSquirrelflight, squirrelflight.CmdInit)
 
 	// Channel for signal handling
 	sigs := make(chan os.Signal, 1)

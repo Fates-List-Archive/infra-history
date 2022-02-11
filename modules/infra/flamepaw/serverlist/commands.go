@@ -585,8 +585,8 @@ func CmdInit() map[string]types.SlashCommand {
 		},
 	}
 
-	commands["VOTE"] = ServerListCommand{
-		InternalName: "vote",
+	commands["VOTESERVER"] = ServerListCommand{
+		InternalName: "voteserver",
 		Description:  "Vote for this server!",
 		Perm:         1,
 		SlashOptions: []*discordgo.ApplicationCommandOption{

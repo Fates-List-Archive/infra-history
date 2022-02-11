@@ -33,6 +33,7 @@ var (
 var (
 	MainBotToken            string
 	ServerBotToken          string
+	SquirrelflightToken     string
 	fetchBot1Token          string // Used for fetching
 	ClientSecret            string
 	GHWebhookSecret         string
@@ -46,6 +47,7 @@ var (
 	AppealsChannel          string
 	MainSupportChannel      string
 	GithubChannel           string
+	VoteReminderChannel     string
 	CertifiedBotRole        string
 	CertifiedDevRole        string
 	BotDevRole              string
@@ -103,6 +105,7 @@ func init() {
 	MainBotToken = fastjson.GetString(secretsJson, "token_main")
 	ClientSecret = fastjson.GetString(secretsJson, "client_secret")
 	ServerBotToken = fastjson.GetString(secretsJson, "token_server")
+	SquirrelflightToken = fastjson.GetString(secretsJson, "token_squirrelflight")
 	fetchBot1Token = fastjson.GetString(secretsJson, "token_fetch_bot_1")
 	JAPIKey = fastjson.GetString(secretsJson, "japi_key")
 	GHWebhookSecret = fastjson.GetString(secretsJson, "gh_webhook_secret")
@@ -130,6 +133,7 @@ func init() {
 	GithubChannel = string(channels.Get("github_channel").GetStringBytes())
 	RolesChannel = string(channels.Get("roles_channel").GetStringBytes())
 	AppealsChannel = string(channels.Get("appeals_channel").GetStringBytes())
+	VoteReminderChannel = string(channels.Get("vote_reminder_channel").GetStringBytes())
 
 	var roles = v.GetObject("roles")
 

@@ -41,7 +41,7 @@ class Bot(Table, tablename="bots"):
     created_at = Timestamptz(default = datetime.datetime.now())
     webhook_type = Integer(choices = enums.WebhookType)
     webhook = Text()
-    webhook_secret = Secret()
+    webhook_secret = Text()
     bot_library = Text()
     css = Text(default = "")
     prefix = Varchar(length = 13)
