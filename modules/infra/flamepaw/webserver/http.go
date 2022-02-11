@@ -135,7 +135,23 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 
 	document("GET", "/api/dragon/__stats", "get_stats", "Get stats of websocket server", nil, nil)
 	router.GET("/__stats", func(c *gin.Context) {
-		c.String(200, spew.Sdump(hub.clients))
+		stats := "Websocket server stats:\n\n"
+		i := 0
+		for client := range hub.clients {
+			stats += fmt.Sprintf(
+				"Client #%d\nID: %d\nIdentityStatus: %t\nBot: %t\nRLChannel: %s\nSendAll: %t\nSendNone: %t\nMessagePumpUp: %t\nToken: [redacted] \n\n\n",
+				i,
+				client.ID,
+				client.IdentityStatus,
+				client.Bot,
+				client.RLChannel,
+				client.SendAll,
+				client.SendNone,
+				client.MessagePumpUp,
+			)
+			i++
+		}
+		c.String(200, stats)
 	})
 
 	document("POST", "/api/dragon/github", "github_webhook", "Post to github webhook. Needs authorization", types.GithubWebhook{}, types.APIResponse{})

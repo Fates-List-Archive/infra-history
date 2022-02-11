@@ -78,6 +78,7 @@ async def csp_report(request: Request):
         pass
     return api_success()
 
+
 @router.post("/sellix-webhook")
 async def sellix_webhook(request: Request):
     """
@@ -206,6 +207,7 @@ async def get_botlist_stats(request: Request,
         "workers": worker_session.workers,
     }
 
+
 @router.get("/is_staff", response_model=IsStaff)
 async def check_staff_member(request: Request,
                              user_id: int,
@@ -310,6 +312,7 @@ async def get_vanity(request: Request, vanity: str):
     if vb is None:
         return abort(404)
     return {"type": vb[1], "redirect": str(vb[0])}
+
 
 @router.get("/index", response_model=BotIndex)
 async def get_index(request: Request,
@@ -481,6 +484,7 @@ async def search_list(request: Request, q: str):
 
     return data
 
+
 @router.get("/search/tags", response_model=TagSearch, dependencies=[])
 async def search_by_tag(request: Request, 
                         tag: str,
@@ -520,6 +524,7 @@ async def get_partners(request: Request):
     Gets the partner list.
     """
     return partners
+
 
 @router.get(
     "/vote-reminders", 
