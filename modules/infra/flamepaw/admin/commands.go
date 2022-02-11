@@ -444,7 +444,7 @@ func CmdInit() map[string]types.SlashCommand {
 		InternalName: "lynxreset",
 		Cooldown:     types.CooldownBan,
 		Description:  "Reset Lynx Creds",
-		MinimumPerm:  5,
+		MinimumPerm:  2,
 		Event:        types.EventNone,
 		Server:       common.StaffServer,
 		SlashRaw:     true,
