@@ -1,4 +1,5 @@
 from base64 import b64decode
+import random
 import sys
 import asyncpg
 
@@ -17,7 +18,7 @@ from piccolo_api.fastapi.endpoints import FastAPIWrapper
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Mount
 from starlette.types import Scope, Message
-from tables import Bot, Reviews, BotTag, User, Vanity, BotListTags, ServerTags
+from tables import Bot, Reviews, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand
 import orjson
 import aioredis
 from modules.core import redis_ipc_new
@@ -27,7 +28,7 @@ from piccolo.apps.user.tables import BaseUser
 from lynxfall.utils.string import get_token
 
 admin = create_admin(
-    [Vanity, User, Bot, BotTag, BotListTags, ServerTags, Reviews], 
+    [Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews], 
     allowed_hosts = ["lynx.fateslist.xyz"], 
     production = True,
 )
@@ -37,7 +38,6 @@ class Unknown:
 
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        # Call the API
         if request.cookies.get("sunbeam-session:warriorcats"):
             request.scope["sunbeam_user"] = orjson.loads(b64decode(request.cookies.get("sunbeam-session:warriorcats")))
         else:
@@ -54,9 +54,53 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
 
         _, perm, _ = await is_staff(None, int(request.scope["sunbeam_user"]["user"]["id"]), 2, redis=app.state.redis)
 
-        if perm < 5:
+        # Only allow moderators to access the admin panel
+        if perm < 3:
             return HTMLResponse("<h1>You do not have permission to access this page</h1>")
-        
+
+        # Perm check
+        if request.url.path.startswith("/api"):
+            if request.url.path == "/api/tables/" and perm < 5:
+                return ORJSONResponse(["reviews", "bot_packs", "vanity"])
+            elif request.url.path == "/api/tables/users/ids/" and request.method == "GET":
+                pass
+            elif request.url.path in ("/api/forms/", "/api/user/", "/api/openapi.json") or request.url.path.startswith("/api/docs"):
+                pass
+            elif perm < 5:
+                if request.url.path.startswith("/api/tables/vanity"):
+                    if request.method != "GET":
+                        return ORJSONResponse({"error": "You do not have permission to update vanity"}, status_code=403)
+                elif request.url.path.startswith("/api/tables/bot_packs"):
+                    if request.method != "GET":
+                        return ORJSONResponse({"error": "You do not have permission to update bot packs"}, status_code=403)
+
+                elif not request.url.path.startswith(("/api/tables/reviews", "/api/tables/bot_packs")):
+                    return ORJSONResponse({"error": "You do not have permission to access this page"}, status_code=403)
+
+        key = "rl:%s" % request.scope["sunbeam_user"]["user"]["id"]
+        check = await app.state.redis.get(key)
+        if not check:
+            rl = await app.state.redis.set(key, "0", ex=30)
+        if request.method != "GET":
+            rl = await app.state.redis.incr(key)
+            if int(rl) > 3:
+                expire = await app.state.redis.ttl(key)
+                await app.state.db.execute("UPDATE users SET api_token = $1 WHERE user_id = $2", get_token(128), int(request.scope["sunbeam_user"]["user"]["id"]))
+                return ORJSONResponse({"error": f"You have exceeded the rate limit {expire} is TTL. API_TOKEN_RESET"}, status_code=429)
+
+        embed = Embed(
+            title = "Lynx API Request", 
+            description = f"**This is usually malicious. When in doubt DM**", 
+            color = 0x00ff00,
+        )
+
+        mention = random.randint(1, 100) > 85
+
+        embed.add_field(name="User ID", value=request.scope["sunbeam_user"]["user"]["id"])
+        embed.add_field(name="Username", value=request.scope["sunbeam_user"]["user"]["username"])
+        embed.add_field(name="Request", value=f"{request.method} {request.url}")
+        await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"@everyone", "embed": embed.to_dict(), "channel_id": "935168801480261733", "mention_everyone": mention})
+
         username = request.scope["sunbeam_user"]["user"]["username"]
         password = get_token(96)
 

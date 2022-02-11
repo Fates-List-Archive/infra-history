@@ -237,12 +237,13 @@ type WebhookData struct {
 }
 
 type DiscordMessage struct {
-	Content      string                  `json:"content"`
-	Embed        *discordgo.MessageEmbed `json:"embed,omitempty"`
-	FileContent  string                  `json:"file_content"`
-	FileName     string                  `json:"file_name"`
-	ChannelId    string                  `json:"channel_id"`
-	MentionRoles []string                `json:"mention_roles,omitempty"`
+	Content         string                  `json:"content"`
+	Embed           *discordgo.MessageEmbed `json:"embed,omitempty"`
+	FileContent     string                  `json:"file_content"`
+	FileName        string                  `json:"file_name"`
+	ChannelId       string                  `json:"channel_id"`
+	MentionRoles    []string                `json:"mention_roles,omitempty"`
+	MentionEveryone bool                    `json:"mention_everyone,omitempty"`
 }
 
 type FatesVote struct {

@@ -288,12 +288,19 @@ func setupCommands() {
 				message.FileName = "default.txt"
 			}
 
+			parse := []discordgo.AllowedMentionType{}
+
+			if message.MentionEveryone {
+				parse = append(parse, discordgo.AllowedMentionTypeEveryone)
+			}
+
 			messageSend := discordgo.MessageSend{
 				Content: message.Content,
 				Embed:   message.Embed,
 				TTS:     false,
 				AllowedMentions: &discordgo.MessageAllowedMentions{
 					Roles: message.MentionRoles,
+					Parse: parse,
 				},
 				File: &discordgo.File{
 					Name:        message.FileName,

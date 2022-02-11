@@ -64,6 +64,31 @@ class Bot(Table, tablename="bots"):
     uptime_checks_total = BigInt()
     uptime_checks_failed = BigInt()
 
+class BotPack(Table, tablename="bot_packs"):
+    id = UUID(primary_key=True)
+    icon = Text()
+    banner = Text()
+    name = Text()
+    description = Text()
+    owner = ForeignKey(references=User)
+    bots = Array(base_column = BigInt())
+    created_at = Timestamptz(default = datetime.datetime.now())
+
+class BotCommand(Table, tablename="bot_commands"):
+    id = UUID(primary_key=True)
+    bot_id = ForeignKey(references=Bot)
+    cmd_type = Integer(choices = enums.CommandType)
+    cmd_groups = Array(base_column = Text())
+    cmd_name = Text()
+    vote_locked = Boolean(default = False)
+    description = Text()
+    args = Array(base_column = Text())
+    examples = Array(base_column = Text())
+    premium_only = Boolean(default = False)
+    notes = Array(base_column = Text())
+    doc_link = Text(help_text = "Link to documentation of command")
+
+
 class BotTag(Table, tablename="bot_tags"):
     bot_id = ForeignKey(references=Bot)
     tag = Text(null = False)
