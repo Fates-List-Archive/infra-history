@@ -71,15 +71,16 @@ var (
 
 func init() {
 	flag.StringVar(&RootPath, "root", "/home/meow/FatesList", "Fates List source directory")
-	flag.StringVar(&secretsJsonFile, "secret", RootPath+"/config/data/secrets.json", "Secrets json file")
-	flag.StringVar(&discordJsonFile, "discord", RootPath+"/config/data/discord.json", "Discord json file")
-	flag.StringVar(&staffRoleFilePath, "staff-roles", RootPath+"/config/data/staff_roles.json", "Staff roles json")
 	flag.StringVar(&CliCmd, "cmd", "", "The command to run:\n\tserver: runs the ipc and ws server\n\ttest: runs the unit test system\n\tsite.XXX: run a site command (run=run site, compilestatic=compile static files).\n\tSet PYLOG_LEVEL to set loguru log level to debug")
 	flag.StringVar(&PythonPath, "python-path", "/home/meow/venv-next-2022/bin/python", "Path to python interpreter")
 	flag.BoolVar(&Debug, "debug", false, "Debug mode")
 	flag.BoolVar(&RegisterCommands, "register-only", false, "Only register commands and exit! Overrides --cmd")
 	flag.BoolVar(&IPCOnly, "ipc-only", false, "Whether or not this dragon server instance should be a ipc only instance")
 	flag.Parse()
+
+	secretsJsonFile = RootPath + "/config/data/secrets.json"
+	discordJsonFile = RootPath + "/config/data/discord.json"
+	staffRoleFilePath = RootPath + "/config/data/staff_roles.json"
 
 	if CliCmd == "" && !RegisterCommands && !IPCOnly {
 		fmt.Println("Version:", version, "\nBuilt with:", runtime.Version())
