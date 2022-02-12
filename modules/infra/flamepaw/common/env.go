@@ -70,11 +70,11 @@ var (
 )
 
 func init() {
-	flag.StringVar(&secretsJsonFile, "secret", "/home/meow/FatesList/config/data/secrets.json", "Secrets json file")
-	flag.StringVar(&discordJsonFile, "discord", "/home/meow/FatesList/config/data/discord.json", "Discord json file")
-	flag.StringVar(&staffRoleFilePath, "staff-roles", "/home/meow/FatesList/config/data/staff_roles.json", "Staff roles json")
-	flag.StringVar(&CliCmd, "cmd", "", "The command to run:\n\tserver: runs the ipc and ws server\n\ttest: runs the unit test system\n\tsite.XXX: run a site command (run=run site, compilestatic=compile static files).\n\tSet PYLOG_LEVEL to set loguru log level to debug")
 	flag.StringVar(&RootPath, "root", "/home/meow/FatesList", "Fates List source directory")
+	flag.StringVar(&secretsJsonFile, "secret", RootPath+"/config/data/secrets.json", "Secrets json file")
+	flag.StringVar(&discordJsonFile, "discord", RootPath+"/config/data/discord.json", "Discord json file")
+	flag.StringVar(&staffRoleFilePath, "staff-roles", RootPath+"/config/data/staff_roles.json", "Staff roles json")
+	flag.StringVar(&CliCmd, "cmd", "", "The command to run:\n\tserver: runs the ipc and ws server\n\ttest: runs the unit test system\n\tsite.XXX: run a site command (run=run site, compilestatic=compile static files).\n\tSet PYLOG_LEVEL to set loguru log level to debug")
 	flag.StringVar(&PythonPath, "python-path", "/home/meow/venv-next-2022/bin/python", "Path to python interpreter")
 	flag.BoolVar(&Debug, "debug", false, "Debug mode")
 	flag.BoolVar(&RegisterCommands, "register-only", false, "Only register commands and exit! Overrides --cmd")
