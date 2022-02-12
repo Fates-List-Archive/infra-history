@@ -227,88 +227,95 @@ func giveRole(id string, m *discordgo.Member, onlyGive bool) bool {
 
 var msgSendTries = 0
 
-func SendRolesMessage(s *discordgo.Session, m *discordgo.Ready) {
+func SendRolesMessage(s *discordgo.Session, delAndSend bool) {
 	msgs, err := s.ChannelMessages(common.RolesChannel, 100, "", "", "")
-
-	if err != nil {
-		log.Error(err)
-	}
-
-	for _, msg := range msgs {
-		if msg.Author.ID == s.State.User.ID {
-			s.ChannelMessageDelete(common.RolesChannel, msg.ID)
-		}
-	}
-
-	rolesMsg, err = s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
-		Embeds: []*discordgo.MessageEmbed{
-			{
-				Title:       "Fates List Roles",
-				Description: "Hey there 👋! Please grab your roles here. Use the below 'Get Old Roles' for Bot/Certified Developer roles!",
-			},
-		},
-		Components: rolesMenu,
-	})
 
 	if err != nil {
 		panic(err)
 	}
+	if delAndSend {
+		for _, msg := range msgs {
+			if msg.Author.ID == s.State.User.ID {
+				s.ChannelMessageDelete(common.RolesChannel, msg.ID)
+			}
+		}
+	}
 
-	s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
-		Content: "If you have the Bronze User role, you can redeem it for a free upvote every 24 hours here!",
-		Components: []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						CustomID: "bronze-redeem",
-						Label:    "Redeem Daily Reward",
+	if delAndSend {
+		rolesMsg, err = s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
+			Embeds: []*discordgo.MessageEmbed{
+				{
+					Title:       "Fates List Roles",
+					Description: "Hey there 👋! Please grab your roles here. Use the below 'Get Old Roles' for Bot/Certified Developer roles!",
+				},
+			},
+			Components: rolesMenu,
+		})
+
+		if err != nil {
+			panic(err)
+		}
+
+		s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
+			Content: "If you have the Bronze User role, you can redeem it for a free upvote every 24 hours here!",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							CustomID: "bronze-redeem",
+							Label:    "Redeem Daily Reward",
+						},
 					},
 				},
 			},
-		},
-	})
+		})
 
-	s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
-		Content: "Click the button below to get the Bot/Certified Developer roles if you don't already have it!",
-		Components: []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						CustomID: "get-old-roles",
-						Label:    "Get Old Roles",
+		s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
+			Content: "Click the button below to get the Bot/Certified Developer roles if you don't already have it!",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							CustomID: "get-old-roles",
+							Label:    "Get Old Roles",
+						},
 					},
 				},
 			},
-		},
-	})
+		})
 
-	s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
-		Content: "Click the button below to request a data deletion request!\n**This action is irreversible, you will loose all perks you have and all your bots will be deleted permanently**.\nYour vote epoch (when you last voted) will stay as it is temporary (expires after 8 hours) and is needed for anti-vote abuse (to prevent vote spam and vote scams etc.)\n\n*This process is manual and can take up to 24 hours to complete.*",
-		Components: []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						CustomID: "ddr",
-						Label:    "Data Deletion Request",
+		s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
+			Content: "Click the button below to request a data deletion request!\n**This action is irreversible, you will loose all perks you have and all your bots will be deleted permanently**.\nYour vote epoch (when you last voted) will stay as it is temporary (expires after 8 hours) and is needed for anti-vote abuse (to prevent vote spam and vote scams etc.)\n\n*This process is manual and can take up to 24 hours to complete.*",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							CustomID: "ddr",
+							Label:    "Data Deletion Request",
+						},
 					},
 				},
 			},
-		},
-	})
+		})
 
-	s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
-		Content: "Click the button below to start a staff application",
-		Components: []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						CustomID: "baypaw-modal::0",
-						Label:    "Apply",
+		s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
+			Content: "Click the button below to start a staff application",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							CustomID: "baypaw-modal::0",
+							Label:    "Apply",
+						},
 					},
 				},
 			},
-		},
-	})
+		})
+	} else {
+		if len(msgs) > 0 {
+			rolesMsg = msgs[len(msgs)-1]
+		}
+	}
 	slashbot.AddModalHandler("baypaw-modal", func(context types.SlashContext) string {
 		log.Info(context.ModalContext)
 		pageInt, err := strconv.Atoi(context.ModalContext)
@@ -440,6 +447,7 @@ func MessageHandler(
 				takenRoles = append(takenRoles, role)
 			}
 		}
+		log.Info(rolesMsg)
 		common.DiscordMain.ChannelMessageEditComplex(&discordgo.MessageEdit{
 			ID:         rolesMsg.ID,
 			Channel:    rolesMsg.ChannelID,

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flamepaw/common"
 	"flamepaw/slashbot"
+	"flamepaw/supportsystem"
 	"flamepaw/types"
 	"io"
 	"net/http"
@@ -834,6 +835,20 @@ func CmdInit() map[string]types.SlashCommand {
 
 			common.DiscordMain.GuildBanDelete(common.MainServer, context.Bot.ID)
 			return ""
+		},
+	}
+
+	commands["SENDROLEMSG"] = AdminOp{
+		InternalName: "sendrolemsg",
+		Cooldown:     types.CooldownNone,
+		Description:  "Send role message",
+		MinimumPerm:  5,
+		Event:        types.EventNone,
+		Server:       common.StaffServer,
+		SlashRaw:     true,
+		Handler: func(context types.SlashContext) string {
+			supportsystem.SendRolesMessage(common.DiscordMain, true)
+			return "Done"
 		},
 	}
 

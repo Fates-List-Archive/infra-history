@@ -238,7 +238,9 @@ func Server() {
 	})
 
 	discord.AddHandler(onReady)
-	discord.AddHandler(supportsystem.SendRolesMessage)
+	discord.AddHandler(func(s *discordgo.Session, m *discordgo.Ready) {
+		supportsystem.SendRolesMessage(s, false)
+	})
 	discordServerBot.AddHandler(onReady)
 
 	// Slash command handling
