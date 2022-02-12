@@ -117,9 +117,7 @@ func VoteBot(db *pgxpool.Pool, redis *redis.Client, userID string, botID string,
 	check := redis.PTTL(ctx, key).Val()
 
 	var debug string
-	if common.Debug {
-		debug = "**DEBUG (for nerds)**\nRedis TTL: " + strconv.FormatInt(check.Milliseconds(), 10) + "\nKey: " + key + "\nTest: " + strconv.FormatBool(test)
-	}
+	debug = "**DEBUG (for nerds)**\nRedis TTL: " + strconv.FormatInt(check.Milliseconds(), 10) + "\nKey: " + key + "\nTest: " + strconv.FormatBool(test)
 
 	if check.Milliseconds() == 0 || test {
 		var votesDb pgtype.Int8
@@ -139,7 +137,9 @@ func VoteBot(db *pgxpool.Pool, redis *redis.Client, userID string, botID string,
 			}
 		}
 
-		if test {
+		realID := userID
+
+		if !test {
 			go addUserVote(db, redis, userID, botID)
 		} else {
 			userID = "519850436899897346"
@@ -149,15 +149,18 @@ func VoteBot(db *pgxpool.Pool, redis *redis.Client, userID string, botID string,
 
 		eventId := common.CreateUUID()
 
-		voteEvent := map[string]interface{}{
+		voteEvent := map[string]any{
 			"votes": votes,
 			"id":    userID,
-			"ctx": map[string]interface{}{
+			"ctx": map[string]any{
 				"user":  userID,
+				"rid":   realID,
+				"tvn":   "In a test vote, user will be set to Mewbot's bot id, rid always contains real id, but always validate test vs non-test first",
+				"dn":    "https://docs.fateslist.xyz",
 				"votes": votes,
 				"test":  test,
 			},
-			"m": map[string]interface{}{
+			"m": map[string]any{
 				"e":    types.EventBotVote,
 				"user": userID,
 				"t":    -1,
