@@ -97,7 +97,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         embed.add_field(name="User ID", value=request.scope["sunbeam_user"]["user"]["id"])
         embed.add_field(name="Username", value=request.scope["sunbeam_user"]["user"]["username"])
         embed.add_field(name="Request", value=f"{request.method} {request.url}")
-        await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"@LynxAlert", "embed": embed.to_dict(), "channel_id": "935168801480261733", "mention_everyone": True})
+        await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@&942099547025465426>", "embed": embed.to_dict(), "channel_id": "935168801480261733", "mention_roles": ["942099547025465426"]})
 
         username = request.scope["sunbeam_user"]["user"]["username"]
         password = get_token(96)
