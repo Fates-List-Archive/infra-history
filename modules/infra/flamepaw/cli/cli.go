@@ -91,6 +91,7 @@ func Server() {
 	if err != nil {
 		panic(err)
 	}
+	discord.SyncEvents = false
 
 	common.DiscordMain = discord
 
@@ -99,6 +100,7 @@ func Server() {
 	if err != nil {
 		panic(err)
 	}
+	discordServerBot.SyncEvents = false
 
 	common.DiscordServerList = discordServerBot
 
@@ -110,6 +112,7 @@ func Server() {
 	if err != nil {
 		panic(err)
 	}
+	common.DiscordSquirrelflight.SyncEvents = false
 
 	common.DiscordSquirrelflight.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages
 
@@ -257,7 +260,7 @@ func Server() {
 				"bot": bot,
 			}).Info("Going to handle interaction")
 		}
-		go slashbot.SlashHandler(
+		slashbot.SlashHandler(
 			ctx,
 			s,
 			rdb,
@@ -400,8 +403,8 @@ func Server() {
 		panic(err)
 	}
 
-	go slashbot.SetupSlash(discord, admin.CmdInit)
-	go slashbot.SetupSlash(discordServerBot, serverlist.CmdInit)
+	slashbot.SetupSlash(discord, admin.CmdInit)
+	slashbot.SetupSlash(discordServerBot, serverlist.CmdInit)
 
 	rdb = redis.NewClient(&redis.Options{
 		Addr:     "localhost:1001",
@@ -416,7 +419,9 @@ func Server() {
 
 	// Start VR and squirrelflight CmdInit
 	go squirrelflight.StartVR(ctx, db, rdb)
-	go slashbot.SetupSlash(common.DiscordSquirrelflight, squirrelflight.CmdInit)
+	slashbot.SetupSlash(common.DiscordSquirrelflight, squirrelflight.CmdInit)
+
+	squirrelflight.SendStats()
 
 	// Channel for signal handling
 	sigs := make(chan os.Signal, 1)

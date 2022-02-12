@@ -20,15 +20,6 @@ class BotFeature(BaseModel):
 class BotFeatures(BaseModel):
     __root__: dict[str, BotFeature]
 
-class BotListStats(BaseModel):
-    uptime: float
-    pid: int
-    up: bool
-    server_uptime: float
-    bot_count: int
-    bot_count_total: int
-    workers: list[int]
-
 
 class FilteredBotOwner(BaseModel):
     user_id: str
@@ -161,6 +152,7 @@ class Troubleshoot(BaseModel):
 
 class BotStatsFull(BaseModel):
     bot_amount: int
+    bot_amount_total: int
     denied_amount: int
     banned_amount: int
     certified: BotPartialList
@@ -168,3 +160,8 @@ class BotStatsFull(BaseModel):
     under_review: BotPartialList
     denied: BotPartialList | None = None
     banned: BotPartialList | None = None
+    uptime: float
+    pid: int
+    up: bool
+    server_uptime: float
+    workers: list[int]

@@ -78,7 +78,7 @@ with open("config/data/policy.json") as fp:
 with open("config/data/secrets.json") as fp:
     _secret_data = json.load(fp)
     TOKEN_SERVER: str = _secret_data["token_server"]
-    TOKEN_MANAGER: str = _secret_data["token_manager"]
+    TOKEN_MANAGER: str = ""
     sellix_secret: str = _secret_data["sellix_secret"]
     sellix_api_key: str = _secret_data["sellix_api_key"]
     session_key: str = _secret_data["session_key"]

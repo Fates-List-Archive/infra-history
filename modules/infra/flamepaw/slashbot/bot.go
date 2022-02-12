@@ -503,7 +503,7 @@ func tryGetArg(argName string, components []discordgo.MessageComponent) interfac
 	return nil
 }
 
-// Gets an argument, if possibleLink is set, this will convert the possible link using common/converters.go if possible
+// Gets an argument, if possibleLink is set, this will convert the possible link using common/converters if possible
 func GetArg(discord *discordgo.Session, i *discordgo.Interaction, name string, possibleLink bool) interface{} {
 	defer recovery()
 	if i.Type == discordgo.InteractionModalSubmit {

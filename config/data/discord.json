@@ -26,7 +26,8 @@
         "roles_channel": "848605596936437791",
 	    "main_support_channel": "838648883675922462",
         "github_channel": "836326337375109191",
-        "vote_reminder_channel": "939123825885474898"
+        "vote_reminder_channel": "939123825885474898",
+        "stats_channel": "847766984020197387"
     },
     "oauth": {
         "client_id": "798951566634778641",

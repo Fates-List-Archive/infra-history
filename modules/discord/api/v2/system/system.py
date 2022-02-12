@@ -8,7 +8,7 @@ import hmac
 
 from ..base import API_VERSION, responses
 from ..base_models import APIResponse, HTMLAPIResponse
-from .models import AddBotInfo, BotFeatures, BotIndex, BotListStats, BotQueueGet, BotStatsFull, Search, TagSearch, BotVanity, Partners, StaffRoles, IsStaff, Troubleshoot
+from .models import AddBotInfo, BotFeatures, BotIndex, BotQueueGet, BotStatsFull, Search, TagSearch, BotVanity, Partners, StaffRoles, IsStaff, Troubleshoot
 
 router = APIRouter(
     prefix=f"/api/v{API_VERSION}",
@@ -142,33 +142,8 @@ def get_top_spots(request: Request):
 async def stats_page(request: Request, full: bool = False):
     """
     Returns the full set of botlist stats
-    """
-    worker_session = request.app.state.worker_session
-    db = worker_session.postgres
-    certified = await do_index_query(state = [enums.BotState.certified], limit = None, worker_session = worker_session) 
-    bot_amount = await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
-    queue = await do_index_query(state = [enums.BotState.pending], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
-    under_review = await do_index_query(state = [enums.BotState.under_review], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
-    if full:
-        denied = await do_index_query(state = [enums.BotState.denied], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
-        banned = await do_index_query(state = [enums.BotState.banned], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
-    data = {
-        "certified": certified,
-        "bot_amount": bot_amount,
-        "queue": queue,
-        "denied": denied if full else [],
-        "denied_amount": await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = $1", enums.BotState.denied),
-        "banned": banned if full else [],
-        "banned_amount": await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = $1", enums.BotState.banned),
-        "under_review": under_review,
-    }
-    return data
 
-@router.get("/blstats", response_model=BotListStats)
-async def get_botlist_stats(request: Request,
-                            worker_session=Depends(worker_session)):
-    """
-    Returns uptime and stats about the list.
+    This includes blstats data as well now which is:
 
     **uptime** - The current uptime for the given worker. All workers reboot periodically to avoid memory leaks
     so this will mostly be low
@@ -179,16 +154,15 @@ async def get_botlist_stats(request: Request,
 
     **server_uptime** - How long the Fates List Server has been up for totally
 
-    **bot_count_total** - The bot count of the list
+    **bot_amount_total** - The bot count of the list
 
-    **bot_count** - The approved and certified bots on the list
+    **bot_amount** - Renamed to bot_amount. The number of approved and certified bots on the list
 
     **workers** - The worker pids. This is sorted and retrived from dragon IPC if not directly available on the worker
     """
+    worker_session = request.app.state.worker_session
     db = worker_session.postgres
-    bot_count_total = await db.fetchval("SELECT COUNT(1) FROM bots")
-    bot_count = await db.fetchval(
-        "SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
+
     if not worker_session.workers or worker_session.worker_count != len(
             worker_session.workers):
         workers = await redis_ipc_new(worker_session.redis, "WORKERS", worker_session=worker_session)
@@ -196,14 +170,29 @@ async def get_botlist_stats(request: Request,
             return abort(503)
         worker_session.workers = orjson.loads(workers)
         worker_session.workers.sort()
-        worker_session.up = True  # If workers is actually existant
+        worker_session.up = True  # If workers is actually existant, then it's up
+
+    certified = await do_index_query(state = [enums.BotState.certified], limit = None, worker_session = worker_session) 
+    bot_amount = await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
+    queue = await do_index_query(state = [enums.BotState.pending], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
+    under_review = await do_index_query(state = [enums.BotState.under_review], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
+    if full:
+        denied = await do_index_query(state = [enums.BotState.denied], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
+        banned = await do_index_query(state = [enums.BotState.banned], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
     return {
+        "bot_amount_total": await db.fetchval("SELECT COUNT(1) FROM bots"),
+        "certified": certified,
+        "bot_amount": bot_amount,
+        "queue": queue,
+        "denied": denied if full else [],
+        "denied_amount": await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = $1", enums.BotState.denied),
+        "banned": banned if full else [],
+        "banned_amount": await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = $1", enums.BotState.banned),
+        "under_review": under_review,
         "uptime": time.time() - worker_session.start_time,
         "server_uptime": get_uptime(),
         "pid": os.getpid(),
         "up": worker_session.up,
-        "bot_count": bot_count,
-        "bot_count_total": bot_count_total,
         "workers": worker_session.workers,
     }
 

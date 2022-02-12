@@ -177,16 +177,16 @@ func VoteBot(db *pgxpool.Pool, redis *redis.Client, userID string, botID string,
 
 		voteStr := string(vote_b)
 
-		go common.AddWsEvent(ctx, redis, "bot-"+botID, eventId, voteEvent)
-
 		go func() {
+			common.AddWsEvent(ctx, redis, "bot-"+botID, eventId, voteEvent)
+
 			ok, webhookType, secret, webhookURL := common.GetWebhook(ctx, "bots", botID, db)
 
 			if ok {
 				if webhookType == types.DiscordWebhook {
-					go common.SendIntegration(common.DiscordMain, userID, botID, webhookURL, int(votes))
+					common.SendIntegration(common.DiscordMain, userID, botID, webhookURL, int(votes))
 				} else {
-					go common.WebhookReq(ctx, db, eventId, webhookURL, secret, voteStr, 0)
+					common.WebhookReq(ctx, db, eventId, webhookURL, secret, voteStr, 0)
 				}
 				log.Debug("Got webhook type of " + strconv.Itoa(int(webhookType)))
 			}

@@ -656,18 +656,20 @@ func CmdInit() map[string]types.SlashCommand {
 					return dbError(err)
 				}
 
-				go common.AddWsEvent(context.Context, context.Redis, "server-"+context.Interaction.GuildID, eventId, voteEvent)
+				go func() {
+					common.AddWsEvent(context.Context, context.Redis, "server-"+context.Interaction.GuildID, eventId, voteEvent)
 
-				voteStr := string(vote_b)
+					voteStr := string(vote_b)
 
-				ok, webhookType, secret, webhookURL := common.GetWebhook(context.Context, "servers", context.Interaction.GuildID, context.Postgres)
-				if !ok {
-					voteMsg = "You have successfully voted for this server (note: this server does not support vote rewards if you were expecting a reward)"
-				} else {
-					voteMsg = "You have successfully voted for this server"
-					go common.WebhookReq(context.Context, context.Postgres, eventId, webhookURL, secret, voteStr, 0)
-					log.Debug("Got webhook type of " + strconv.Itoa(int(webhookType)))
-				}
+					ok, webhookType, secret, webhookURL := common.GetWebhook(context.Context, "servers", context.Interaction.GuildID, context.Postgres)
+					if !ok {
+						voteMsg = "You have successfully voted for this server (note: this server does not support vote rewards if you were expecting a reward)"
+					} else {
+						voteMsg = "You have successfully voted for this server"
+						common.WebhookReq(context.Context, context.Postgres, eventId, webhookURL, secret, voteStr, 0)
+						log.Debug("Got webhook type of " + strconv.Itoa(int(webhookType)))
+					}
+				}()
 
 				// Handle vote autoroles
 				var roles pgtype.Int8Array

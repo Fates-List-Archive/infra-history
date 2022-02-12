@@ -84,22 +84,5 @@ func CmdInit() map[string]types.SlashCommand {
 		},
 	}
 
-	commands["catid"] = types.SlashCommand{
-		Name:        "catid",
-		CmdName:     "catid",
-		Description: "Get the ID of the current channels parent/category",
-		Cooldown:    types.CooldownNone,
-		Handler: func(context types.SlashContext) string {
-			channel, err := common.DiscordMain.Channel(context.Interaction.ChannelID)
-			if err != nil {
-				return err.Error()
-			}
-			if channel.ParentID == "" {
-				return "Not in a category?"
-			}
-			return channel.ParentID
-		},
-	}
-
 	return commands
 }

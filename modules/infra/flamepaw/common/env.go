@@ -52,6 +52,7 @@ var (
 	CertifiedDevRole        string
 	BotDevRole              string
 	RolesChannel            string
+	StatsChannel            string
 	AccessGrantedRole       string
 	TestServerStaffRole     string
 	TestServerBotsRole      string
@@ -134,6 +135,7 @@ func init() {
 	RolesChannel = string(channels.Get("roles_channel").GetStringBytes())
 	AppealsChannel = string(channels.Get("appeals_channel").GetStringBytes())
 	VoteReminderChannel = string(channels.Get("vote_reminder_channel").GetStringBytes())
+	StatsChannel = string(channels.Get("stats_channel").GetStringBytes())
 
 	var roles = v.GetObject("roles")
 
