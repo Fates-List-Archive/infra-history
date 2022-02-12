@@ -2,6 +2,7 @@ from base64 import b64decode
 import random
 import sys
 import asyncpg
+from http import HTTPStatus
 
 from modules.core.permissions import is_staff
 sys.path.append(".")
@@ -97,7 +98,6 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         embed.add_field(name="User ID", value=request.scope["sunbeam_user"]["user"]["id"])
         embed.add_field(name="Username", value=request.scope["sunbeam_user"]["user"]["username"])
         embed.add_field(name="Request", value=f"{request.method} {request.url}")
-        await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"@LynxAlert", "embed": embed.to_dict(), "channel_id": "935168801480261733", "mention_everyone": True})
 
         username = request.scope["sunbeam_user"]["user"]["username"]
         password = get_token(96)
@@ -123,6 +123,11 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             print(exc)
         
         response = await call_next(request)
+
+        embed.add_field(name="Status Code", value=f"{response.status_code} {HTTPStatus(response.status_code).phrase}")
+
+        await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"@LynxAlert", "embed": embed.to_dict(), "channel_id": "935168801480261733", "mention_everyone": True})
+
 
         if not response.status_code < 400:
             return response
