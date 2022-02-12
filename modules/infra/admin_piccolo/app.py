@@ -94,12 +94,10 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             color = 0x00ff00,
         )
 
-        mention = random.randint(1, 100) > 85
-
         embed.add_field(name="User ID", value=request.scope["sunbeam_user"]["user"]["id"])
         embed.add_field(name="Username", value=request.scope["sunbeam_user"]["user"]["username"])
         embed.add_field(name="Request", value=f"{request.method} {request.url}")
-        await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"@everyone", "embed": embed.to_dict(), "channel_id": "935168801480261733", "mention_everyone": mention})
+        await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"@LynxAlert", "embed": embed.to_dict(), "channel_id": "935168801480261733", "mention_everyone": True})
 
         username = request.scope["sunbeam_user"]["user"]["username"]
         password = get_token(96)

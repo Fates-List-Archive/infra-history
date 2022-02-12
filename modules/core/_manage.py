@@ -515,9 +515,12 @@ def db_setup():
     if not home.exists():
         return error("Invalid user specified for primary_user")
 
-    with open("/etc/sysctl.conf", "w") as sysctl_file:
-        lines = ["fs.file-max=17500", "vm.overcommit_memory = 1"]
-        sysctl_file.write("\n".join(lines))
+    try:
+        with open("/etc/sysctl.conf", "w") as sysctl_file:
+            lines = ["fs.file-max=17500", "vm.overcommit_memory = 1"]
+            sysctl_file.write("\n".join(lines))
+    except:
+        pass
 
     with Popen(["sysctl", "-p"], env=os.environ, stdout=DEVNULL) as proc:
         proc.wait()

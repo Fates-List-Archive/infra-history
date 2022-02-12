@@ -10,7 +10,7 @@ from copy import deepcopy
 from typing import List, Optional, Union
 
 import aiohttp
-import disnake as discord
+import discord
 import orjson
 from aioredis.exceptions import ConnectionError as ServerConnectionClosedError
 from fastapi import APIRouter, BackgroundTasks, Depends, File

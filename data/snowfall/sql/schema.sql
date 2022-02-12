@@ -62,6 +62,10 @@ CREATE TABLE resources (
     resource_description TEXT NOT NULL
 );
 
+CREATE TABLE bot_list_tags (
+    id TEXT NOT NULL UNIQUE,
+    icon TEXT NOT NULL UNIQUE
+);
 
 CREATE TABLE bot_tags (
     id SERIAL,
@@ -71,10 +75,6 @@ CREATE TABLE bot_tags (
     CONSTRAINT tags_fk FOREIGN KEY (tag) REFERENCES bot_list_tags(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE bot_list_tags (
-    id TEXT NOT NULL UNIQUE, 
-    icon TEXT NOT NULL UNIQUE
-);
 
 CREATE INDEX bot_list_tags_index ON bot_list_tags (id, icon, type);
 
@@ -258,8 +258,8 @@ CREATE TABLE servers (
     tags text[] default '{}',
     deleted boolean default false,
     js_allowed boolean default true,
-    flags integer[] default '{}'
-    autorole_votes bigint[] default '{}';
+    flags integer[] default '{}',
+    autorole_votes bigint[] default '{}'
 );
 
 -- In server tags, owner_guild is the first guild a tag was given to

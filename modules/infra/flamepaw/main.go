@@ -3,6 +3,8 @@ package main
 import (
 	"flamepaw/cli"
 	"flamepaw/common"
+	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -70,6 +72,20 @@ func main() {
 			os.Setenv("LOGURU_LEVEL", "INFO")
 		}
 		devserver := exec.Command(common.PythonPath, "-c", pyCmd)
+
+		if common.CliCmd == "db.setup" {
+			log.Info("Applying stdin patch")
+			userInput := make(chan string)
+			go readInput(userInput)
+			stdin, err := devserver.StdinPipe()
+			if err != nil {
+				log.Fatal(err)
+			}
+			go func() {
+				defer stdin.Close()
+				io.WriteString(stdin, <-userInput)
+			}()
+		}
 		devserver.Dir = common.RootPath
 		devserver.Env = os.Environ()
 		devserver.Stdout = os.Stdout
@@ -77,4 +93,16 @@ func main() {
 		devserver.Run()
 	}
 	os.Exit(0)
+}
+
+// STDIN patch
+func readInput(input chan<- string) {
+	for {
+		var u string
+		_, err := fmt.Scanf("%s\n", &u)
+		if err != nil {
+			panic(err)
+		}
+		input <- u
+	}
 }
