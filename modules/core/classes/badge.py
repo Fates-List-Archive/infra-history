@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from config import special_badges, staff_roles
 from config._logger import logger
-from modules.core.permissions import is_staff
+from modules.core.auth import is_staff
 from modules.models import enums
 
 

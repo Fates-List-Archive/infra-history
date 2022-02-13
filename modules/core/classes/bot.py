@@ -1,6 +1,6 @@
 from .base import DiscordUser
 from typing import Optional, List
-from modules.core.events import add_ws_event
+from modules.core.helpers import add_ws_event
 from modules.models import enums
 from modules.core.cache import get_bot
 

@@ -50,7 +50,8 @@ CREATE TABLE bots (
     js_allowed BOOLEAN DEFAULT TRUE,
     system boolean default false,
     uptime_checks_total integer default 0,
-    uptime_checks_failed integer default 0
+    uptime_checks_failed integer default 0,
+    di_text text
 );
 
 CREATE TABLE resources (
@@ -124,7 +125,7 @@ CREATE TABLE reviews (
    target_id bigint not null,
    target_type integer default 0,
    user_id bigint not null,
-   star_rating float4 default 0.0,
+   star_rating numeric(4,2) default 0.0,
    review_text text,
    review_upvotes bigint[] default '{}',
    review_downvotes bigint[] default '{}',
@@ -135,7 +136,7 @@ CREATE TABLE reviews (
    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-create index review_index on reviews (id, target_id, target_type, star_rating);
+create index review_index on reviews (id, target_id, user_id, review_text, review_upvotes, review_downvotes, epoch, replies, target_type, star_rating, flagged, reply);
 
 CREATE TABLE bot_voters (
     bot_id bigint,

@@ -2,11 +2,18 @@ import datetime
 
 from piccolo.columns.column_types import (UUID, Array, BigInt, Boolean, Float,
                                           ForeignKey, Integer, Secret, Text,
-                                          Timestamptz, Varchar)
+                                          Timestamptz, Varchar, Interval, Serial)
 from piccolo.columns.readable import Readable
 from piccolo.table import Table
 
 from modules.models import enums
+
+class LeaveOfAbsence(Table, tablename="leave_of_absence"):
+    id = Serial(primary_key=True)
+    user_id = BigInt(help_text="The user id of the user who is on leave. This is autofilled on submit")
+    reason = Text(help_text="Reason for the leave of absence")
+    estimated_time = Interval(help_text="Estimated time")
+    start_date = Timestamptz(help_text="Start date", default=datetime.datetime.now())
 
 class Vanity(Table, tablename="vanity"):
     vanity_url = Text(unique=True, required=True)

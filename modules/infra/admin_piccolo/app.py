@@ -1,17 +1,19 @@
 from base64 import b64decode
+from os import abort
 import random
 import sys
 import asyncpg
 import asyncio
 from http import HTTPStatus
 
-from modules.core.permissions import is_staff
+from modules.core.auth import is_staff
 sys.path.append(".")
 sys.path.append("modules/infra/admin_piccolo")
 from fastapi import FastAPI
 from typing import Callable, Awaitable, Tuple, Dict, List
 from starlette.responses import Response, StreamingResponse, RedirectResponse, HTMLResponse
 from starlette.requests import Request
+from starlette.concurrency import iterate_in_threadpool
 from fastapi.responses import ORJSONResponse
 from piccolo.engine import engine_finder
 from piccolo_admin.endpoints import create_admin
@@ -20,7 +22,7 @@ from piccolo_api.fastapi.endpoints import FastAPIWrapper
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Mount
 from starlette.types import Scope, Message
-from tables import Bot, Reviews, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand
+from tables import Bot, Reviews, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, LeaveOfAbsence
 import orjson
 import aioredis
 from modules.core import redis_ipc_new
@@ -30,7 +32,7 @@ from piccolo.apps.user.tables import BaseUser
 from lynxfall.utils.string import get_token
 
 admin = create_admin(
-    [Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews], 
+    [LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews], 
     allowed_hosts = ["lynx.fateslist.xyz"], 
     production = True,
 )
@@ -63,7 +65,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         # Perm check
         if request.url.path.startswith("/api"):
             if request.url.path == "/api/tables/" and perm < 5:
-                return ORJSONResponse(["reviews", "bot_packs", "vanity"])
+                return ORJSONResponse(["reviews", "bot_packs", "vanity", "leave_of_absence"])
             elif request.url.path == "/api/tables/users/ids/" and request.method == "GET":
                 pass
             elif request.url.path in ("/api/forms/", "/api/user/", "/api/openapi.json") or request.url.path.startswith("/api/docs"):
@@ -72,11 +74,26 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                 if request.url.path.startswith("/api/tables/vanity"):
                     if request.method != "GET":
                         return ORJSONResponse({"error": "You do not have permission to update vanity"}, status_code=403)
+                
                 elif request.url.path.startswith("/api/tables/bot_packs"):
                     if request.method != "GET":
                         return ORJSONResponse({"error": "You do not have permission to update bot packs"}, status_code=403)
+                
+                elif request.url.path.startswith("/api/tables/leave_of_absence/") and request.method in ("PATCH", "DELETE"):
+                    ids = request.url.path.split("/")
+                    loa_id = None
+                    for id in ids:
+                        if id.isdigit():
+                            loa_id = int(id)
+                            break
+                    else:
+                        return abort(404)
+                    
+                    user_id = await app.state.db.fetchval("SELECT user_id::text FROM leave_of_absence WHERE id = $1", loa_id)
+                    if user_id != request.scope["sunbeam_user"]["user"]["id"]:
+                        return ORJSONResponse({"error": "You do not have permission to update this leave of absence"}, status_code=403)
 
-                elif not request.url.path.startswith(("/api/tables/reviews", "/api/tables/bot_packs")):
+                elif not request.url.path.startswith(("/api/tables/reviews", "/api/tables/bot_packs", "/api/tables/leave_of_absence")):
                     return ORJSONResponse({"error": "You do not have permission to access this page"}, status_code=403)
 
         key = "rl:%s" % request.scope["sunbeam_user"]["user"]["id"]
@@ -127,7 +144,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
 
         embed.add_field(name="Status Code", value=f"{response.status_code} {HTTPStatus(response.status_code).phrase}")
 
-        asyncio.create_task(redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@&942099547025465426>", "embed": embed.to_dict(), "channel_id": "935168801480261733", "mention_roles": ["942099547025465426"]}))
+        asyncio.create_task(redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"", "embed": embed.to_dict(), "channel_id": "935168801480261733"}))
 
 
         if not response.status_code < 400:
@@ -137,6 +154,14 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             print(request.user.user.username)
         except:
             request.scope["user"] = Unknown()
+
+        if request.url.path.startswith("/api/tables/leave_of_absence") and request.method == "POST":
+            response_body = [section async for section in response.body_iterator]
+            response.body_iterator = iterate_in_threadpool(iter(response_body))
+            content = response_body[0]
+            content_dict = orjson.loads(content)
+            await app.state.db.execute("UPDATE leave_of_absence SET user_id = $1 WHERE id = $2", int(request.scope["sunbeam_user"]["user"]["id"]), content_dict[0]["id"])
+            return ORJSONResponse(content_dict)
 
         if request.url.path.startswith("/api/tables/bots") and request.method == "PATCH":
             print("Got bot edit, sending message")

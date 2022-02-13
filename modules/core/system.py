@@ -14,7 +14,7 @@ from http import HTTPStatus
 import aioredis
 import asyncpg
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.exceptions import (HTTPException, RequestValidationError,
                                 ValidationError)
 from fastapi.middleware.gzip import GZipMiddleware
@@ -27,7 +27,7 @@ from lynxfall.oauth.models import OauthConfig
 from lynxfall.oauth.providers.discord import DiscordOauth
 from lynxfall.ratelimits import LynxfallLimiter
 from lynxfall.utils.fastapi import api_versioner, include_routers
-from lynxfall.utils.string import get_token
+from lynxfall.utils.string import get_token, secure_strcmp
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -38,7 +38,6 @@ from config import (API_VERSION, discord_client_id, discord_client_secret,
 from config._logger import logger
 from modules.core.error import WebError
 from modules.core.ipc import redis_ipc_new
-from modules.core.ratelimits import rl_key_func
 from modules.models import enums
 from itsdangerous import URLSafeSerializer
 
@@ -451,42 +450,42 @@ async def catclient(workers, session):
                     )
                            
                 session.up = True # Site is back up when we FUP
-                #asyncio.create_task(vote_reminder(session))
 
             case _:
                 pass  # Ignore the rest for now
 
+# IP Checker
+def ip_check(request: Request) -> str:
+    """Given a request, try to find its IP"""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        logger.trace(f"Forwarded IPs are {forwarded}")
+        return forwarded.split(",")[0]
+    return request.client.host
 
-async def vote_reminder(session: FatesWorkerSession):
-    """Vote reminders task"""
-    if session.primary_worker():
-        events = importlib.import_module("modules.core.events")
-        bot_add_event = events.bot_add_event
-        reminders = await session.postgres.fetch(
-            """SELECT user_id, bot_id FROM user_reminders 
-            WHERE remind_time >= NOW() AND resolved = false"""
-        )
+async def rl_key_func(request: Request) -> str:
+    """Ratelimit identifier function"""
+    db = request.app.state.worker_session.postgres
+
+    if os.environ.get("ALLOW_RL_BYPASS") and secure_strcmp(str(request.headers.get("X-RL-Bypass")), request.app.state.rl_key):
+        return None
     
-        for reminder in reminders:
-            logger.debug(f"Got reminder {reminder}")
-            await bot_add_event(
-                session.redis,
-                reminder["bot_id"], 
-                enums.APIEvents.vote_reminder, 
-                {"user": str(reminder["user_id"])}
-            )
-
-            await session.postgres.execute(
-                """UPDATE user_reminders SET resolved = true 
-                WHERE user_id = $1 AND bot_id = $2""", 
-                reminder["user_id"], 
-                reminder["bot_id"]
-            )
-    
-        await asyncio.sleep(60 * 15)
-        await vote_reminder(session)
+    if ("Authorization" in request.headers or "authorization" in request.headers):
+        r = request.headers.get("Authorization") or request.headers.get("authorization")
+        check = await db.fetchrow("SELECT bot_id, state FROM bots WHERE api_token = $1", r) # Check api token
+        if check is None:
+            # Check user token too
+            check_user = await db.fetchval("SELECT user_id FROM users WHERE api_token = $1", r) # Check api token
+            if check_user is None:
+                return ip_check(request) # Invalid api token, fallback to ip
+            return str(check_user)
+        if check["state"] == enums.BotState.certified:
+            return None
+        return str(check["bot_id"]) # Otherwise, ratelimit using bot id
+    return ip_check(request) # Fallback to ip
 
 
+# Tags
 def calc_tags(list_tags):
     """Calculate bot list tags"""
     # Tag calculation

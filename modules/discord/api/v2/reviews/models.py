@@ -49,7 +49,6 @@ class BotReview(BaseModel):
     review_downvotes: list
     flagged: bool
     epoch: list
-    time_past: str
     user: BaseUser
     replies: BotReviewList | None = []
 

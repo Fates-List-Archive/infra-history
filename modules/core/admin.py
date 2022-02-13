@@ -5,11 +5,9 @@ from lynxfall.utils.string import get_token
 from .system import FatesWorkerSession
 
 from .cache import *
-from .events import *
 from .helpers import *
-from .imports import *
 from .ipc import redis_ipc_new
-from .permissions import *
+from .auth import *
 
 class BotActions():
     def __init__(self, worker_session: FatesWorkerSession, bot):
