@@ -459,9 +459,6 @@ def db_wipeuser():
         logger.info("Wiping user info in db")
         db = await asyncpg.create_pool()
         await db.execute("DELETE FROM users WHERE user_id = $1", user_id)
-        await db.execute(
-            "INSERT INTO users (id, user_id, vote_epoch) VALUES ($1, $1, NOW())",
-            user_id)  # INSERT minimal data to prevent abuse
 
         bots = await db.fetch(
             """SELECT DISTINCT bots.bot_id FROM bots 
