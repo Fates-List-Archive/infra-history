@@ -56,41 +56,9 @@ async def update_user_preferences(request: Request, user_id: int, data: UpdateUs
     if data.site_lang is not None:
         await db.execute("UPDATE users SET site_lang = $1 WHERE user_id = $2", data.site_lang.value, user_id)
     if data.vote_reminder_channel is not None:
+        if not data.vote_reminder_channel.isdigit():
+            return api_error("Vote reminder channel must be a valid channel ID")
         await db.execute("UPDATE users SET vote_reminder_channel = $1 WHERE user_id = $2", int(data.vote_reminder_channel), user_id)
-    return api_success()
-
-@router.patch(
-    "/{user_id}/vote-reminders",
-    response_model=APIResponse,
-    dependencies = [
-        Depends(user_auth_check)
-    ],
-)
-async def update_vote_reminders(request: Request, user_id: int, data: UpdateVoteReminders):
-    db = request.app.state.worker_session.postgres
-    if data.mode == enums.VoteReminderMode.enable:
-        bot_check = await db.fetchval("SELECT bot_id FROM bots WHERE bot_id = $1", int(data.bot_id))
-        if not bot_check:
-            return api_error("Bot does not exist on Fates List")
-        check = await db.fetchval(
-            "SELECT vote_reminders FROM users WHERE user_id = $1", 
-            user_id
-        )
-        if check and int(data.bot_id) in check:
-            return api_error("Vote reminders already enabled!")
-        elif len(check) > 5:
-            return api_error("Maximum vote reminders reached!")
-        await db.execute(
-            "UPDATE users SET vote_reminders = vote_reminders || $1 WHERE user_id = $2",
-            [int(data.bot_id)],
-            user_id
-        )
-    else:
-        await db.execute(
-            "UPDATE users SET vote_reminders = array_remove(vote_reminders, $1) WHERE user_id = $2",
-            int(data.bot_id),
-            user_id
-        )
     return api_success()
 
 @router.get(

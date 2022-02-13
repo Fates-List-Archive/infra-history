@@ -2,6 +2,7 @@ from base64 import b64decode
 import random
 import sys
 import asyncpg
+import asyncio
 from http import HTTPStatus
 
 from modules.core.permissions import is_staff
@@ -126,7 +127,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
 
         embed.add_field(name="Status Code", value=f"{response.status_code} {HTTPStatus(response.status_code).phrase}")
 
-        await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@&942099547025465426>", "embed": embed.to_dict(), "channel_id": "935168801480261733", "mention_roles": ["942099547025465426"]})
+        asyncio.create_task(redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@&942099547025465426>", "embed": embed.to_dict(), "channel_id": "935168801480261733", "mention_roles": ["942099547025465426"]}))
 
 
         if not response.status_code < 400:

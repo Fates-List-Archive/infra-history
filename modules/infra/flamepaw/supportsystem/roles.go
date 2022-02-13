@@ -418,7 +418,57 @@ func MessageHandler(
 	db *pgxpool.Pool,
 	i *discordgo.Interaction,
 ) {
+	if i.Member == nil {
+		return
+	}
 	data := i.MessageComponentData()
+	if strings.HasPrefix(data.CustomID, "vr-enable") {
+		botId := strings.Split(data.CustomID, "::")[1]
+		// Check if they have signed up vote reminders
+		var voteReminders pgtype.TextArray
+
+		err := db.QueryRow(ctx, "SELECT vote_reminders::text[] FROM users WHERE user_id = $1", i.Member.User.ID).Scan(&voteReminders)
+		if err != nil {
+			log.Error(err)
+			voteReminders = pgtype.TextArray{
+				Elements: []pgtype.Text{},
+				Status:   pgtype.Null,
+			}
+		}
+
+		var hasRemindersEnabled bool
+		for _, bot := range voteReminders.Elements {
+			if bot.String == botId {
+				hasRemindersEnabled = true
+				break
+			}
+		}
+
+		if hasRemindersEnabled {
+			slashbot.SendIResponseEphemeral(common.DiscordMain, i, "You already have reminders enabled for this bot!", false)
+		} else if len(voteReminders.Elements) > 5 {
+			slashbot.SendIResponseEphemeral(common.DiscordMain, i, "You can only have 5 reminders enabled at a time!", false)
+		} else {
+			db.Exec(
+				ctx,
+				"UPDATE users SET vote_reminders = vote_reminders || $1 WHERE user_id = $2",
+				[]string{botId},
+				i.Member.User.ID,
+			)
+			slashbot.SendIResponseEphemeral(common.DiscordMain, i, "Vote reminders enabled for this bot", false)
+		}
+	}
+	if data.CustomID == "vr-menu" {
+		bot := data.Values[0]
+		db.Exec(
+			ctx,
+			"UPDATE users SET vote_reminders = array_remove(vote_reminders, $1) WHERE user_id = $2",
+			bot,
+			i.Member.User.ID,
+		)
+		slashbot.SendIResponseEphemeral(common.DiscordMain, i, "Vote reminders disabled for this bot", false)
+	}
+
 	if strings.HasPrefix(data.CustomID, "baypaw-modal") {
 		page := strings.Split(data.CustomID, "::")[1]
 		pageInt, err := strconv.Atoi(page)

@@ -10,8 +10,6 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
-	"crypto/sha512"
-	"crypto/subtle"
 	"encoding/hex"
 	"flamepaw/common"
 	"flamepaw/types"
@@ -548,45 +546,6 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		}
 
 		apiReturn(c, 200, true, nil, nil)
-	})
-
-	document("GET", "/api/dragon/users/:uid/bots/:bid/ts/:ts/_vote-token", "get_vote_token", "Returns a vote token. Needs whitelisting and a access key.", nil, types.APIResponse{})
-	router.GET("/users/:uid/bots/:bid/ts/:ts/_vote-token", func(c *gin.Context) {
-		var auth types.InternalUserAuth
-
-		if err := c.ShouldBindHeader(&auth); err != nil {
-			apiReturn(c, 401, false, "Invalid User Token: "+err.Error(), nil)
-			return
-		}
-
-		var userID = c.Param("uid")
-		var botID = c.Param("bid")
-		var ts = c.Param("ts")
-
-		tsInt, err := strconv.Atoi(ts)
-
-		if err != nil {
-			apiReturn(c, 400, false, "Invalid timestamp: "+err.Error(), nil)
-			return
-		}
-
-		if time.Now().Unix()-int64(tsInt) > 10 {
-			apiReturn(c, 400, false, "Timestamp is too old", nil)
-			return
-		}
-
-		mac := hmac.New(sha512.New, common.VoteTokenAccessKeyBytes)
-		mac.Write([]byte(userID + "/" + botID + "/" + ts + "/Shadowsight"))
-		expected := hex.EncodeToString(mac.Sum(nil))
-
-		if subtle.ConstantTimeCompare([]byte(auth.AuthToken), []byte(expected)) != 1 {
-			apiReturn(c, 401, false, "Invalid Access Key", nil)
-			return
-		}
-
-		voteToken := common.RandString(512)
-		redis.Set(ctx, "vote_token:"+voteToken, userID+botID, 30*time.Second)
-		apiReturn(c, 200, true, nil, voteToken)
 	})
 
 	document("OPTIONS", "/api/dragon/bots/:id/votes", "vote_bot", "Creates a vote for a bot. Needs authorization. This is the CORS code", nil, nil)

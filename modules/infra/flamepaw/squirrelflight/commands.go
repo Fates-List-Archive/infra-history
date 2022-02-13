@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Fates-List/discordgo"
+	"github.com/jackc/pgtype"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -66,8 +67,114 @@ func CmdInit() map[string]types.SlashCommand {
 				botId = botVal.ID
 			}
 
-			_, res := webserver.VoteBot(context.Postgres, context.Redis, context.User.ID, botId, false)
+			ok, res := webserver.VoteBot(context.Postgres, context.Redis, context.User.ID, botId, false)
+
+			// Check if they have signed up vote reminders
+			var voteReminders pgtype.TextArray
+
+			err := context.Postgres.QueryRow(context.Context, "SELECT vote_reminders::text[] FROM users WHERE user_id = $1", context.User.ID).Scan(&voteReminders)
+			if err != nil {
+				log.Error(err)
+				voteReminders = pgtype.TextArray{
+					Elements: []pgtype.Text{},
+					Status:   pgtype.Null,
+				}
+			}
+
+			var hasRemindersEnabled bool
+			for _, bot := range voteReminders.Elements {
+				if bot.String == botId {
+					hasRemindersEnabled = true
+					break
+				}
+			}
+
+			if !hasRemindersEnabled {
+				res += "\n\nWant to be reminded when you can next vote for this bot?"
+
+				slashbot.SendIResponseFull(
+					common.DiscordMain,
+					context.Interaction,
+					res,
+					true,
+					0,
+					[]string{},
+					nil,
+					[]discordgo.MessageComponent{
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.Button{
+									CustomID: "vr-enable::" + botId,
+									Label:    "Enable Vote Reminders",
+								},
+							},
+						},
+					})
+				return ""
+			}
+
 			return res
+		},
+	}
+
+	commands["votereminders"] = types.SlashCommand{
+		Name:        "votereminders",
+		CmdName:     "votereminders",
+		Description: "Get and update your vote reminders!",
+		Cooldown:    types.CooldownNone,
+		Handler: func(context types.SlashContext) string {
+			// Check if they have signed up vote reminders
+			var voteReminders pgtype.TextArray
+
+			err := context.Postgres.QueryRow(context.Context, "SELECT vote_reminders::text[] FROM users WHERE user_id = $1", context.User.ID).Scan(&voteReminders)
+			if err != nil {
+				log.Error(err)
+				voteReminders = pgtype.TextArray{
+					Elements: []pgtype.Text{},
+					Status:   pgtype.Null,
+				}
+			}
+
+			var reminders []string
+			var remindersSelect []discordgo.SelectMenuOption
+			for _, bot := range voteReminders.Elements {
+				botV, err, _ := common.FetchUserRNG(bot.String)
+				if err != nil {
+					return err.Error()
+				}
+				if len(botV.Username) > 25 {
+					botV.Username = botV.Username[:22] + "..."
+				}
+				remindersSelect = append(remindersSelect, discordgo.SelectMenuOption{
+					Label:       botV.Username,
+					Description: bot.String,
+					Value:       bot.String,
+				})
+				reminders = append(reminders, botV.Username+" ("+bot.String+")")
+			}
+			slashbot.SendIResponseFull(
+				common.DiscordMain,
+				context.Interaction,
+				"**Vote Reminders**\n"+strings.Join(reminders, ", ")+"\nYou can disable a vote reminder below!",
+				true,
+				0,
+				[]string{},
+				nil,
+				[]discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.SelectMenu{
+								CustomID:    "vr-menu",
+								Placeholder: "Select a vote reminder to disable",
+								Options:     remindersSelect,
+								MinValues:   1,
+								MaxValues:   1,
+							},
+						},
+					},
+				},
+			)
+			return ""
 		},
 	}
 
