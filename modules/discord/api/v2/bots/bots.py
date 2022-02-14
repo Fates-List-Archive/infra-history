@@ -296,7 +296,7 @@ async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
         bot = await db.fetchrow(
             """SELECT bot_id, prefix, shard_count, user_count, shards, state, description, bot_library AS library, 
             website, votes, guild_count, discord AS support, banner_page AS banner, github, features, 
-            invite_amount, css, long_description_type, long_description, donate, privacy_policy, 
+            invite_amount, css, long_description_type, long_description, donate, privacy_policy, page_style,
             nsfw, keep_banner_decor, flags, last_stats_post, created_at, uptime_checks_total, uptime_checks_failed 
             FROM bots WHERE bot_id = $1 OR client_id = $1""", 
             bot_id
@@ -470,7 +470,7 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
         return api_error("You are not allowed to edit this bot!", status_code=403)
 
     bot = await db.fetchrow(
-        "SELECT bot_id, client_id, api_token, state, prefix, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, flags, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor FROM bots WHERE bot_id = $1",
+        "SELECT bot_id, client_id, api_token, state, prefix, bot_library AS library, invite, website, banner_card, banner_page, long_description, description, webhook, webhook_secret, webhook_type, discord AS support, flags, github, features, long_description_type, css, donate, privacy_policy, nsfw, keep_banner_decor, page_style FROM bots WHERE bot_id = $1",
         bot_id,
     )
 

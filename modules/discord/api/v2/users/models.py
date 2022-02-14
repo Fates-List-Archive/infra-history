@@ -40,7 +40,6 @@ class BotMeta(BaseModel):
 
     - extra_owners must be a list of strings where the strings can be made a integer
     """
-
     client_id: str | None = None
     prefix: str | None = None
     library: str
@@ -55,6 +54,7 @@ class BotMeta(BaseModel):
     long_description: str
     css: str | None = None
     long_description_type: enums.LongDescType
+    page_style: enums.PageStyle | None = enums.PageStyle.tabs
     nsfw: bool
     donate: str | None = None
     privacy_policy: str | None = None

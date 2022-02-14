@@ -31,6 +31,11 @@ class CooldownBucket(Enum):
     lock = 60*2
     delete = 60*3.5
 
+class PageStyle(IntEnum):
+    _init_ = 'value __doc__'
+    tabs = 0, "Tabs"
+    single_scroll = 1, "Single Scroll"
+
 class SiteLang(Enum):
     """Site languages"""
     _init_ = 'value __doc__'
