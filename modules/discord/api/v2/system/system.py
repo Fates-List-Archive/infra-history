@@ -540,3 +540,14 @@ async def get_all_vote_reminders(request: Request):
         _reminder["can_vote"] = can_vote
         reminders_lst.append(_reminder)
     return {"reminders": reminders_lst}
+
+@router.get("/staff-apps/qibli/{id}")
+async def short_url(request: Request, id: uuid.UUID):
+    """
+    Gets the qibli data for a id
+    """
+    redis = request.app.state.worker_session.redis
+    data = await redis.get(f"sapp:{id}")
+    if not data:
+        return abort(404)
+    return orjson.loads(data)

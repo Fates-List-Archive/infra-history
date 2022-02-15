@@ -127,9 +127,11 @@ async def fetch_server(
     """
     Fetches server information given a server/guild ID. If not found, 404 will be returned.
     
-    Setting compact to true (default) -> description, long_description, long_description_type, keep_banner_decor and css will be null
+    Setting compact to true (default) -> description, long_description, long_description_type and keep_banner_decor will be null
 
     No cache means cached responses will not be served (may be temp disabled in the case of a DDOS or temp disabled for specific servers as required)
+    
+    **Set the Frostpaw header if you are a custom client**
     """
     if len(str(guild_id)) not in [17, 18, 19, 20]:
         return abort(404)
@@ -160,13 +162,15 @@ async def fetch_server(
     
 
     api_ret = await db.fetchrow(
-        "SELECT flags, banner_card, banner_page, guild_count, invite_amount, state, website, total_votes, login_required, votes, nsfw, tags AS _tags FROM servers WHERE guild_id = $1", 
+        "SELECT flags, banner_card, banner_page, guild_count, invite_amount, css, state, website, total_votes, login_required, votes, nsfw, tags AS _tags FROM servers WHERE guild_id = $1", 
         guild_id
     )
     if api_ret is None:
         return abort(404)
 
     api_ret = dict(api_ret)
+
+    api_ret["css"] = f"<style>{api_ret['css'] or ''}</style>"
 
     if not compact:
         extra = await db.fetchrow(
