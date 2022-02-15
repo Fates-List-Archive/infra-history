@@ -117,8 +117,9 @@ func slashIr() map[string]types.SlashCommand {
 				}
 
 				if !adminOp.Critical {
-					verify, err := context.Redis.Get(context.Context, "staffverify:"+context.User.ID).Result()
-					if err != nil || verify != common.VerificationCode(context.User.ID) {
+					var verifyCode pgtype.Text
+					context.Postgres.QueryRow(context.Context, "SELECT staff_verify_code FROM users WHERE user_id = $1", context.User.ID).Scan(&verifyCode)
+					if verifyCode.Status != pgtype.Present || verifyCode.String != common.VerificationCode(context.User.ID) {
 						return "You must verify in the staff server again to ensure you are up to date with our rules and staff guide"
 					}
 				}

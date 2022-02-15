@@ -490,8 +490,8 @@ func CmdInit() map[string]types.SlashCommand {
 					}
 				}
 
-				// Set verification code with 14 day expiry
-				context.Redis.Set(context.Context, "staffverify:"+context.User.ID, verify, 24*14*time.Hour)
+				// Set verification code
+				context.Postgres.Exec(context.Context, "UPDATE users SET staff_verify_code = $1 WHERE user_id = $2", verify, context.User.ID)
 
 				return "Welcome back... master!"
 			},
