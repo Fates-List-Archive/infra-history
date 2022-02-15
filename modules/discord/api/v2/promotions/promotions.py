@@ -31,7 +31,10 @@ async def get_promotion(request:  Request, bot_id: int):
 async def new_promotion(request: Request, bot_id: int, promo: BotPromotion):
     """Creates a promotion for a bot. Type can be 1 for announcement, 2 for promotion or 3 for generic"""
     db = request.app.worker_session.postgres
+    redis = request.app.worker_session.redis
     await add_promotion(db, bot_id, promo.title, promo.info, promo.css, promo.type)
+    await redis.delete(f"botcache-{bot_id}-True")
+    await redis.delete(f"botcache-{bot_id}-False")
     return api_success()
 
 @router.patch(
@@ -44,6 +47,7 @@ async def new_promotion(request: Request, bot_id: int, promo: BotPromotion):
 async def edit_promotion(request: Request, bot_id: int, promo: BotPromotion, id: uuid.UUID):
     """Edits an promotion for a bot given its promotion ID."""
     db = request.app.worker_session.postgres
+    redis = request.app.worker_session.redis
     pid = await db.fetchrow("SELECT id FROM bot_promotions WHERE id = $1 AND bot_id = $2", id, bot_id)
     if pid is None:
         return api_error(
@@ -58,6 +62,8 @@ async def edit_promotion(request: Request, bot_id: int, promo: BotPromotion, id:
         bot_id, 
         id
     )
+    await redis.delete(f"botcache-{bot_id}-True")
+    await redis.delete(f"botcache-{bot_id}-False")
     return api_success()
 
 @router.delete(
@@ -70,6 +76,7 @@ async def edit_promotion(request: Request, bot_id: int, promo: BotPromotion, id:
 async def delete_promotion(request: Request, bot_id: int, id: uuid.UUID):
     """Deletes a bots promotion"""
     db = request.app.worker_session.postgres
+    redis = request.app.worker_session.redis
     eid = await db.fetchrow("SELECT id FROM bot_promotions WHERE id = $1", id)
     if eid is None:
         return api_error(
@@ -77,4 +84,6 @@ async def delete_promotion(request: Request, bot_id: int, id: uuid.UUID):
             status_code = 404
         )
     await db.execute("DELETE FROM bot_promotions WHERE bot_id = $1 AND id = $2", bot_id, id)
+    await redis.delete(f"botcache-{bot_id}-True")
+    await redis.delete(f"botcache-{bot_id}-False")
     return api_success()

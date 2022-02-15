@@ -1,6 +1,7 @@
 from modules.core import *
 from lynxfall.utils.string import human_format
 from fastapi.responses import PlainTextResponse
+from fastapi.encoders import jsonable_encoder
 
 from ..base import API_VERSION
 from .models import APIResponse, Guild, GuildRandom
@@ -137,7 +138,7 @@ async def fetch_server(
     redis = request.app.state.worker_session.redis
 
     if request.headers.get("Frostpaw"):
-        no_cache = True
+        no_cache = False
         compact = False
         auth = request.headers.get("Frostpaw-Auth", "")
         if auth and "|" in auth:
@@ -153,7 +154,7 @@ async def fetch_server(
             user_id = None
 
     if not no_cache:
-        cache = await redis.get(f"guildcache-{guild_id}-{compact}")
+        cache = await redis.get(f"servercache-{guild_id}-{compact}")
         if cache:
             return orjson.loads(cache)
     
@@ -186,6 +187,8 @@ async def fetch_server(
     
     if request.headers.get("Frostpaw"):
         await add_ws_event(redis, guild_id, {"m": {"e": enums.APIEvents.server_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}}, type = "server", timeout=None)
+
+    await redis.set(f"servercache-{guild_id}-{compact}", orjson.dumps(jsonable_encoder(api_ret)), ex=60*60*8)
 
     return api_ret
 

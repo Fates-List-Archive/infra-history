@@ -114,14 +114,6 @@ async def fetch_random_bot(request: Request, bot_id: int, lang: str = "default")
 @router.get(
     "/{bot_id}", 
     response_model = Bot, 
-    dependencies=[
-        Depends(
-            Ratelimiter(
-                global_limit = Limit(times=7, seconds=45),
-                operation_bucket="get_bot"
-            )
-        )
-    ],
 )
 async def fetch_bot(
     request: Request, 
@@ -150,12 +142,11 @@ async def fetch_bot(
     redis = worker_session.redis
 
     if request.headers.get("Frostpaw"):
+        no_cache = False
         if request.headers.get("Frostpaw-Vote-Page"):
             logger.info("Got vote page")
-            no_cache = False
             compact = True
         else:
-            no_cache = True
             compact = False
         auth = request.headers.get("Frostpaw-Auth", "")
         if auth and "|" in auth:
@@ -174,11 +165,12 @@ async def fetch_bot(
         cache = await redis.get(f"botcache-{bot_id}-{compact}")
         if cache:
             data = orjson.loads(cache)
+            data["votes"] = await db.fetchval("SELECT votes FROM bots WHERE bot_id = $1", bot_id)
             data["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
             return data
 
     api_ret = await db.fetchrow(
-        "SELECT bot_id, created_at, last_stats_post, description, css, flags, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id, uptime_checks_total, uptime_checks_failed, page_style FROM bots WHERE bot_id = $1 OR client_id = $1", 
+        "SELECT bot_id, created_at, last_stats_post, description, css, flags, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, total_votes, donate, privacy_policy, nsfw, client_id, uptime_checks_total, uptime_checks_failed, page_style FROM bots WHERE bot_id = $1 OR client_id = $1", 
         bot_id
     )
     if api_ret is None:
@@ -239,15 +231,17 @@ async def fetch_bot(
         bot_id
     )
 
-    api_ret["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
-
     api_ret["resources"] = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", bot_id, enums.ReviewType.bot.value)
 
     api_ret["commands"] = await get_bot_commands(db, bot_id, lang, None)
 
     api_ret["promos"] = await get_promotions(db, bot_id)
 
-    await redis.set(f"botcache-{bot_id}-{compact}", orjson.dumps(jsonable_encoder(api_ret)), ex=10)
+    await redis.set(f"botcache-{bot_id}-{compact}", orjson.dumps(jsonable_encoder(api_ret)), ex=60*60*8)
+
+    api_ret["votes"] = await db.fetchval("SELECT votes FROM bots WHERE bot_id = $1", bot_id)
+
+    api_ret["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
 
     if request.headers.get("Frostpaw"):
         await add_ws_event(redis, bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": str(user_id), "widget": False, "vote_page": compact}}, timeout=None)

@@ -66,7 +66,7 @@ class Bot(BaseModel):
     css: str | None = None
     votes: int
     total_votes: int
-    vanity: str
+    vanity: str | None = "unknown"
     donate: str | None = None
     privacy_policy: str | None = None
     nsfw: bool

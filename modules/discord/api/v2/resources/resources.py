@@ -53,6 +53,9 @@ async def add_resources(request: Request, target_id: int, target_type: enums.Rev
         ids.append(str(id))
     if target_type == enums.ReviewType.bot:
         await bot_add_event(redis, target_id, enums.APIEvents.resource_add, {"user": None, "id": ids})
+    cachename = target_type.name.lower()
+    await redis.delete(f"{cachename}cache-{target_id}-True")
+    await redis.delete(f"{cachename}cache-{target_id}-False")
     return api_success(id = ids)
 
 @router.delete(
@@ -90,4 +93,7 @@ async def delete_resources(request: Request, target_id: int, target_type: enums.
 
     if target_type == enums.ReviewType.bot:
         await bot_add_event(redis, target_id, enums.APIEvents.resource_delete, {"user": None, "ids": resources.ids, "names": resources.names, "nuke": False})
+    cachename = target_type.name.lower()
+    await redis.delete(f"{cachename}cache-{target_id}-True")
+    await redis.delete(f"{cachename}cache-{target_id}-False")
     return api_success()

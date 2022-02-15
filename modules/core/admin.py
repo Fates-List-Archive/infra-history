@@ -330,3 +330,5 @@ class BotActions():
         msg = {"content": "", "embed": edit_embed.to_dict(), "channel_id": str(bot_logs), "mention_roles": []}
         if not self.system_bot:
             await redis_ipc_new(self.redis, "SENDMSG", msg=msg, timeout=None, worker_session=self.worker_session)
+        await self.redis.delete(f"botcache-{self.bot_id}-True")
+        await self.redis.delete(f"botcache-{self.bot_id}-False")
