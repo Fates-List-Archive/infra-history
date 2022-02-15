@@ -138,17 +138,6 @@ def logout_sunbeam(request: Request, response: Response):
         return abort(404)
     
     response.set_cookie(
-        key="sunbeam-key", 
-        value="0", 
-        expires="Thu, 01 Jan 1970 00:00:00 GMT", 
-        httponly=True, 
-        samesite="lax", 
-        secure=True,
-        domain="fateslist.xyz",
-        path="/"
-    )
-
-    response.set_cookie(
         key="sunbeam-session:warriorcats", 
         value="0", 
         expires="Thu, 01 Jan 1970 00:00:00 GMT", 

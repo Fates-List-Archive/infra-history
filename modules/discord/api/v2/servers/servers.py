@@ -121,7 +121,7 @@ async def fetch_server(
     guild_id: int, 
     compact: Optional[bool] = True, 
     no_cache: Optional[bool] = False,
-    sensitive: bool = False
+    lang: str = "en"
 ):
     """
     Fetches server information given a server/guild ID. If not found, 404 will be returned.
@@ -129,8 +129,6 @@ async def fetch_server(
     Setting compact to true (default) -> description, long_description, long_description_type, keep_banner_decor and css will be null
 
     No cache means cached responses will not be served (may be temp disabled in the case of a DDOS or temp disabled for specific servers as required)
-
-    Setting sensitive to true will expose sensitive info like invite channel, user whitelist/blacklist etc
     """
     if len(str(guild_id)) not in [17, 18, 19, 20]:
         return abort(404)
@@ -138,14 +136,30 @@ async def fetch_server(
     db = request.app.state.worker_session.postgres
     redis = request.app.state.worker_session.redis
 
+    if request.headers.get("Frostpaw"):
+        no_cache = True
+        compact = False
+        auth = request.headers.get("Frostpaw-Auth", "")
+        if auth and "|" in auth:
+            user_id, token = auth.split("|")
+            try:
+                user_id = int(user_id)
+            except Exception:
+                user_id = None
+            
+            if user_id:
+                auth = await user_auth_check(request, user_id, token)
+        else:
+            user_id = None
+
     if not no_cache:
-        cache = await redis.get(f"guildcache-{guild_id}-{compact}-{sensitive}")
+        cache = await redis.get(f"guildcache-{guild_id}-{compact}")
         if cache:
             return orjson.loads(cache)
     
 
     api_ret = await db.fetchrow(
-        "SELECT banner_card, banner_page, guild_count, invite_amount, state, website, total_votes, login_required, votes, nsfw, tags AS _tags FROM servers WHERE guild_id = $1", 
+        "SELECT flags, banner_card, banner_page, guild_count, invite_amount, state, website, total_votes, login_required, votes, nsfw, tags AS _tags FROM servers WHERE guild_id = $1", 
         guild_id
     )
     if api_ret is None:
@@ -153,18 +167,13 @@ async def fetch_server(
 
     api_ret = dict(api_ret)
 
-    if sensitive:
-        await server_auth_check(request, guild_id, request.headers.get("Authorization", ""))
-        sensitive_dat = await db.fetchrow("SELECT invite_channel, user_whitelist, user_blacklist FROM servers WHERE guild_id = $1", guild_id)
-        api_ret |= dict(sensitive_dat)
-        api_ret["invite_channel"] = str(api_ret["invite_channel"]) if api_ret["invite_channel"] else None
-
     if not compact:
         extra = await db.fetchrow(
             "SELECT description, long_description_type, long_description, css, keep_banner_decor FROM servers WHERE guild_id = $1",
             guild_id
         )
         api_ret |= dict(extra)
+        api_ret = sanitize_bot(api_ret, lang)
 
     api_ret["tags"] = [dict(await db.fetchrow("SELECT name, id, iconify_data FROM server_tags WHERE id = $1", id)) for id in api_ret["_tags"]]
    
@@ -175,56 +184,10 @@ async def fetch_server(
         guild_id
     )
     
-    if not sensitive:
-        await redis.set(f"guildcache-{guild_id}-{compact}-{sensitive}", orjson.dumps(api_ret), ex=60*60*8)
+    if request.headers.get("Frostpaw"):
+        await add_ws_event(redis, guild_id, {"m": {"e": enums.APIEvents.server_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}}, type = "server", timeout=None)
 
     return api_ret
-
-@router.get("/{guild_id}/_sunbeam")
-async def get_server_page(request: Request, guild_id: int, lang: str = "en"):
-    """
-    Internally used by sunbeam for server page getting.
-    """
-    db = request.app.state.worker_session.postgres
-    redis = request.app.state.worker_session.redis
-    if not request.headers.get("Frostpaw"):
-        return abort(404)
-    data = await db.fetchrow(
-        """SELECT banner_page AS banner, keep_banner_decor, guild_count, nsfw, state, invite_amount, avatar_cached, name_cached, votes, css, description, 
-        long_description, long_description_type, website, tags AS _tags, js_allowed, flags FROM servers WHERE guild_id = $1""",
-        guild_id
-    )
-    if not data:
-        logger.info("Something happened!")
-        return abort(404)
-    data = dict(data)
-    data["resources"] = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", guild_id, enums.ReviewType.server.value)
-    if not data["description"]:
-        data["description"] = await default_server_desc(data["name_cached"], guild_id)
-    data["user"] = {
-        "username": data["name_cached"],
-        "avatar": data["avatar_cached"],
-        "id": str(guild_id)
-    }
-    data["tags_fixed"] = [(await db.fetchrow("SELECT id, name, iconify_data FROM server_tags WHERE id = $1", id)) for id in data["_tags"]]
-    context = {"type": "server", "replace_list": constants.long_desc_replace_tuple, "id": str(guild_id), "index": "/servers"}
-    data["type"] = "server"
-    await add_ws_event(redis, guild_id, {"m": {"e": enums.APIEvents.server_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}}, type = "server", timeout=None)
-    # Ensure server banner_page is disabled if not approved or certified
-    if data["state"] not in (enums.BotState.approved, enums.BotState.certified, enums.BotState.private_viewable):
-        data["banner"] = None
-        data["js_allowed"] = False
-
-    data = sanitize_bot(data, lang)
-
-    base = {
-        "type": "server", 
-        "promos": [],
-        "replace_list": constants.long_desc_replace_tuple_sunbeam,
-        "fl_cache_ver": -1,
-    }
-    return {"data": data} | base
-
 
 @router.get(
     "/{guild_id}/_sunbeam/invite"
@@ -270,7 +233,6 @@ async def get_server_invite(request: Request, guild_id: int):
     if invite.startswith("https://"):
         return {"invite": invite}
     return api_error(invite)
-
 
 
 @router.head("/{guild_id}", operation_id="server_exists")

@@ -22,7 +22,7 @@ from piccolo_api.fastapi.endpoints import FastAPIWrapper
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Mount
 from starlette.types import Scope, Message
-from tables import Bot, Reviews, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, LeaveOfAbsence
+from tables import Bot, Reviews, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, LeaveOfAbsence, UserBotLogs
 import orjson
 import aioredis
 from modules.core import redis_ipc_new
@@ -32,7 +32,7 @@ from piccolo.apps.user.tables import BaseUser
 from lynxfall.utils.string import get_token
 
 admin = create_admin(
-    [LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews], 
+    [LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews, UserBotLogs], 
     allowed_hosts = ["lynx.fateslist.xyz"], 
     production = True,
 )

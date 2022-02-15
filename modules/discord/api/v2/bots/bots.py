@@ -3,6 +3,7 @@ import urllib.parse
 from modules.core import *
 from lynxfall.utils.string import human_format
 from fastapi.responses import PlainTextResponse
+from fastapi.encoders import jsonable_encoder
 
 from ..base import API_VERSION
 from .models import APIResponse, Bot, BotRandom, BotStats, SettingsPage
@@ -127,23 +128,47 @@ async def fetch_bot(
     bot_id: int, 
     compact: Optional[bool] = True, 
     no_cache: Optional[bool] = False,
+    lang: str = "en"
 ):
     """
     Fetches bot information given a bot ID. If not found, 404 will be returned. 
 
     This endpoint handles both bot IDs and client IDs
 
-    - **compact** (default `true`) -> long_description_type, long_description, css and keep_banner_decor will be not be given
+    - **compact** (default `true`) -> long_description_type, long_description and keep_banner_decor will be not be given
 
     - **no_cache** (default: `false`) -> cached responses will not be served (may be temp disabled in the case of a DDOS or temp disabled for specific 
     bots as required). **Uncached requests may take up to 100-200 times longer or possibly more**
     
     **Important note: the first owner may or may not be the main owner. 
     Use the `main` key instead of object order**
+
+    **Set the Frostpaw header if you are a custom client**
     """
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
     redis = worker_session.redis
+
+    if request.headers.get("Frostpaw"):
+        if request.headers.get("Frostpaw-Vote-Page"):
+            logger.info("Got vote page")
+            no_cache = False
+            compact = True
+        else:
+            no_cache = True
+            compact = False
+        auth = request.headers.get("Frostpaw-Auth", "")
+        if auth and "|" in auth:
+            user_id, token = auth.split("|")
+            try:
+                user_id = int(user_id)
+            except Exception:
+                user_id = None
+            
+            if user_id:
+                auth = await user_auth_check(request, user_id, token)
+        else:
+            user_id = None
 
     if not no_cache:
         cache = await redis.get(f"botcache-{bot_id}-{compact}")
@@ -153,7 +178,7 @@ async def fetch_bot(
             return data
 
     api_ret = await db.fetchrow(
-        "SELECT bot_id, created_at, last_stats_post, description, flags, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id, uptime_checks_total, uptime_checks_failed FROM bots WHERE bot_id = $1 OR client_id = $1", 
+        "SELECT bot_id, created_at, last_stats_post, description, css, flags, banner_card, banner_page, guild_count, shard_count, shards, prefix, invite, invite_amount, features, bot_library AS library, state, website, discord AS support, github, user_count, votes, total_votes, donate, privacy_policy, nsfw, client_id, uptime_checks_total, uptime_checks_failed, page_style FROM bots WHERE bot_id = $1 OR client_id = $1", 
         bot_id
     )
     if api_ret is None:
@@ -163,12 +188,15 @@ async def fetch_bot(
 
     api_ret = dict(api_ret)
 
+    api_ret["css"] = f"<style>{api_ret['css'] or ''}</style>"
+
     if not compact:
         extra = await db.fetchrow(
-            "SELECT long_description_type, long_description, css, keep_banner_decor FROM bots WHERE bot_id = $1",
+            "SELECT long_description_type, long_description, keep_banner_decor FROM bots WHERE bot_id = $1",
             bot_id
         )
         api_ret |= dict(extra)
+        api_ret = sanitize_bot(api_ret, lang)
 
     tags = await db.fetch("SELECT tag FROM bot_tags WHERE bot_id = $1", bot_id)
     api_ret["tags"] = [tag["tag"] for tag in tags]
@@ -198,6 +226,7 @@ async def fetch_bot(
         owners.append(owner_obj)
 
     api_ret["owners"] = owners
+    api_ret["owners_html"] = gen_owner_html(owners)
 
     api_ret["features"] = [features[id] for id in api_ret["features"] if id in features]
 
@@ -210,9 +239,18 @@ async def fetch_bot(
         bot_id
     )
 
-    await redis.set(f"botcache-{bot_id}-{compact}", orjson.dumps(api_ret), ex=60*60*8)
-
     api_ret["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
+
+    api_ret["resources"] = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", bot_id, enums.ReviewType.bot.value)
+
+    api_ret["commands"] = await get_bot_commands(db, bot_id, lang, None)
+
+    api_ret["promos"] = await get_promotions(db, bot_id)
+
+    await redis.set(f"botcache-{bot_id}-{compact}", orjson.dumps(jsonable_encoder(api_ret)), ex=10)
+
+    if request.headers.get("Frostpaw"):
+        await add_ws_event(redis, bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": str(user_id), "widget": False, "vote_page": compact}}, timeout=None)
 
     return api_ret
 
@@ -230,162 +268,6 @@ def gen_owner_html(owners_lst: tuple[dict]):
     # First owner will always be main and hence should have the crown, set initial state to crown for that
     owners_html = "<br/>".join([f"<a class='long-desc-link' href='/profile/{owner['user']['id']}'>{owner['user']['username'].replace('%CROWN%', '')}</a>" for owner in owners_lst if owner])
     return owners_html
-
-@router.get("/{bot_id}/_sunbeam")
-async def get_bot_page(request: Request, bot_id: int, lang: str = "en"):
-    """
-    Internally used by sunbeam to render bot pages.
-
-    While the data you get from this API is sanitized because
-    it is actually rendered for users, it is *not* recommended
-    to rely or use this API outside of internal use cases. Data
-    is unstructured and will constantly change. **This API is not
-    backwards compatible whatsoever**
-
-    Additionally, this API *will* trigger a WS View Event.
-
-    To protect against scraping and browsers, this endpoint requires a 
-    proper Frostpaw header to be set.
-
-    This API will also be heavily monitored. If we find you attempting
-    to abuse this API endpoint or doing anything out of the ordinary with
-    it, you may be IP or user banned. Calling it once or twice is OK but
-    automating it is not. Use the Get Bot API instead for automation.
-
-    **This API is only documented because it's in our FastAPI backend and
-    to be complete**
-
-    Response models will *never* be documented as it changes very
-    frequently
-    """
-    if not request.headers.get("Frostpaw"):
-        return abort(404)
-
-    worker_session = request.app.state.worker_session
-    db = worker_session.postgres
-    redis = worker_session.redis
-    if bot_id >= 9223372036854775807: # Max size of bigint
-        return abort(404)
-    
-    BOT_CACHE_VER = 16
-
-    auth = request.headers.get("Frostpaw-Auth", "")
-    if auth and "|" in auth:
-        user_id, token = auth.split("|")
-        try:
-            user_id = int(user_id)
-        except Exception:
-            user_id = None
-        
-        if user_id:
-            auth = await user_auth_check(request, user_id, token)
-    else:
-        user_id = None
-
-    bot_cache = None # await redis.get(f"botpagecache-sunbeam:{bot_id}:{lang}")
-    use_cache = True
-    if not bot_cache:
-        use_cache = False
-    else:
-        bot_cache = orjson.loads(bot_cache)
-        if bot_cache.get("fl_cache_ver") != BOT_CACHE_VER:
-            use_cache = False
-   
-    if not use_cache:
-        logger.debug("Using cache for new bot request")
-        bot = await db.fetchrow(
-            """SELECT bot_id, prefix, shard_count, user_count, shards, state, description, bot_library AS library, 
-            website, votes, guild_count, discord AS support, banner_page AS banner, github, features, 
-            invite_amount, css, long_description_type, long_description, donate, privacy_policy, page_style,
-            nsfw, keep_banner_decor, flags, last_stats_post, created_at, uptime_checks_total, uptime_checks_failed 
-            FROM bots WHERE bot_id = $1 OR client_id = $1""", 
-            bot_id
-        )
-        if not bot:
-            return abort(404)
-
-        bot_id = bot["bot_id"]
-        _resources = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", bot_id, enums.ReviewType.bot.value)
-        resources = []
-
-        # Bypass for UUID issue
-        for resource in _resources:
-            resource_dat = dict(resource)
-            resource_dat["id"] = str(resource_dat["id"])
-            resources.append(resource_dat)
-
-        tags = await db.fetch("SELECT tag FROM bot_tags WHERE bot_id = $1", bot_id)
-        if not tags:
-            return abort(404)
-
-        bot = dict(bot) | {"tags": [tag["tag"] for tag in tags], "resources": resources}
-        
-        # Ensure bot banner_page is disable if not approved or certified
-        if bot["state"] not in (enums.BotState.approved, enums.BotState.certified):
-            bot["banner"] = None
-
-        # Get all bot owners
-        if flags_check(bot["flags"], enums.BotFlag.system):
-            owners = await db.fetch("SELECT DISTINCT ON (owner) owner, main FROM bot_owner WHERE bot_id = $1 AND main = true", bot_id)
-            bot["system"] = True
-        else:
-            owners = await db.fetch(
-                "SELECT DISTINCT ON (owner) owner, main FROM bot_owner WHERE bot_id = $1 ORDER BY owner, main DESC", 
-                bot_id
-            )
-            bot["system"] = False
-        owners_lst = []
-        for owner in owners:
-            payload = {
-                "user": await get_user(
-                    owner["owner"], 
-                    worker_session = worker_session
-                ),
-                "main": owner["main"]
-            }
-            if owner["main"]: 
-                owners_lst.insert(0, payload)
-            else: owners_lst.append(payload)
-
-        bot = sanitize_bot(bot, lang)
-
-        if bot["banner"]:
-            bot["banner"] = bot["banner"].replace(" ", "%20").replace("\n", "")
-
-        bot_info = await get_bot(bot_id, worker_session = worker_session)
-        
-        if not bot_info:
-            return abort(404)
-
-        bot["owners_html"] = gen_owner_html(owners_lst)
-
-        bot["user"] = bot_info
-        bot["css"] = f"<style>{bot['css']}</style>"
-                
-        bot["commands"] = await get_bot_commands(db, bot_id, lang, None)
-        
-        bot["tags"] = [tag for tag in request.app.state.worker_session.tags_fixed if tag["id"] in bot["tags"]]
-
-        bot["features"] =  [features[id] for id in bot["features"] if id in features]
-
-
-        bot_cache = {
-            "fl_cache_ver": BOT_CACHE_VER,
-            "data": bot,
-        }
-
-        # Dont cache right now, previously was only cache for bots with more than 1000 votes
-        # await redis.set(f"botpagecache-sunbeam:{bot_id}:{lang}", orjson.dumps(bot_cache), ex=60*60*4)
-
-    await add_ws_event(redis, bot_id, {"m": {"e": enums.APIEvents.bot_view}, "ctx": {"user": str(user_id), "widget": False}}, timeout=None)
-    
-    bot_cache["data"]["votes"] = await db.fetchval("SELECT votes FROM bots WHERE bot_id = $1", bot_cache["data"]["bot_id"])
-    bot_cache["data"]["action_logs"] = await db.fetch("SELECT user_id::text, action, action_time, context FROM user_bot_logs WHERE bot_id = $1", bot_id)
-    data = bot_cache | {
-        "promos": await get_promotions(db, bot_id),
-        "replace_list": constants.long_desc_replace_tuple_sunbeam
-    }
-    return data
 
 @router.get("/{bot_id}/_sunbeam/invite")
 async def get_bot_invite(request: Request, bot_id: int, user_id: int = 0):

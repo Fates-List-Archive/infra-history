@@ -30,6 +30,13 @@ class User(Table, tablename="users"):
     coins = Integer(default = 0)
     api_token = Text()
 
+class UserBotLogs(Table, tablename="user_bot_logs"):
+    user_id = ForeignKey(references=User)
+    bot_id = BigInt()
+    action_time = Timestamptz(default=datetime.datetime.now())
+    action = Integer(choices=enums.UserBotAction)
+    context = Text()
+
 class Bot(Table, tablename="bots"):
     bot_id = BigInt(primary_key=True)
     client_id = BigInt()

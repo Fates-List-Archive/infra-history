@@ -26,7 +26,6 @@ class Guild(BaseModel):
     """
     Represents a server/guild on Fates List
     """
-    invite_channel: str | None = None
     user: BaseUser
     description: str | None = None
     tags: list[dict[str, str]]
@@ -35,8 +34,6 @@ class Guild(BaseModel):
     guild_count: int
     invite_amount: int
     total_votes: int
-    user_whitelist: list[str] | None = None
-    user_blacklist: list[str] | None = None
     state: enums.BotState
     website: str | None = None
     css: str | None = None
@@ -46,3 +43,4 @@ class Guild(BaseModel):
     banner_card: str | None = None
     banner_page: str | None = None
     keep_banner_decor: bool | None = None
+    flags: list[int] | None = []

@@ -56,8 +56,10 @@ class Bot(BaseModel):
     invite_link: str
     invite_amount: int
     owners: BotOwners | None = None
+    owners_html: str | None = None
     features: list[BotFeature]
     state: enums.BotState
+    page_style: enums.PageStyle | None = enums.PageStyle.tabs
     website: str | None = None
     support: str | None = None
     github: str | None = None
@@ -76,6 +78,13 @@ class Bot(BaseModel):
     action_logs: list[dict] | None = None
     uptime_checks_total: int | None = None
     uptime_checks_failed: int | None = None
+    resources: list | None = [] # TODO
+    commands: dict | None = {} # TODO
+    promos: list[dict] | None = [] # TODO
+
+
+#class SunbeamBot(BaseModel):
+
 
 class BotStats(BaseModel):
     guild_count: int

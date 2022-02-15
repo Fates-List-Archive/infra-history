@@ -161,7 +161,7 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         acam = "Access-Control-Allow-Methods"
 
         response.headers[acao] = origin if origin else "*"
-        response.headers["Access-Control-Allow-Headers"] = "Frostpaw, Frostpaw-Server, Content-Type, Set-Cookie, Frostpaw-Auth, Authorization, Method"
+        response.headers["Access-Control-Allow-Headers"] = "Frostpaw, Frostpaw-Server, Content-Type, Set-Cookie, Frostpaw-Auth, Frostpaw-Vote-Page, Authorization, Method"
         
         if is_api and origin or origin in ("https://sunbeam.fateslist.xyz", "https://fateslist.xyz"):
             response.headers[acac] = "true"
