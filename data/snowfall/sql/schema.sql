@@ -8,6 +8,38 @@ CREATE TABLE platform_map (
     platform_id TEXT NOT NULL
 );
 
+CREATE TABLE features (
+    id text not null,
+    name text not null,
+    description text not null,
+    viewed_as text not null
+);
+
+INSERT INTO features VALUES (
+    'custom_prefix',
+    'Customizable Prefix',
+    'positive',
+    'This bot supports changing of its prefix and/or has recently migrated to slash commands'
+);
+INSERT INTO features VALUES (
+    'open_source',
+    'Open Source',
+    'positive',
+    'These bots are open source meaning they can easily be audited and/or potentially self hosted'
+);
+INSERT INTO features VALUES (
+    'slash_commands',
+    'Slash Commands',
+    'critical',
+    'These bots support slash commands'
+);
+INSERT INTO features VALUES (
+    'cryptocurrency',
+    'Cryptocurrency (NFTs)',
+    'negative',
+    'These bots offer services related to cryptocurrency which is considered negative by users'
+);
+
 CREATE TABLE bots (
     id BIGINT NOT NULL, -- Used by piccolo, must be equal to bot_id
     username_cached text DEFAULT '',
@@ -28,7 +60,9 @@ CREATE TABLE bots (
     site_lang TEXT DEFAULT 'default',
     description text,
     long_description text,
-    long_description_type integer default 0,
+    long_description_parsed text,
+    long_description_type integer not null default 0,
+    page_style integer not null default 0,
     css text default '',
     prefix text,
     features TEXT[] DEFAULT '{}',
@@ -82,7 +116,7 @@ CREATE INDEX bot_list_tags_index ON bot_list_tags (id, icon, type);
 CREATE TABLE bot_owner (
     _id SERIAL,
     bot_id BIGINT not null,
-    owner BIGINT,
+    owner BIGINT not null,
     main BOOLEAN DEFAULT false,
     CONSTRAINT bots_fk FOREIGN KEY (bot_id) REFERENCES bots(bot_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -251,7 +285,7 @@ CREATE TABLE servers (
     invite_amount integer DEFAULT 0,
     invite_url text,
     invite_channel text,
-    state int default 0,
+    state int not null default 0,
     nsfw boolean default false,
     banner_card text,
     banner_page text,

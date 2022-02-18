@@ -27,7 +27,7 @@ async def get_commands(
     called by the Get Bot Page API and as such this API endpoint itself is
     not used by Sunbeam for those curious**
     """
-    db = request.app.worker_session.postgres
+    db = request.app.state.worker_session.postgres
     cmd = await get_bot_commands(db, bot_id, lang, filter)
     if cmd == {}:
         return abort(404)
