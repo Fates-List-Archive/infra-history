@@ -51,60 +51,6 @@ async def regenerate_server_token(request: Request, guild_id: int):
     return api_success()
 
 @router.get(
-    "/{guild_id}/random", 
-    response_model = GuildRandom, 
-    dependencies=[
-        Depends(
-            Ratelimiter(
-                global_limit = Limit(times=7, seconds=5),
-                operation_bucket="random_guild"
-            )
-        )
-    ],
-    operation_id="fetch_random_server"
-)
-async def fetch_random_server(request: Request, guild_id: int, lang: str = "default"):
-    """
-    Fetch a random server. Server ID should be the recursive/root server 0.
-
-
-    Example:
-    ```py
-    import requests
-
-    def random_server():
-        res = requests.get("https://fateslist.xyz/api/guilds/0/random")
-        json = res.json()
-        if not json.get("done", True):
-            # Handle an error in the api
-            ...
-        return res, json
-    ```
-    """
-    if guild_id != 0:
-        return api_error(
-            "This guild cannot use the fetch random guild API"
-        )
-
-    db = request.app.state.worker_session.postgres
-
-    random_unp = await db.fetchrow(
-        "SELECT description, banner_card, state, votes, guild_count, guild_id FROM servers WHERE (state = 0 OR state = 6) AND description IS NOT NULL ORDER BY RANDOM() LIMIT 1"
-    ) # Unprocessed, use the random function to get a random bot
-    bot_obj = await db.fetchrow("SELECT name_cached AS username, avatar_cached AS avatar FROM servers WHERE guild_id = $1", random_unp["guild_id"])
-    bot_obj = dict(bot_obj) | {"disc": "0000", "status": 1, "bot": True}
-    bot = bot_obj | dict(random_unp) # Get bot from cache and add that in
-    bot["guild_id"] = str(bot["guild_id"]) # Make sure bot id is a string to prevent corruption issues in javascript
-    bot["formatted"] = {
-        "votes": human_format(bot["votes"]),
-        "guild_count": human_format(bot["guild_count"])
-    }
-    bot["description"] = bleach.clean(intl_text(bot["description"], lang)) # Prevent XSS attacks in short description
-    if not bot["banner_card"]: # Ensure banner is always a string
-        bot["banner_card"] = "" 
-    return bot
-
-@router.get(
     "/{guild_id}", 
     response_model = Guild, 
     dependencies=[

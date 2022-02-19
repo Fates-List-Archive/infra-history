@@ -332,3 +332,4 @@ class BotActions():
             await redis_ipc_new(self.redis, "SENDMSG", msg=msg, timeout=None, worker_session=self.worker_session)
         await self.redis.delete(f"botcache-{self.bot_id}-True")
         await self.redis.delete(f"botcache-{self.bot_id}-False")
+        await self.redis.delete(f"bot:{self.bot_id}")

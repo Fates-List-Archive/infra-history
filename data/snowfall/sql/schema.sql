@@ -135,7 +135,7 @@ CREATE TABLE bot_packs (
 CREATE TABLE bot_commands (
    id uuid primary key DEFAULT uuid_generate_v4(),
    bot_id bigint,
-   cmd_type integer, -- 0 = no, 1 = guild, 2 = global
+   cmd_type integer not null, -- 0 = no, 1 = guild, 2 = global
    cmd_groups text[] default '{Default}',
    cmd_name text not null, -- command name
    vote_locked boolean default false, -- friendly name
