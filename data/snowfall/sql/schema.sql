@@ -102,6 +102,8 @@ CREATE TABLE bot_list_tags (
     icon TEXT NOT NULL UNIQUE
 );
 
+CREATE INDEX bot_list_tags_index ON bot_list_tags (id, icon);
+
 CREATE TABLE bot_tags (
     id SERIAL,
     bot_id BIGINT NOT NULL,
@@ -110,8 +112,6 @@ CREATE TABLE bot_tags (
     CONSTRAINT tags_fk FOREIGN KEY (tag) REFERENCES bot_list_tags(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-
-CREATE INDEX bot_list_tags_index ON bot_list_tags (id, icon, type);
 
 CREATE TABLE bot_owner (
     _id SERIAL,
