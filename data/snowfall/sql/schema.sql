@@ -42,6 +42,7 @@ INSERT INTO features VALUES (
 
 CREATE TABLE bots (
     id BIGINT NOT NULL, -- Used by piccolo, must be equal to bot_id
+    flags integer[] default '{}',
     username_cached text DEFAULT '',
     bot_id bigint not null unique,
     client_id bigint,
