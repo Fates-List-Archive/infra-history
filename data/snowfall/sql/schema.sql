@@ -154,24 +154,6 @@ CREATE TABLE bot_stats_votes_pm (
    votes bigint
 );
 
-CREATE TABLE reviews (
-   id uuid primary key DEFAULT uuid_generate_v4(),
-   target_id bigint not null,
-   target_type integer default 0,
-   user_id bigint not null,
-   star_rating numeric(4,2) default 0.0,
-   review_text text,
-   review_upvotes bigint[] default '{}',
-   review_downvotes bigint[] default '{}',
-   flagged boolean default false,
-   epoch bigint[] default '{}',
-   replies uuid[] default '{}',
-   reply boolean default false,
-   CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
-);
-
-create index review_index on reviews (id, target_id, user_id, review_text, review_upvotes, review_downvotes, epoch, replies, target_type, star_rating, flagged, reply);
-
 CREATE TABLE bot_voters (
     bot_id bigint,
     user_id bigint,
@@ -196,6 +178,25 @@ CREATE TABLE users (
     vote_reminder_channel bigint,
     staff_verify_code text
 );
+
+CREATE TABLE reviews (
+   id uuid primary key DEFAULT uuid_generate_v4(),
+   target_id bigint not null,
+   target_type integer default 0,
+   user_id bigint not null,
+   star_rating numeric(4,2) default 0.0,
+   review_text text,
+   review_upvotes bigint[] default '{}',
+   review_downvotes bigint[] default '{}',
+   flagged boolean default false,
+   epoch bigint[] default '{}',
+   replies uuid[] default '{}',
+   reply boolean default false,
+   CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+create index review_index on reviews (id, target_id, user_id, review_text, review_upvotes, review_downvotes, epoch, replies, target_type, star_rating, flagged, reply);
+
 
 CREATE TABLE user_bot_logs (
     user_id BIGINT NOT NULL,
@@ -300,15 +301,6 @@ CREATE TABLE servers (
 
 -- In server tags, owner_guild is the first guild a tag was given to
 create table server_tags (id TEXT NOT NULL UNIQUE, name TEXT NOT NULL UNIQUE, iconify_data TEXT NOT NULL, owner_guild BIGINT NOT NULL);
-
--- ULA
-CREATE TABLE bot_list_feature (
-	feature_id INTEGER PRIMARY KEY,
-	name TEXT NOT NULL UNIQUE,
-	iname TEXT NOT NULL UNIQUE, -- Internal Name
-	description TEXT,
-	positive INTEGER
-);
 
 CREATE TABLE bot_list_partners (
 	id UUID NOT NULL UNIQUE, 
