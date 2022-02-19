@@ -265,7 +265,7 @@ CREATE TABLE vanity (
 CREATE TABLE servers (
     guild_id bigint not null unique,
     owner_id bigint not null default 0,
-    name_cached text default 'Unlisted',
+    name_cached text not null default 'Unlisted',
     avatar_cached text default 'Unlisted',
     votes bigint default 0,   
     total_votes bigint default 0,
