@@ -22,19 +22,6 @@ def get_uptime():
     return uptime_seconds
 
 @router.get(
-    "/_sunbeam/add-bot",
-    response_model=AddBotInfo,
-)
-async def add_bot_info(request: Request, user_id: int):
-    redis = request.app.state.worker_session.redis
-    context = {
-        "perm": (await is_staff(None, user_id, 4, redis=redis))[1],
-        "tags": [tag["id"] for tag in request.app.state.worker_session.tags_fixed],
-        "features": list(features.keys()),
-    }
-    return context
-
-@router.get(
     "/_sunbeam/troubleshoot",
     response_model=Troubleshoot
 )
@@ -317,14 +304,6 @@ async def search_by_tag(request: Request,
         "tags_fixed": tags,
         "query": tag,
     }
-
-
-@router.get("/partners", response_model=Partners)
-async def get_partners(request: Request):
-    """
-    Gets the partner list.
-    """
-    return partners
 
 
 @router.get(

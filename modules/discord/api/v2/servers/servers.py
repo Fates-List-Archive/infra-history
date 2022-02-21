@@ -50,51 +50,6 @@ async def regenerate_server_token(request: Request, guild_id: int):
     await db.execute("UPDATE servers SET api_token = $1 WHERE guild_id = $2", get_token(256), guild_id)
     return api_success()
 
-@router.get(
-    "/{guild_id}/_sunbeam/invite"
-)
-async def get_server_invite(request: Request, guild_id: int):
-    """
-    Internally used by sunbeam for inviting users.
-
-    **Usage of this API without explicit permission from said servers
-    is not allowed**
-
-    Additionally, this API *will* trigger a WS Invite Event.
-
-    To protect against scraping, this endpoint requires a proper
-    Frostpaw header to be set.
-
-    This API will also be heavily monitored. If we find you attempting
-    to abuse this API endpoint or doing anything out of the ordinary with
-    it, you may be IP or user banned. Calling it once or twice is OK but
-    automating it is not. Use the Get Bot API instead for automation.
-
-    **This API is only documented because it's in our FastAPI backend and
-    to be complete**
-    """
-    worker_session = request.app.state.worker_session
-    redis = worker_session.redis
-    if not request.headers.get("Frostpaw"):
-        return abort(404)
-    auth = request.headers.get("Frostpaw-Auth", "")
-    if auth and "|" in auth:
-        user_id, token = auth.split("|")
-        try:
-            user_id = int(user_id)
-        except Exception:
-            return api_error("Invalid User ID specified, are you logged in?")
-        auth = await user_auth_check(request, user_id, token)
-    else:
-        user_id = 0
-    invite = await redis_ipc_new(redis, "GUILDINVITE", args=[str(guild_id), str(user_id)], worker_session=worker_session)
-    if invite is None:
-        return await get_server_invite(request, guild_id)
-    invite = invite.decode("utf-8")
-    if invite.startswith("https://"):
-        return {"invite": invite}
-    return api_error(invite)
-
 @router.get("/{guild_id}/widget", operation_id="get_server_widget", deprecated=True)
 async def server_widget(request: Request, bt: BackgroundTasks, guild_id: int, format: enums.WidgetFormat, bgcolor: Union[int, str] ='black', textcolor: Union[int, str] ='white'):
     """
