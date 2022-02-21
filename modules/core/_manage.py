@@ -60,6 +60,9 @@ def _fappgen(session_id, workers, static_assets):
             API URL: https://api.fateslist.xyz
             API Docs: https://apidocs.fateslist.xyz
             Enum Reference: https://apidocs.fateslist.xyz/structures/enums.autogen
+        
+        
+            Note: Many API endpoints have moved to API v3. Check there if you cant find something
         """,
         version="0.4.0",
         terms_of_service="https://fateslist.xyz/frostpaw/tos",

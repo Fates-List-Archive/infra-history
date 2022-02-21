@@ -51,98 +51,6 @@ async def regenerate_server_token(request: Request, guild_id: int):
     return api_success()
 
 @router.get(
-    "/{guild_id}", 
-    response_model = Guild, 
-    dependencies=[
-        Depends(
-            Ratelimiter(
-                global_limit = Limit(times=5, minutes=1),
-                operation_bucket="fetch_guild"
-            )
-        )
-    ],
-    operation_id="fetch_server"
-)
-async def fetch_server(
-    request: Request, 
-    guild_id: int, 
-    compact: Optional[bool] = True, 
-    no_cache: Optional[bool] = False,
-    lang: str = "en"
-):
-    """
-    Fetches server information given a server/guild ID. If not found, 404 will be returned.
-    
-    Setting compact to true (default) -> description, long_description, long_description_type and keep_banner_decor will be null
-
-    No cache means cached responses will not be served (may be temp disabled in the case of a DDOS or temp disabled for specific servers as required)
-    
-    **Set the Frostpaw header if you are a custom client**
-    """
-    if len(str(guild_id)) not in [17, 18, 19, 20]:
-        return abort(404)
-
-    db = request.app.state.worker_session.postgres
-    redis = request.app.state.worker_session.redis
-
-    if request.headers.get("Frostpaw"):
-        no_cache = False
-        compact = False
-        auth = request.headers.get("Frostpaw-Auth", "")
-        if auth and "|" in auth:
-            user_id, token = auth.split("|")
-            try:
-                user_id = int(user_id)
-            except Exception:
-                user_id = None
-            
-            if user_id:
-                auth = await user_auth_check(request, user_id, token)
-        else:
-            user_id = None
-
-    if not no_cache:
-        cache = await redis.get(f"servercache-{guild_id}-{compact}")
-        if cache:
-            return orjson.loads(cache)
-    
-
-    api_ret = await db.fetchrow(
-        "SELECT flags, banner_card, banner_page, guild_count, invite_amount, css, state, website, total_votes, login_required, votes, nsfw, tags AS _tags FROM servers WHERE guild_id = $1", 
-        guild_id
-    )
-    if api_ret is None:
-        return abort(404)
-
-    api_ret = dict(api_ret)
-
-    api_ret["css"] = f"<style>{api_ret['css'] or ''}</style>"
-
-    if not compact:
-        extra = await db.fetchrow(
-            "SELECT description, long_description_type, long_description, css, keep_banner_decor FROM servers WHERE guild_id = $1",
-            guild_id
-        )
-        api_ret |= dict(extra)
-        api_ret = sanitize_bot(api_ret, lang)
-
-    api_ret["tags"] = [dict(await db.fetchrow("SELECT name, id, iconify_data FROM server_tags WHERE id = $1", id)) for id in api_ret["_tags"]]
-   
-    api_ret["user"] = dict(await db.fetchrow("SELECT guild_id AS id, name_cached AS username, '0000' AS disc, avatar_cached AS avatar FROM servers WHERE guild_id = $1", guild_id))
-    
-    api_ret["vanity"] = await db.fetchval(
-        "SELECT vanity_url FROM vanity WHERE redirect = $1 AND type = 0", 
-        guild_id
-    )
-    
-    if request.headers.get("Frostpaw"):
-        await add_ws_event(redis, guild_id, {"m": {"e": enums.APIEvents.server_view}, "ctx": {"user": request.session.get('user_id'), "widget": False}}, type = "server", timeout=None)
-
-    await redis.set(f"servercache-{guild_id}-{compact}", orjson.dumps(jsonable_encoder(api_ret)), ex=60*60*8)
-
-    return api_ret
-
-@router.get(
     "/{guild_id}/_sunbeam/invite"
 )
 async def get_server_invite(request: Request, guild_id: int):
@@ -186,14 +94,6 @@ async def get_server_invite(request: Request, guild_id: int):
     if invite.startswith("https://"):
         return {"invite": invite}
     return api_error(invite)
-
-
-@router.head("/{guild_id}", operation_id="server_exists")
-async def server_exists(request: Request, guild_id: int):
-    db = request.app.state.worker_session.postgres
-    count = await db.fetchval("SELECT guild_id FROM servers WHERE guild_id = $1", guild_id)
-    return PlainTextResponse("", status_code=200 if count else 404) 
-
 
 @router.get("/{guild_id}/widget", operation_id="get_server_widget", deprecated=True)
 async def server_widget(request: Request, bt: BackgroundTasks, guild_id: int, format: enums.WidgetFormat, bgcolor: Union[int, str] ='black', textcolor: Union[int, str] ='white'):

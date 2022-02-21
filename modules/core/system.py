@@ -365,7 +365,7 @@ async def finish_init(app, session_id, workers, dbs):
     # Setup trusted host middleware
     app.add_middleware(
         TrustedHostMiddleware, 
-        allowed_hosts=[site, "127.0.0.1", "0.0.0.0", f"www.{site}", "api.fateslist.xyz"]
+        allowed_hosts=[site, "127.0.0.1", "0.0.0.0", f"www.{site}", "api.fateslist.xyz", "legacy.fateslist.xyz"]
     )
 
     # Add GZip handling

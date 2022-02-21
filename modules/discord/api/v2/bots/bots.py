@@ -56,15 +56,6 @@ async def regenerate_bot_token(request: Request, bot_id: int):
     await db.execute("UPDATE bots SET api_token = $1 WHERE bot_id = $2", get_token(132), bot_id)
     return api_success()
 
-@router.head("/{bot_id}")
-async def bot_exists(request: Request, bot_id: int):
-    db = request.app.state.worker_session.postgres
-    
-    check = await db.fetchval("SELECT bot_id FROM bots WHERE bot_id = $1", bot_id)
-    if not check:
-        return PlainTextResponse("", status_code=404)
-    return PlainTextResponse("", status_code=200)
-
 @router.get("/{bot_id}/_sunbeam/invite")
 async def get_bot_invite(request: Request, bot_id: int, user_id: int = 0):
     """
@@ -214,13 +205,6 @@ async def get_bot_settings(request: Request, bot_id: int, user_id: int):
         "context": context
     }
 
-@router.head("/{bot_id}", operation_id="bot_exists")
-async def bot_exists(request: Request, bot_id: int):
-    db = request.app.state.worker_session.postgres
-    count = await db.fetchval("SELECT bot_id FROM bots WHERE bot_id = $1", bot_id)
-    return PlainTextResponse("", status_code=200 if count else 404) 
-
-
 @router.get("/{bot_id}/widget", operation_id="get_bot_widget", deprecated=True)
 async def bot_widget(request: Request, bt: BackgroundTasks, bot_id: int, format: enums.WidgetFormat, bgcolor: Union[int, str] ='black', textcolor: Union[int, str] ='white'):
     """
@@ -241,128 +225,3 @@ async def get_bot_ws_events(request: Request, bot_id: int):
     if events is None:
         events = {} # Nothing
     return orjson.loads(events) 
-    
-
-@router.post(
-    "/{bot_id}/stats", 
-    response_model = APIResponse, 
-    dependencies=[
-        Depends(
-            Ratelimiter(
-                global_limit = Limit(times=5, minutes=1),
-                operation_bucket="set_bot_stats"
-            ) 
-        ),
-        Depends(bot_auth_check)
-    ],
-    operation_id="set_bot_stats"
-)
-async def set_bot_stats(request: Request, bot_id: int, api: BotStats):
-    """
-    This endpoint allows you to set the guild + shard counts for your bot
-
-
-    Example:
-    ```py
-    # This will use aiohttp and not requests as this is likely to used by discord.py bots
-    import aiohttp
-
-
-    # On dpy, guild_count is usually the below
-    guild_count = len(client.guilds)
-
-    # If you are using sharding
-    shard_count = len(client.shards)
-    shards = client.shards.keys()
-
-    # Optional: User count (this is not accurate for larger bots)
-    user_count = len(client.users) 
-
-    async def set_stats(bot_id, token, guild_count, shard_count = None, shards = None, user_count = None):
-        json = {"guild_count": guild_count, "shard_count": shard_count, "shards": shards, "user_count": user_count}
-
-        async with aiohttp.ClientSession() as sess:
-            async with sess.post(f"https://fateslist.xyz/api/bots/{bot_id}/stats", headers={"Authorization": f"Bot {token}"}, json=json) as res:
-                json = await res.json()
-                if not json["done"]:
-                    # Handle or log this error
-                    ...
-    ```
-    """
-    return await _set_bot_stats(request, bot_id, api.dict())
-
-async def _set_bot_stats(request: Request, bot_id: int, api: dict, no_abuse_checks: bool = False):
-    db = request.app.state.worker_session.postgres
-
-    stats_old = await db.fetchrow(
-        "SELECT guild_count, shard_count, shards, user_count FROM bots WHERE bot_id = $1",
-        bot_id
-    )
-    stats = {}
-    for stat, value in api.items():
-        if value is None:
-            stats[stat] = stats_old[stat]
-        else:
-            stats[stat] = value
-
-    info = await db.fetchrow("SELECT state, flags, client_id FROM bots WHERE bot_id = $1", bot_id)
-    state = info["state"]
-    if state not in (enums.BotState.approved, enums.BotState.certified):
-        return api_error("This endpoint can only be used by approved and certified bots!")
-    if flags_check(info["flags"], enums.BotFlag.stats_locked):
-        logger.warning("This bot has been banned from this API endpoint")
-        return api_error("You have been banned from using this API endpoint")
-    app_id = bot_id if (not info["client_id"] or info["client_id"] == bot_id) else info["client_id"]
-
-    async def _flag_bot():
-        # Do this later, but return success to evade detection
-        key = f"statscheck:{bot_id}"
-        redis = request.app.state.worker_session.redis
-        check = await redis.incr(key)
-        logger.warning(f"Bot flagged {stats}")
-        if int(check) <= 5:
-            await redis.expire(key, 60*60*8)
-            return api_error("You have been caught by our anti-abuse systems. Please try setting your stats using its actual value", ctx="Get your bot certified to avoid anti-abuse. You may only try to post invalid stats 5 times every 8 hours or you will be banned (invalid stats are not set and will only flag you)") 
-        await redis.persist(key)
-        await db.execute("UPDATE bots SET flags = flags || $1 WHERE bot_id = $2", [enums.BotFlag.stats_locked], bot_id) 
-        logger.warning("Bot has been banned")
-        return api_error("You have been banned from using this API due to triggering our anti-abuse systems in a very short timeframe!")
-
-    if stats["guild_count"] > 300000000000 or stats["shard_count"] > 300000000000 or len(stats["shards"]) > (100 + stats["shard_count"]):
-        return await _flag_bot()
-    if int(stats["user_count"]) > INT64_MAX:
-        return await api_error(f"User count cannot be greater than {INT64_MAX}")
-
-    # Anti abuse checks
-    headers = {"Authorization": japi_key} # Lets hope this doesnt break shit
-    try:
-        if state != enums.BotState.certified and not no_abuse_checks:
-            async with aiohttp.ClientSession() as sess:
-                async with sess.get(f"https://japi.rest/discord/v1/application/{app_id}", headers=headers) as resp:
-                    if resp.status != 200:
-                        return api_error("Our anti-abuse provider is down right now. Please contact Fates List Support if this happens when you try again!")
-                    app = await resp.json()
-                    try:
-                        approx_guild_count = app["data"]["bot"]["approximate_guild_count"]
-                    except:
-                        return api_error("You need to edit this bot and set a client ID in order to set stats for this bot due to a ID mismatch")
-                    if ((stats["guild_count"] - approx_guild_count > 2000 and approx_guild_count > 100000) or 
-                    (stats["guild_count"] - approx_guild_count > 20 and approx_guild_count < 1000)):
-                        stats["guild_count"] = approx_guild_count
-                        await _set_bot_stats(request, bot_id, stats, no_abuse_checks=True)
-                        return await _flag_bot()
-
-    except Exception as exc:
-        logger.exception("Something happened!")
-        return api_error("Our anti-abuse provider is down right now. Please contact Fates List Support if this happens when you try again!")
-
-    await db.execute(
-        "UPDATE bots SET last_stats_post = NOW(), guild_count = $1, shard_count = $2, user_count = $3, shards = $4 WHERE bot_id = $5",
-        stats["guild_count"],
-        stats["shard_count"],
-        stats["user_count"],
-        stats["shards"],
-        bot_id,
-    )
-
-    return api_success()

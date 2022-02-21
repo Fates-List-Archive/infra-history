@@ -165,14 +165,14 @@ CREATE TABLE bot_voters (
 CREATE TABLE users (
     id bigint not null, -- Used by piccolo, must be equal to user_id
     user_id bigint not null unique,
-    api_token text,
+    api_token text not null,
     vote_epoch timestamptz,
     description text DEFAULT 'This user prefers to be an enigma',
     badges text[],
     username text,
     user_css text not null default '',
     profile_css text not null default '',
-    state integer default 0, -- 0 = No Ban, 1 = Global Ban
+    state integer not null default 0, -- 0 = No Ban, 1 = Global Ban
     coins INTEGER DEFAULT 0,
     js_allowed BOOLEAN DEFAULT false,
     vote_reminders bigint[] not null default '{}',
@@ -283,7 +283,7 @@ CREATE TABLE servers (
     api_token text unique,
     website text,
     login_required boolean default false,
-    created_at timestamptz default now(),
+    created_at timestamptz not null default now(),
     invite_amount integer DEFAULT 0,
     invite_url text,
     invite_channel text,
@@ -295,7 +295,6 @@ CREATE TABLE servers (
     guild_count bigint default 0,
     tags text[] default '{}',
     deleted boolean default false,
-    js_allowed boolean default true,
     flags integer[] default '{}',
     autorole_votes bigint[] default '{}'
 );
