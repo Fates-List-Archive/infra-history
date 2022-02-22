@@ -69,38 +69,6 @@ async def get_cache_user(request: Request, user_id: int):
         return abort(404)
     return user    
 
-@router.put(
-    "/{user_id}/bots/{bot_id}", 
-    response_model = APIResponse, 
-    dependencies=[
-        Depends(
-            Ratelimiter(
-                global_limit = Limit(times=10, minutes=3)
-            )
-        ),
-        Depends(user_auth_check)
-    ]
-)
-async def add_bot(
-    request: Request, 
-    user_id: int, 
-    bot_id: int, 
-    bot: BotMeta
-):
-    """
-    Adds a bot to fates list
-    """
-    worker_session: FatesWorkerSession = request.app.state.worker_session
-    bot_dict = bot.dict()
-    bot_dict["bot_id"] = bot_id
-    bot_dict["user_id"] = user_id
-    bot_adder = BotActions(worker_session, bot_dict)
-    rc = await bot_adder.add_bot()
-    if rc is None:
-        return api_success()
-    return api_error(rc)
-
-
 @router.get("/{user_id}/bots/{bot_id}/backup",
     dependencies=[
         Depends(user_auth_check)
@@ -114,37 +82,6 @@ async def bot_backup(request: Request, user_id: int, bot_id: int):
         return abort(401)
     backup = await db.fetchrow("SELECT * FROM bots WHERE bot_id = $1", bot_id)
     return backup
-
-@router.patch(
-    "/{user_id}/bots/{bot_id}", 
-    response_model = APIResponse, 
-    dependencies=[
-        Depends(
-            Ratelimiter(
-                global_limit = Limit(times=5, minutes=3)
-            )
-        ),
-        Depends(user_auth_check)
-    ]
-)
-async def edit_bot(
-    request: Request, 
-    user_id: int, 
-    bot_id: int, 
-    bot: BotMeta
-):
-    """
-    Edits a bot, the owner here must be the owner editing the bot.
-    """
-    worker_session: FatesWorkerSession = request.app.state.worker_session
-    bot_dict = bot.dict()
-    bot_dict["bot_id"] = bot_id
-    bot_dict["user_id"] = user_id
-    bot_editor = BotActions(worker_session, bot_dict)
-    rc = await bot_editor.edit_bot()
-    if rc is None:
-        return api_success()
-    return api_error(rc)
 
 @router.delete(
     "/{user_id}/bots/{bot_id}", 

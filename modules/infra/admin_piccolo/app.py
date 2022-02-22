@@ -64,13 +64,13 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
 
         # Perm check
         if request.url.path.startswith("/api"):
-            if request.url.path == "/api/tables/" and perm < 5:
+            if request.url.path == "/api/tables/" and perm < 4:
                 return ORJSONResponse(["reviews", "bot_packs", "vanity", "leave_of_absence"])
             elif request.url.path == "/api/tables/users/ids/" and request.method == "GET":
                 pass
             elif request.url.path in ("/api/forms/", "/api/user/", "/api/openapi.json") or request.url.path.startswith("/api/docs"):
                 pass
-            elif perm < 5:
+            elif perm < 4:
                 if request.url.path.startswith("/api/tables/vanity"):
                     if request.method != "GET":
                         return ORJSONResponse({"error": "You do not have permission to update vanity"}, status_code=403)
