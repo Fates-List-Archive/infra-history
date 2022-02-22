@@ -320,66 +320,9 @@ async def finish_init(app, session_id, workers, dbs):
     # Fix operation ids
     fix_operation_ids(app)
 
-    # Begin worker sync
-    asyncio.create_task(catclient(workers, session))
-    logger.debug("Started catclient task")
-
     logger.success(
         f"Fates List worker (pid: {os.getpid()}) bootstrapped successfully!"
     )
-
-        
-async def catclient(workers, session):
-    """The Fates List Dragon IPC protocol"""
-    await session.redis.publish(
-        "_worker_fates", 
-        f"UP {session.id} {os.getpid()} {workers}"
-    )
-
-    pubsub = session.redis.pubsub()
-    
-    await pubsub.subscribe("_worker_fates")
-    async for msg in pubsub.listen():
-        if not msg or not isinstance(msg.get("data"), bytes):
-            continue
-        msg = tuple(msg.get("data").decode("utf-8").split(" "))
-        logger.trace(f"Got {msg}")
-        match msg:
-            case ("RESTART", tgt):
-                if tgt == "*" or (tgt.isdigit() and int(tgt) == os.getpid()):
-                    session.up = False
-                    logger.info(f"Dying due to sent RESTART call with requestor being {tgt}")
-
-            # IPC going up has no session id yet
-            case("REGET", reason):
-                # Announce that we are up and sending to repeat a message
-                logger.info(f"Sending IPC info due to reget (reason: {reason})")
-                await session.redis.publish(
-                    "_worker_fates", 
-                    f"UP {session.id} {os.getpid()} {workers}"
-                )
-
-            # FUP = finally up
-            case("FUP", session_id, *worker_lst):
-                if session_id != session.id:  # noqa: F821
-                    continue
-                logger.success("All workers are up!")
-
-                # Finally up!
-                try:
-                    session.publish_workers(
-                        [int(worker) for worker in worker_lst]  # noqa: F821
-                    )
-
-                except ValueError:
-                    logger.warning(
-                        f"Got invalid workers from ipc ({workers})"
-                    )
-                           
-                session.up = True # Site is back up when we FUP
-
-            case _:
-                pass  # Ignore the rest for now
 
 # IP Checker
 def ip_check(request: Request) -> str:
