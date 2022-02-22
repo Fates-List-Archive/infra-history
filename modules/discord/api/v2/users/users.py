@@ -23,17 +23,6 @@ async def fetch_user(request: Request, user_id: int, bot_logs: bool = False, sys
     return user
 
 @router.patch(
-    "/{user_id}/token",
-    dependencies = [
-        Depends(user_auth_check)
-    ]
-)
-async def regenerate_user_token(request: Request, user_id: int):
-    db: asyncpg.Pool = request.app.state.worker_session.postgres
-    await db.execute("UPDATE users SET api_token = $1 WHERE user_id = $2", get_token(132), user_id)
-    return api_success()
-
-@router.patch(
     "/{user_id}/preferences",
     response_model=APIResponse,
     dependencies = [
