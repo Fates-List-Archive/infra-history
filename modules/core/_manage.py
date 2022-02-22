@@ -92,7 +92,7 @@ def site_run():
     workers = os.environ.get("WORKERS") or default_workers_num
     workers = int(workers)
 
-    from gunicorn.app.base import BaseApplication
+    import uvicorn
     from PIL import Image
 
     from config._logger import logger
@@ -117,47 +117,9 @@ def site_run():
     static_assets["server_pil"] = Image.open(
         static_assets["server_img"]).resize((15, 15))
 
-    # Create the pids folder if it hasnt been created
-    Path("data/pids").mkdir(exist_ok=True)
-
-    for sig in (signal.SIGINT, signal.SIGQUIT, signal.SIGTERM):
-        signal.signal(sig, lambda *args, **kwargs: ...)
-
-    class FatesRunner(BaseApplication):
-        def __init__(self, application: Callable, options: dict[str, Any]):
-            self.options = options
-            self.application = application
-            super().__init__()
-
-        def load_config(self):
-            config = {
-                key: value
-                for key, value in self.options.items()
-                if key in self.cfg.settings and value is not None
-            }
-            for key, value in config.items():
-                self.cfg.set(key.lower(), value)
-
-        def load(self):
-            return self.application
-
-    options = {
-        "worker_class": "config._uvicorn.FatesWorker",
-        "workers": workers,
-        "bind": "127.0.0.1:9999",
-        "loglevel": "info",
-        "pidfile": "data/pids/gunicorn.pid",
-        "preload_app": True,
-        "timeout": 120,
-        "max_requests": 1000, # Currently there are bugs which prevent us from increasing this
-    }
-
     _app = _fappgen(str(session_id), workers, static_assets)
-    try:
-        FatesRunner(_app, options).run()
-    except BaseException as exc:
-        logger.info(f"Site killed due to {type(exc).__name__}: {exc}")
-        sys.exit(0)
+
+    uvicorn.run(_app, host="127.0.0.1", port=9999, log_level="info")
 
 def site_enum2html():
     """Converts the enums in modules/models/enums.py into markdown. Mainly for apidocs creation"""

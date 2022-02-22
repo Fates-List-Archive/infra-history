@@ -56,26 +56,7 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
             "Something happened!", 
             status_code=500
         ) 
-    
-    @staticmethod
-    def _log_req(path, request, response):
-        """Logs HTTP requests to console (and file)"""
-        code = response.status_code
-        phrase = HTTPStatus(response.status_code).phrase
-        query_str_raw = request.scope["query_string"]
-
-        if query_str_raw:
-            query_str = f'?{query_str_raw.decode("utf-8")}'
-        else:
-            query_str = ""
-        
-        if "jwtparse" in path:
-            return
-
-        logger.info(
-            f"{request.method} {path}{query_str} | {code} {phrase}"
-        )
-        
+            
     async def dispatch(self, request, call_next):
         """Run _dispatch, if that fails, log error and do exc handler"""
         if request.headers.get("method"):
@@ -95,10 +76,6 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
 
         res = await self._dispatcher(path, request, call_next)
 
-        try:
-            self._log_req(path, request, res)
-        except:  # pylint: disable=bare-except
-            pass
         return res if res else self.default_res
     
     async def _dispatcher(self, path, request, call_next):
@@ -309,12 +286,6 @@ async def finish_init(app, session_id, workers, dbs):
         worker_count=workers
     )
 
-    # Create the shutdown handler to work around uvicorn faults
-    loop = asyncio.get_event_loop()
-
-    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGABRT, signal.SIGQUIT):
-        loop.add_signal_handler(sig, shutdown_fates_worker(app))
-
     # Set the session for use in startup
     session = app.state.worker_session
    
@@ -463,43 +434,3 @@ async def setup_db():
     postgres = await asyncpg.create_pool()
     redis = await aioredis.from_url('redis://localhost:1001', db=1)
     return {"postgres": postgres, "redis": redis}
-
-
-def shutdown_fates_worker(app):
-    """Shutdown the list properly"""
-    worker_session = app.state.worker_session
-    db = worker_session.postgres
-    redis = worker_session.redis
-
-    async def _close():
-        await asyncio.sleep(0)
-        await db.close()
-        await redis.publish("_worker", f"DOWN WORKER {os.getpid()}")
-        await redis.close()
-        await asyncio.sleep(0)
-        try:
-            await app.state.cprof.get_profiler_result()
-        except:
-            pass
-        await asyncio.sleep(0)
-
-    def _signal_handler_entry():
-        """Entrypoint for signal handler"""
-
-        # Ensure only one stop task is executed
-        if worker_session.dying:
-            return
-
-        # We are going to die
-        worker_session.dying = True
-
-        # Begin killing fates list
-        logger.info("Killing Fates List: ")
-        task = asyncio.create_task(_close())
-        task.add_done_callback(_gohome)
-
-    def _gohome(_):
-        logger.info("Fates List is now down. Going back to the IceWings!")
-        os._exit(0)
-
-    return _signal_handler_entry
