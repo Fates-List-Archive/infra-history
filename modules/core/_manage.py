@@ -18,14 +18,6 @@ from pathlib import Path
 from subprocess import DEVNULL, Popen
 from typing import Any, Callable, Dict
 
-sys.pycache_prefix = "data/pycache"
-if sys.version_info < (3, 11):
-    warnings.warn(
-        f"Fates List has only been tested to run on python 3.11. You are running {sys.version_info}",
-        RuntimeWarning,
-    )
-
-
 def error(msg: str, code: int = 1):
     print(msg)
     return sys.exit(code)
@@ -55,12 +47,13 @@ def _fappgen(session_id, workers, static_assets):
         title="Fates List",
         responses=responses,
         description=f"""
-            Current API: v2 beta 3
-            Default API: v{API_VERSION}
+            Current API: v3
+            Default API: v3
             API URL: https://api.fateslist.xyz
             API Docs: https://apidocs.fateslist.xyz
             Enum Reference: https://apidocs.fateslist.xyz/structures/enums.autogen
         
+            **This is the legacy API v2 docs**
         
             Note: Many API endpoints have moved to API v3. Check there if you cant find something
         """,
@@ -76,8 +69,8 @@ def _fappgen(session_id, workers, static_assets):
         openapi_url=f"/api/v{API_VERSION}/docs/openapi",
         servers=[
             {
-                "url": "https://api.fateslist.xyz",
-                "description": "Fates List API"
+                "url": "https://legacy.fateslist.xyz",
+                "description": "Fates List Legacy API"
             }, 
         ]
     )
@@ -242,60 +235,6 @@ def site_getdragondocs():
     asyncio.set_event_loop(loop)
     loop.run_until_complete(_docs())
 
-
-def site_reload():
-    """Get the PID of the running site and reloads the site"""
-    try:
-        with open("data/pids/gunicorn.pid") as guni_pid:
-            pid = guni_pid.read().replace(" ", "").replace("\n", "")
-
-            if not pid.isdigit():
-                return error(
-                    "Invalid/corrupt PID file found (site/gunicorn.pid)")
-
-            pid = int(pid)
-            if not os.environ.get("KILL"):
-                os.kill(pid, signal.SIGHUP)
-            else:
-                try:
-                    os.kill(pid, signal.SIGINT)
-                except Exception as exc:
-                    print(exc)
-                print("Waiting for site to die...")
-                time.sleep(3)
-                # Use kill to force kill any rogue workers
-                os.system('killall -9 "gunicorn: master" >/dev/null 2>&1')
-                os.system('killall -9 "gunicorn: worker" >/dev/null 2>&1')
-                time.sleep(3)
-
-    except FileNotFoundError:
-        return error("No PID file found. Is the site running?")
-
-
-def site_venv():
-    """Sets up a new venv deleting the old one"""
-    from config._logger import logger
-
-    python = os.environ.get("PYTHON") or "python3.11"
-    home = os.environ.get("HOMEDIR") or Path.home()
-    home = Path(str(home))
-
-    logger.info("Backing up old venv")
-    Path(home / "flvenv").rename(home / "flvenv.old")
-
-    cmd = [python, "-m", "venv", str(home / "flvenv")]
-
-    with Popen(cmd, env=os.environ) as proc:
-        proc.wait()
-
-    new_python = home / "flvenv/bin/python"
-
-    cmd = [new_python, "-m", "pip", "install", "-r", "data/res/deps.txt"]
-
-    with Popen(cmd, env=os.environ) as proc:
-        proc.wait()
-
-
 def site_updaterepos():
     """Update all of the extra internal services made by Fates List"""
     cmd = [
@@ -394,13 +333,6 @@ def db_backup():
             proc.wait()
 
     logger.success("Backups done!")
-
-
-def db_shell():
-    """Run a postgres shell"""
-    with Popen(["pgcli"], env=os.environ) as proc:
-        proc.wait()
-
 
 def db_apply():
     """Apply Fates List database migration"""

@@ -74,17 +74,6 @@ async def user_auth_check(request: Request, user_id: int, user_auth: str = Secur
     if id is None:
         raise HTTPException(status_code=401, detail=f"Invalid User Token")
 
-async def bot_user_auth_check(request: Request, bot_id: int, user_id: Optional[int] = None, bot_auth: str = Security(bot_auth_header), user_auth: str = Security(user_auth_header)):
-    if user_auth.startswith("User "):
-        scheme = "User"
-        id = await _user_auth(request, user_id, user_auth)
-    else:
-        scheme = "Bot"
-        id = await _bot_auth(request, bot_id, bot_auth)
-    
-    if not id:
-        raise HTTPException(status_code=401, detail=f"Invalid {scheme} Token")
-
 # All bot_server auth endpoints must use target_id and probably uses target_type
 async def bot_server_auth_check(request: Request, target_id: int, target_type: enums.ReviewType, bot_auth: str = Security(bot_auth_header), server_auth: str = Security(server_auth_header)):
     if target_type == enums.ReviewType.server:

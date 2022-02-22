@@ -36,7 +36,6 @@ from config import (API_VERSION, discord_client_id, discord_client_secret,
                     discord_redirect_uri, sentry_dsn, site, session_key,
                     rl_key)
 from config._logger import logger
-from modules.core.error import WebError
 from modules.core.ipc import redis_ipc_new
 from modules.models import enums
 from itsdangerous import URLSafeSerializer
@@ -46,10 +45,8 @@ reboot_error = "<h1>Fates List is currently rebooting. Please click <a href='/ma
 
 class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-public-methods
     """Request Handler for Fates List"""
-    def __init__(self, app, *, exc_handler):
+    def __init__(self, app):
         super().__init__(app)
-        self.exc_handler = exc_handler
-        app.add_exception_handler(Exception, exc_handler)
         
         # Methods that should be allowed by CORS
         self.cors_allowed = "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS"
@@ -96,12 +93,8 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
             logger.warning("Accepting bad connection without working IPC")
             #return HTMLResponse(reboot_error + f"<br>Worker UP: {request.app.state.worker_session.up}")
 
-        try:
-            res = await self._dispatcher(path, request, call_next)
-        except:  # pylint: disable=broad-except
-            exc = sys.exc_info()[2]
-            res = await self.exc_handler(request, exc, log=True)
-        
+        res = await self._dispatcher(path, request, call_next)
+
         try:
             self._log_req(path, request, res)
         except:  # pylint: disable=bare-except
@@ -131,15 +124,7 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
     
         start_time = time.time()
         
-        # Process request with retry
-        try:
-            response = await call_next(request)
-        except:  # pylint: disable=broad-except
-            err = sys.exc_info()
-            try:
-                response = await self.exc_handler(request, err[2])
-            except:
-                response = PlainTextResponse(err[1])
+        response = await call_next(request)
 
         process_time = time.time() - start_time
         response.headers["X-Process-Time"] = str(process_time)
@@ -148,9 +133,6 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
-
-        if is_api:
-            response.headers["X-API-Version"] = api_ver
     
         # Fuck CORS by force setting headers with proper origin
         origin = request.headers.get('Origin')
@@ -257,7 +239,6 @@ async def init_fates_worker(app, session_id, workers):
     # Add request handler
     app.add_middleware(
         FatesListRequestHandler, 
-        exc_handler=WebError.error_handler,
     )
 
     if os.environ.get("PROFILE"):
@@ -361,30 +342,6 @@ async def finish_init(app, session_id, workers, dbs):
 
     # Setup ratelimiter
     LynxfallLimiter.init(session.redis, identifier=rl_key_func)
-
-    # Setup trusted host middleware
-    app.add_middleware(
-        TrustedHostMiddleware, 
-        allowed_hosts=[site, "127.0.0.1", "0.0.0.0", f"www.{site}", "api.fateslist.xyz", "legacy.fateslist.xyz"]
-    )
-
-    # Add GZip handling
-    app.add_middleware(GZipMiddleware, minimum_size=500)
-    
-    # Setup exception handling
-    codes = (
-        403, 
-        404, 
-        RequestValidationError, 
-        ValidationError, 
-        500, 
-        HTTPException, 
-        Exception, 
-        StarletteHTTPException
-    )
-
-    for code in codes:
-        app.add_exception_handler(code, WebError.error_handler)
         
     # Include all routers
     include_routers(app, "Discord", "modules/discord")
@@ -396,7 +353,6 @@ async def finish_init(app, session_id, workers, dbs):
     asyncio.create_task(catclient(workers, session))
     logger.debug("Started catclient task")
 
-    # Boast about oht success!
     logger.success(
         f"Fates List worker (pid: {os.getpid()}) bootstrapped successfully!"
     )
