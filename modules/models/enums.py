@@ -215,3 +215,8 @@ class ReviewType(IntEnum):
     _init_ = "value __doc__"
     bot = 0, "Bot"
     server = 1, "Server"
+
+class BotRequestType(IntEnum):
+    _init_ = "value __doc__"
+    appeal = 0, "Bot"
+    certification = 1, "Certification"
