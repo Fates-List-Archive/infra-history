@@ -321,14 +321,7 @@ def sanitize_bot(bot: dict, lang: str) -> dict:
 
 async def add_ws_event(redis: aioredis.Connection, target: int, ws_event: dict, *, id: Optional[uuid.UUID] = None, type: str = "bot", timeout: int | None = 30) -> None:
     """Create websocket event"""
-    if not id:
-        id = uuid.uuid4()
-    id = str(id)
-    if "m" not in ws_event.keys():
-        ws_event["m"] = {}
-    ws_event["m"]["eid"] = id
-    ws_event["m"]["ts"] = time.time()
-    asyncio.create_task(redis_ipc_new(redis, "ADDWSEVENT", msg=ws_event, args=[str(target), str(id), "1" if type == "bot" else "0"], timeout=timeout))
+    return # Being remade in baypaw
 
 async def bot_get_events(*_, **__):
     # As a replacement/addition to webhooks, we have API events as well to allow you to quickly get old and new events with their epoch
@@ -336,13 +329,7 @@ async def bot_get_events(*_, **__):
     return {}
 
 async def bot_add_event(redis: aioredis.Connection, bot_id: int, event: int, context: dict, t: Optional[int] = None, *, send_event: bool = True, guild: bool = False):
-    if type(context) is dict:
-        pass
-    else:
-        raise TypeError("Event must be a dict")
-
-    event_time = time.time()
-    await add_ws_event(redis, bot_id, {"ctx": context, "m": {"t": t if t else -1, "ts": event_time, "e": event}})
+    return # No point in using a broken API
 
 # Reviews
 

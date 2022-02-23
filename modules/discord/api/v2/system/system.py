@@ -150,20 +150,12 @@ async def stats_page(request: Request, full: bool = False):
     worker_session = request.app.state.worker_session
     db = worker_session.postgres
 
-    if not worker_session.workers or worker_session.worker_count != len(
-            worker_session.workers):
-        workers = await redis_ipc_new(worker_session.redis, "WORKERS", worker_session=worker_session)
-        if not workers:
-            return abort(503)
-        worker_session.workers = orjson.loads(workers)
-        worker_session.workers.sort()
-        worker_session.up = True  # If workers is actually existant, then it's up
-
     certified = await do_index_query(state = [enums.BotState.certified], limit = None, worker_session = worker_session) 
     bot_amount = await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
     queue = await do_index_query(state = [enums.BotState.pending], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
     under_review = await do_index_query(state = [enums.BotState.under_review], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
     if full:
+        return abort(400) # We cannot handle full as of now
         denied = await do_index_query(state = [enums.BotState.denied], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
         banned = await do_index_query(state = [enums.BotState.banned], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
     return {
@@ -179,8 +171,8 @@ async def stats_page(request: Request, full: bool = False):
         "uptime": time.time() - worker_session.start_time,
         "server_uptime": get_uptime(),
         "pid": os.getpid(),
-        "up": worker_session.up,
-        "workers": worker_session.workers,
+        "up": True,
+        "workers": [],
     }
 
 
