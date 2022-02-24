@@ -36,12 +36,6 @@ async def get_commands(
 @router.post(
     "/{bot_id}/commands",
     dependencies=[
-        Depends(
-            Ratelimiter(
-                global_limit = Limit(times=20, minutes=1),
-                sub_limits = [Limit(times=5, seconds=15)]
-            )
-        ),
         Depends(bot_auth_check)
     ],
     operation_id="add_commands"
@@ -79,12 +73,6 @@ async def add_commands(request: Request, bot_id: int, commands: BotCommands):
     "/{bot_id}/commands", 
     response_model = APIResponse, 
     dependencies=[
-        Depends(
-            Ratelimiter(
-                global_limit = Limit(times=20, minutes=1),
-                sub_limits = [Limit(times=5, seconds=15)]
-            )
-        ), 
         Depends(bot_auth_check)
     ],
     operation_id="delete_commands"

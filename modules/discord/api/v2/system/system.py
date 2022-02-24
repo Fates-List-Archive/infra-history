@@ -26,54 +26,7 @@ def get_uptime():
     response_model=BotStatsFull
 )
 async def stats_page(request: Request, full: bool = False):
-    """
-    Returns the full set of botlist stats
-
-    This includes blstats data as well now which is:
-
-    **uptime** - The current uptime for the given worker. All workers reboot periodically to avoid memory leaks
-    so this will mostly be low
-
-    **pid** - The pid of the worker you are connected to
-
-    **up** - Whether the databases are up on this worker
-
-    **server_uptime** - How long the Fates List Server has been up for totally
-
-    **bot_amount_total** - The bot count of the list
-
-    **bot_amount** - Renamed to bot_amount. The number of approved and certified bots on the list
-
-    **workers** - The worker pids. This is sorted and retrived from dragon IPC if not directly available on the worker
-    """
-    worker_session = request.app.state.worker_session
-    db = worker_session.postgres
-
-    certified = await do_index_query(state = [enums.BotState.certified], limit = None, worker_session = worker_session) 
-    bot_amount = await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = 0 OR state = 6")
-    queue = await do_index_query(state = [enums.BotState.pending], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
-    under_review = await do_index_query(state = [enums.BotState.under_review], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
-    if full:
-        return abort(400) # We cannot handle full as of now
-        denied = await do_index_query(state = [enums.BotState.denied], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
-        banned = await do_index_query(state = [enums.BotState.banned], limit = None, add_query = "ORDER BY created_at ASC", worker_session = worker_session)
-    return {
-        "bot_amount_total": await db.fetchval("SELECT COUNT(1) FROM bots"),
-        "certified": certified,
-        "bot_amount": bot_amount,
-        "queue": queue,
-        "denied": denied if full else [],
-        "denied_amount": await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = $1", enums.BotState.denied),
-        "banned": banned if full else [],
-        "banned_amount": await db.fetchval("SELECT COUNT(1) FROM bots WHERE state = $1", enums.BotState.banned),
-        "under_review": under_review,
-        "uptime": time.time() - worker_session.start_time,
-        "server_uptime": get_uptime(),
-        "pid": os.getpid(),
-        "up": True,
-        "workers": [],
-    }
-
+    return abort(408)
 
 @router.get("/is_staff", response_model=IsStaff)
 async def check_staff_member(request: Request,
@@ -105,6 +58,7 @@ async def get_bots_filtered(
     **This API now guarantees that the bot list is only what you
     request**
     """
+    return abort(408)
     if limit > 100:
         return api_error("Limit must be less than or equal to 100")
 
@@ -157,20 +111,3 @@ async def get_bots_filtered(
                            bot["bot_id"]),
         } for bot in bots]
     }
-
-
-@router.get("/staff_roles", response_model=StaffRoles, operation_id="get_staff_roles")
-def get_staff_roles(request: Request):
-    """Return all staff roles and their role ids if you ever wanted them..."""
-    return staff_roles
-
-@router.get("/staff-apps/qibli/{id}")
-async def short_url(request: Request, id: uuid.UUID):
-    """
-    Gets the qibli data for a id
-    """
-    redis = request.app.state.worker_session.redis
-    data = await redis.get(f"sapp:{id}")
-    if not data:
-        return abort(404)
-    return orjson.loads(data)

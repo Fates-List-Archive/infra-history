@@ -33,10 +33,6 @@ async def redis_ipc_new(
             async with sess.post(f"http://localhost:1234/messages", json=msg) as res:
                 return await res.text()
 
-    if worker_session:
-        app = worker_session.app
-    else:
-        logger.debug("No worker_session passed to redis_ipc_new")
     args = args if args else []
     cmd_id = str(uuid.uuid4())
     if msg:
@@ -55,16 +51,9 @@ async def redis_ipc_new(
             await asyncio.sleep(0)
             data = await redis.get(id)
             if data is not None:
-                try:
-                    if worker_session:
-                        app.state.worker_session.up = True # If we have data, then IPC is up
-                except AttributeError:
-                    pass
                 return data
 
         if not no_wait:
-            if worker_session:
-                await app.state.wait_for_ipc()
             return await redis_ipc_new(redis, cmd, msg=msg, timeout=timeout, args=args.split(" "), no_wait=True, worker_session=worker_session)
 
     if timeout:

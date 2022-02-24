@@ -15,11 +15,6 @@ minlength = 10
 @router.get(
     "/reviews/{target_id}/all", 
     response_model = BotReviews,
-    dependencies=[
-        Depends(
-            Ratelimiter(global_limit=Limit(times=3, seconds=7))
-        )
-    ]
 )
 async def get_all_reviews(request: Request, target_id: int, target_type: enums.ReviewType, page: Optional[int] = 1, recache: bool = False):
     """Gets all reviews for a target bot or server/guild"""

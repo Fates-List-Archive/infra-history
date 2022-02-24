@@ -9,36 +9,24 @@ import signal
 import sys
 import time
 import uuid
-from http import HTTPStatus
 
 import aioredis
 import asyncpg
 import sentry_sdk
 from fastapi import FastAPI, Request
-from fastapi.exceptions import (HTTPException, RequestValidationError,
-                                ValidationError)
-from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import PlainTextResponse, HTMLResponse
-from fastapi_cprofile.profiler import CProfileMiddleware
 from fastapi.routing import APIRoute
 from lynxfall.core.classes import Singleton
 from lynxfall.oauth.models import OauthConfig
 from lynxfall.oauth.providers.discord import DiscordOauth
-from lynxfall.ratelimits import LynxfallLimiter
 from lynxfall.utils.fastapi import api_versioner, include_routers
-from lynxfall.utils.string import get_token, secure_strcmp
-from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
-from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from config import (API_VERSION, discord_client_id, discord_client_secret,
-                    discord_redirect_uri, sentry_dsn, site, session_key,
-                    rl_key)
+                    discord_redirect_uri, rl_key)
 from config._logger import logger
 from modules.core.ipc import redis_ipc_new
 from modules.models import enums
-from itsdangerous import URLSafeSerializer
 
 sys.pycache_prefix = "data/pycache"
 reboot_error = "<h1>Fates List is currently rebooting. Please click <a href='/maint/page'>here</a> for more information</h1>"
@@ -218,56 +206,7 @@ async def init_fates_worker(app, session_id, workers):
         FatesListRequestHandler, 
     )
 
-    if os.environ.get("PROFILE"):
-        app.add_middleware(CProfileMiddleware, enable=True, server_app=app, filename="flprofile.pstats", strip_dirs=False, sort_by='cumulative')
-        app.state.cprof = app.user_middleware[0]
-
     dbs = await setup_db()
-
-    # Wait for redis ipc to come up
-    app.state.first_run = True
-
-    async def wait_for_ipc(first_run: bool = False):
-        logger.info("Wait for ipc called")
-        ipc_up = False
-        if not first_run:
-            app.state.worker_session.up = False
-
-        while not ipc_up:
-            resp = await redis_ipc_new(dbs["redis"], "PING", timeout=5)
-            logger.info(resp)
-            if not resp:
-                invalid = True
-                reason = "IPC not up"
-            else:
-                resp1 = resp.decode("utf-8")
-                invalid, reason = False, "All good!"
-                respl = resp1.split(" ")
-                if len(respl) != 3:
-                    invalid, reason = True, "Invalid PONG payload"
-                if respl[0] != "PONG":
-                    invalid, reason = True, "IPC corrupt"
-                if respl[1] != "V3":
-                    invalid, reason = True, f"Invalid IPC version: {respl[1]}"
-
-                if not invalid:
-                    app.state.site_degraded = (respl[2] == "1")
-        
-            if invalid:  # pylint: disable=no-else-continue
-                logger.info(f"Invalid IPC. Got invalid PONG: {resp} (reason: {reason})")
-                continue
-
-            if first_run:
-                return await finish_init(app, session_id, workers, dbs)
-            app.state.worker_session.up = True
-            return
-
-    app.state.wait_for_ipc = wait_for_ipc
-    await app.state.wait_for_ipc(first_run=True)
-
-async def finish_init(app, session_id, workers, dbs):
-    """Finish site init"""
-    logger.success("Connected to postgres and redis")
 
     app.state.worker_session = FatesWorkerSession(
         app=app,
@@ -285,35 +224,9 @@ async def finish_init(app, session_id, workers, dbs):
         ),
         worker_count=workers
     )
-
-    # Set the session for use in startup
-    session = app.state.worker_session
    
     app.state.rl_key = rl_key
-
-    # Set bot tags
-    def _tags(tag_db):
-        tags = {}
-        for tag in tag_db:
-            tags = tags | {tag["id"]: tag["icon"]}
-        return tags
-
-    tags_db = await session.postgres.fetch(
-        "SELECT id, icon FROM bot_list_tags"
-    )
-    tags = _tags(tags_db)
-    builtins.TAGS = tags # TODO: Remove this
-    app.state.worker_session.tags = tags
-    builtins.tags_fixed = calc_tags(tags)
-    app.state.worker_session.tags_fixed = calc_tags(tags)
-
-    # Setup sentry
-    sentry_sdk.init(sentry_dsn)  # pylint: disable=abstract-class-instantiated
-    app.add_middleware(SentryAsgiMiddleware)
-
-    # Setup ratelimiter
-    LynxfallLimiter.init(session.redis, identifier=rl_key_func)
-        
+            
     # Include all routers
     include_routers(app, "Discord", "modules/discord")
 
@@ -324,53 +237,9 @@ async def finish_init(app, session_id, workers, dbs):
         f"Fates List worker (pid: {os.getpid()}) bootstrapped successfully!"
     )
 
-# IP Checker
-def ip_check(request: Request) -> str:
-    """Given a request, try to find its IP"""
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        logger.trace(f"Forwarded IPs are {forwarded}")
-        return forwarded.split(",")[0]
-    return request.client.host
 
 async def rl_key_func(request: Request) -> str:
-    """Ratelimit identifier function"""
-    db = request.app.state.worker_session.postgres
-
-    if os.environ.get("ALLOW_RL_BYPASS") and secure_strcmp(str(request.headers.get("X-RL-Bypass")), request.app.state.rl_key):
-        return None
-    
-    if ("Authorization" in request.headers or "authorization" in request.headers):
-        r = request.headers.get("Authorization") or request.headers.get("authorization")
-        check = await db.fetchrow("SELECT bot_id, state FROM bots WHERE api_token = $1", r) # Check api token
-        if check is None:
-            # Check user token too
-            check_user = await db.fetchval("SELECT user_id FROM users WHERE api_token = $1", r) # Check api token
-            if check_user is None:
-                return ip_check(request) # Invalid api token, fallback to ip
-            return str(check_user)
-        if check["state"] == enums.BotState.certified:
-            return None
-        return str(check["bot_id"]) # Otherwise, ratelimit using bot id
-    return ip_check(request) # Fallback to ip
-
-
-# Tags
-def calc_tags(list_tags):
-    """Calculate bot list tags"""
-    # Tag calculation
-    tags_fixed = []
-    for tag in list_tags.keys():
-        # For every key in tag dict, 
-        # create the "fixed" tag information 
-        # (friendly and easy to use data for tags)
-        tags_fixed.append({
-            "name": tag.replace("_", " ").title(),
-            "iconify_data": list_tags[tag], 
-            "id": tag
-        })
-    return tags_fixed
-
+    return None
 
 async def setup_db():
     """Function to setup the asyncpg connection pool"""

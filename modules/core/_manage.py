@@ -65,7 +65,7 @@ def _fappgen(session_id, workers, static_assets):
         },
         default_response_class=ORJSONResponse,
         redoc_url=f"/api/v{API_VERSION}/docs/redoc",
-        docs_url=f"/api/v{API_VERSION}/docs/swagger",
+        swagger_url=None,
         openapi_url=f"/api/v{API_VERSION}/docs/openapi",
         servers=[
             {
@@ -196,22 +196,6 @@ def site_getdragondocs():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(_docs())
-
-def site_updaterepos():
-    """Update all of the extra internal services made by Fates List"""
-    cmd = [
-        "git",
-        "submodule",
-        "foreach",
-        "--recursive",
-        "git",
-        "pull",
-        "origin",
-        "main",
-    ]
-    with Popen(cmd, env=os.environ) as proc:
-        proc.wait()
-
 
 def site_gensecret():
     """Generates a random secret"""

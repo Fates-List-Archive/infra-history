@@ -24,12 +24,6 @@ async def get_resources(request:  Request, target_id: int, target_type: enums.Re
 @router.post(
     "/{target_id}",
     dependencies=[
-        Depends(
-            Ratelimiter(
-                global_limit = Limit(times=20, minutes=1),
-                sub_limits = [Limit(times=5, seconds=15)]
-            )
-        ),
         Depends(bot_server_auth_check)
     ],
     operation_id="add_resources"
@@ -62,12 +56,6 @@ async def add_resources(request: Request, target_id: int, target_type: enums.Rev
     "/{target_id}", 
     response_model = APIResponse, 
     dependencies=[
-        Depends(
-            Ratelimiter(
-                global_limit = Limit(times=20, minutes=1),
-                sub_limits = [Limit(times=5, seconds=15)]
-            )
-        ), 
         Depends(bot_server_auth_check)
     ],
     operation_id="delete_resources"
