@@ -130,7 +130,7 @@ class Reviews(Table, tablename="reviews"):
     review_downvotes = Array(base_column = BigInt(), default=[])
     flagged = Boolean(default=False)
     epoch = Array(base_column = BigInt(), default=[])
-    replies = Array(base_column=UUID(), default=[])
+    parent_id = UUID()
     reply = Boolean(default=False)
 
     @classmethod

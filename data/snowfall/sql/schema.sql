@@ -137,7 +137,7 @@ CREATE TABLE bot_commands (
    id uuid primary key DEFAULT uuid_generate_v4(),
    bot_id bigint,
    cmd_type integer not null, -- 0 = no, 1 = guild, 2 = global
-   cmd_groups text[] default '{Default}',
+   cmd_groups text[] not null default '{Default}',
    cmd_name text not null, -- command name
    vote_locked boolean default false, -- friendly name
    description text, -- command description
@@ -185,18 +185,17 @@ CREATE TABLE reviews (
    target_id bigint not null,
    target_type integer default 0,
    user_id bigint not null,
-   star_rating numeric(4,2) default 0.0,
-   review_text text,
-   review_upvotes bigint[] default '{}',
-   review_downvotes bigint[] default '{}',
-   flagged boolean default false,
-   epoch bigint[] default '{}',
-   replies uuid[] default '{}',
-   reply boolean default false,
+   star_rating numeric(4,2) not null default 0.0,
+   review_text text not null,
+   review_upvotes bigint[] not null default '{}',
+   review_downvotes bigint[] not null default '{}',
+   flagged boolean not null default false,
+   epoch bigint[] default not null '{}',
+   parent_id uuid,
    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-create index review_index on reviews (id, target_id, user_id, review_text, review_upvotes, review_downvotes, epoch, replies, target_type, star_rating, flagged, reply);
+create index review_index on reviews (id, target_id, user_id, review_text, review_upvotes, review_downvotes, epoch, parent_id, target_type, star_rating, flagged, reply);
 
 
 CREATE TABLE user_bot_logs (
