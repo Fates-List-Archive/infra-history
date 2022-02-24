@@ -164,32 +164,6 @@ def get_staff_roles(request: Request):
     """Return all staff roles and their role ids if you ever wanted them..."""
     return staff_roles
 
-@router.get(
-    "/vote-reminders", 
-    dependencies=[
-        Depends(
-            Ratelimiter(
-                global_limit = Limit(times=5, seconds=30)
-            )
-        ),
-    ]
-)
-async def get_all_vote_reminders(request: Request):
-    """Get vote reminders"""
-    worker_session: FatesWorkerSession = request.app.state.worker_session
-    reminders = await worker_session.postgres.fetch("SELECT user_id::text, vote_reminders::text[], vote_reminder_channel::text FROM users WHERE vote_reminders != '{}'")
-    reminders_lst = []
-    for reminder in reminders:
-        can_vote = []
-        for bot in reminder["vote_reminders"]:
-            vote_epoch = await worker_session.redis.ttl(f"vote_lock:{reminder['user_id']}")
-            if vote_epoch < 0:
-                can_vote.append(bot)
-        _reminder = dict(reminder)
-        _reminder["can_vote"] = can_vote
-        reminders_lst.append(_reminder)
-    return {"reminders": reminders_lst}
-
 @router.get("/staff-apps/qibli/{id}")
 async def short_url(request: Request, id: uuid.UUID):
     """
