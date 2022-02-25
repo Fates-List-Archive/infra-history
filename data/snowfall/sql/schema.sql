@@ -197,6 +197,13 @@ CREATE TABLE reviews (
 
 create index review_index on reviews (id, target_id, user_id, review_text, review_upvotes, review_downvotes, epoch, parent_id, target_type, star_rating, flagged, reply);
 
+CREATE TABLE review_votes (
+    id uuid not null REFERENCES reviews (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    user_id bigint not null,
+    upvote BOOLEAN NOT NULL,
+    PRIMARY KEY(id, user_id)
+);
+
 
 CREATE TABLE user_bot_logs (
     user_id BIGINT NOT NULL,
