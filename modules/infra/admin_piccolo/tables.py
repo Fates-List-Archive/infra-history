@@ -1,4 +1,5 @@
 import datetime
+from typing import ForwardRef
 
 from piccolo.columns.column_types import (UUID, Array, BigInt, Boolean, Float,
                                           ForeignKey, Integer, Secret, Text,
@@ -125,14 +126,13 @@ class Reviews(Table, tablename="reviews"):
     target_id = BigInt()
     user_id = ForeignKey(references=User)
     star_rating = Float(help_text = "Amount of stars a bot has")
-    review_text = Text()
+    review_text = Text(null=False)
     review_upvotes = Array(base_column = BigInt(), default = [])
     review_downvotes = Array(base_column = BigInt(), default=[])
     flagged = Boolean(default=False)
     epoch = Array(base_column = BigInt(), default=[])
-    parent_id = UUID()
-    reply = Boolean(default=False)
+    parent_id =  ForeignKey(references="Reviews")
 
-    @classmethod
-    def get_readable(cls):
-        return Readable(template="%s", columns=[cls.name])
+    #@classmethod
+    #def get_readable(cls):
+    #    return Readable(template="%s", columns=[cls.name])

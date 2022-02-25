@@ -191,7 +191,7 @@ CREATE TABLE reviews (
    review_downvotes bigint[] not null default '{}',
    flagged boolean not null default false,
    epoch bigint[] default not null '{}',
-   parent_id uuid,
+   parent_id uuid REFERENCES reviews (id),
    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 

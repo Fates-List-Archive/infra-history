@@ -12,36 +12,7 @@ router = APIRouter(
 
 minlength = 10
 
-@router.get(
-    "/reviews/{target_id}/all", 
-    response_model = BotReviews,
-)
-async def get_all_reviews(request: Request, target_id: int, target_type: enums.ReviewType, page: Optional[int] = 1, recache: bool = False):
-    """Gets all reviews for a target bot or server/guild"""
-    reviews = await parse_reviews(request.app.state.worker_session, target_id, page = page, target_type=target_type, in_recache=recache)
-    if reviews[0] == []:
-        return abort(404)
-    return {
-            "reviews": reviews[0],
-            "average_stars": reviews[1],
-            "pager": {
-                "total_count": reviews[2], 
-                "total_pages": reviews[3], 
-                "per_page": reviews[4], 
-                "from": ((page - 1) * reviews[4]) + 1, 
-                "to": (page - 1) * reviews[4] + len(reviews[0])
-            }
-    }
 
-
-@router.post(
-        "/users/{user_id}/reviews", 
-        response_model=APIResponse,
-        dependencies=[
-            Depends(id_check("user")),
-            Depends(user_auth_check)
-            ]
-        )
 async def new_review(request: Request, user_id: int, data: BotReviewPartialExt):
     """target_id is who the review is targetted to, target_type is whether its a guild or bot, 0 means bot, 1 means server"""
     db = request.app.state.worker_session.postgres
@@ -110,14 +81,6 @@ async def new_review(request: Request, user_id: int, data: BotReviewPartialExt):
         type="server" if data.target_type == enums.ReviewType.server else "bot"
     )
 
-    # Recache reviews
-    await parse_reviews(
-        request.app.state.worker_session, 
-        data.target_id,
-        target_type=data.target_type,
-        recache = True,
-    )
-
     return api_success()
 
 
@@ -139,7 +102,7 @@ async def edit_review(request: Request, user_id: int, id: uuid.UUID, data: BotRe
         )
 
     check = await db.fetchrow(
-        "SELECT reply, target_id, target_type FROM reviews WHERE id = $1 AND user_id = $2", 
+        "SELECT parent_id, target_id, target_type FROM reviews WHERE id = $1 AND user_id = $2", 
         id,
         user_id,
     )
@@ -164,21 +127,13 @@ async def edit_review(request: Request, user_id: int, id: uuid.UUID, data: BotRe
             },
             "ctx": {
                 "user": str(user_id),
-                "reply": check["reply"],
+                "reply": check["parent_id"] is not None,
                 "id": str(id),
                 "star_rating": data.star_rating,
                 "review": data.review,
             },
         },
         type="server" if check["target_type"] == enums.ReviewType.server else "bot"
-    )
-
-    # Recache reviews
-    await parse_reviews(
-        request.app.state.worker_session, 
-        check["target_id"],
-        target_type=check["target_type"],
-        recache = True,
     )
 
     return api_success()
@@ -196,7 +151,7 @@ async def delete_review(request: Request, user_id: int, id: uuid.UUID):
     db = request.app.state.worker_session.postgres
     redis = request.app.state.worker_session.redis
     check = await db.fetchrow(
-        "SELECT reply, replies, target_id, target_type, star_rating FROM reviews WHERE id = $1 AND user_id = $2", 
+        "SELECT target_id, parent_id, target_type, star_rating FROM reviews WHERE id = $1 AND user_id = $2", 
         id, 
         user_id
     )
@@ -205,8 +160,6 @@ async def delete_review(request: Request, user_id: int, id: uuid.UUID):
         return abort(404)
     
     await db.execute("DELETE FROM reviews WHERE id = $1", id)
-    for review in check["replies"]:
-        await db.execute("DELETE FROM reviews WHERE id = $1", review)
     
     await add_ws_event(
         redis,
@@ -217,20 +170,12 @@ async def delete_review(request: Request, user_id: int, id: uuid.UUID):
             },
             "ctx": {
                 "user": str(user_id),
-                "reply": check["reply"],
+                "reply": check["parent_id"] is not None,
                 "id": str(id),
                 "star_rating": check["star_rating"]
             },
         },
         type="server" if check["target_type"] == enums.ReviewType.server else "bot"
-    )
-
-    # Recache reviews
-    await parse_reviews(
-        request.app.state.worker_session, 
-        check["target_id"],
-        target_type=check["target_type"],
-        recache = True,
     )
 
     return api_success()    
@@ -247,7 +192,7 @@ async def vote_review_api(request: Request, user_id: int, rid: uuid.UUID, vote: 
     """Creates a vote for a review"""
     db = request.app.state.worker_session.postgres
     redis = request.app.state.worker_session.redis
-    bot_rev = await db.fetchrow("SELECT target_id, target_type, review_upvotes, review_downvotes, star_rating, reply FROM reviews WHERE id = $1", rid)
+    bot_rev = await db.fetchrow("SELECT target_id, target_type, review_upvotes, review_downvotes, star_rating, parent_id FROM reviews WHERE id = $1", rid)
     if bot_rev is None:
         return api_error("You are not allowed to up/downvote this review (doesn't actually exist)")
     bot_rev = dict(bot_rev)
@@ -278,7 +223,7 @@ async def vote_review_api(request: Request, user_id: int, rid: uuid.UUID, vote: 
                 "user": str(user_id), 
                 "id": str(rid), 
                 "star_rating": bot_rev["star_rating"], 
-                "reply": bot_rev["reply"], 
+                "reply": bot_rev["parent_id"] is not None, 
                 "upvotes": len(bot_rev["review_upvotes"]), 
                 "downvotes": len(bot_rev["review_downvotes"]), 
                 "upvote": vote.upvote
@@ -286,13 +231,5 @@ async def vote_review_api(request: Request, user_id: int, rid: uuid.UUID, vote: 
         },
         type="server" if bot_rev["target_type"] == enums.ReviewType.server else "bot"
     )
-    
-    # Recache reviews
-    await parse_reviews(
-        request.app.state.worker_session,
-        str(rid),
-        recache = True,
-        recache_from_rev_id=True
-    )
-    
+        
     return api_success()
