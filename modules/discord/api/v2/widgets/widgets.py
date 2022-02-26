@@ -10,7 +10,7 @@ from jinja2 import Environment, BaseLoader, select_autoescape
 from ..base import API_VERSION
 
 router = APIRouter(
-    prefix = f"/api/v{API_VERSION}/widgets",
+    prefix = f"/widgets",
     include_in_schema = True,
     tags = [f"API v{API_VERSION} - Widgets"],
 )

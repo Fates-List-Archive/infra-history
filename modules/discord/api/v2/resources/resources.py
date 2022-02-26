@@ -4,7 +4,7 @@ from ..base import API_VERSION
 from .models import APIResponse, BotResourcesGet, BotResource, IDResponse, enums, BotResources, BotResourceDelete
 
 router = APIRouter(
-    prefix = f"/api/v{API_VERSION}/resources",
+    prefix = f"/resources",
     include_in_schema = True,
     tags = [f"API v{API_VERSION} - Custom Resources"],
 )

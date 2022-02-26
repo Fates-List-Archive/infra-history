@@ -50,23 +50,23 @@ def _fappgen(session_id, workers, static_assets):
             Current API: v3
             Default API: v3
             API URL: https://api.fateslist.xyz
-            API Docs: https://apidocs.fateslist.xyz
-            Enum Reference: https://apidocs.fateslist.xyz/structures/enums.autogen
+            API Docs: https://docs.fateslist.xyz
+            Enum Reference: https://docs.fateslist.xyz/structures/enums.autogen
         
             **This is the legacy API v2 docs**
         
             Note: Many API endpoints have moved to API v3. Check there if you cant find something
         """,
-        version="0.4.0",
+        version="0.5.0",
         terms_of_service="https://fateslist.xyz/frostpaw/tos",
         license_info={
             "name": "MIT",
             "url": "https://github.com/Fates-List/FatesList/blob/main/LICENSE",
         },
         default_response_class=ORJSONResponse,
-        redoc_url=f"/api/v{API_VERSION}/docs/redoc",
+        redoc_url=f"/docs/redoc",
         swagger_url=None,
-        openapi_url=f"/api/v{API_VERSION}/docs/openapi",
+        openapi_url=f"/docs/openapi",
         servers=[
             {
                 "url": "https://legacy.fateslist.xyz",
