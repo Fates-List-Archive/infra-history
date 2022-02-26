@@ -239,26 +239,12 @@ func StartIPC(postgres *pgxpool.Pool, redisClient *redis.Client) {
 
 	ch := pubsub.Channel()
 
-	send_err := redisClient.Publish(ctx, workerChannel, "PREPARE IPC").Err()
-	if send_err != nil {
-		panic(send_err)
-	}
-
 	ipcContext := types.IPCContext{
 		Redis:    redisClient,
 		Postgres: postgres,
 	}
 
 	handleMsg := func(msg redis.Message) {
-		if !connected {
-			connected = true
-			log.Debug("Announcing that we are up")
-			err = redisClient.Publish(ctx, workerChannel, "REGET 2").Err()
-			if err != nil {
-				log.Warn(err)
-				connected = false
-			}
-		}
 		op := strings.Split(msg.Payload, " ")
 		if len(op) < 2 {
 			return
