@@ -39,7 +39,6 @@ def _fappgen(session_id, workers, static_assets):
     from fastapi import FastAPI
     from fastapi.responses import ORJSONResponse
 
-    from config import API_VERSION
     from modules.discord.api.v2.base import responses
     from modules.core.system import init_fates_worker
 
@@ -94,8 +93,6 @@ def site_run():
 
     import uvicorn
     from PIL import Image
-
-    from config._logger import logger
 
     session_id = uuid.uuid4()
 
@@ -243,7 +240,7 @@ def site_compilestatic():
 
 def db_backup():
     """Backs up the Fates List database"""
-    from config._logger import logger
+    from loguru import logger
 
     logger.info("Starting backups")
 
@@ -284,7 +281,7 @@ def db_apply():
     """Apply Fates List database migration"""
     import uvloop
 
-    from config._logger import logger
+    from loguru import logger
 
     uvloop.install()
 
@@ -321,7 +318,7 @@ def db_wipeuser():
     """Wipes a user account (e.g. Data Deletion Request)"""
     import uvloop
 
-    from config._logger import logger
+    from loguru import logger
 
     uvloop.install()
 
@@ -375,7 +372,7 @@ def db_wipeuser():
 
 def db_setup():
     """Setup Snowfall (the Fates List database system)"""
-    from config._logger import logger
+    from loguru import logger
 
     home = os.environ.get("HOMEDIR") or Path.home()
     home = Path(str(home))

@@ -20,9 +20,7 @@ from lynxfall.core.classes import Singleton
 from lynxfall.utils.fastapi import api_versioner, include_routers
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from config import (API_VERSION, discord_client_id, discord_client_secret,
-                    discord_redirect_uri, rl_key)
-from config._logger import logger
+from loguru import logger
 from modules.core.ipc import redis_ipc_new
 from modules.models import enums
 
@@ -101,9 +99,7 @@ async def init_fates_worker(app, session_id, workers):
         redis=dbs["redis"],
         worker_count=workers
     )
-   
-    app.state.rl_key = rl_key
-            
+               
     # Include all routers
     include_routers(app, "Discord", "modules/discord")
 

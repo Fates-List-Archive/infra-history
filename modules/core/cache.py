@@ -1,6 +1,5 @@
 from aioredis import Connection
-
-from config._logger import logger
+from loguru import logger
 
 import inspect
 

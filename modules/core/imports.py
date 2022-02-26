@@ -35,4 +35,3 @@ from starlette.routing import Mount
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import modules.models.enums as enums
-from config import *
