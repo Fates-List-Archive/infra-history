@@ -8,8 +8,6 @@ from .ipc import *
 
 bot_auth_header = APIKeyHeader(name="Authorization", description="These endpoints require a bot token. You can get this from Bot Settings. Make sure to keep this safe and in a .gitignore/.env.\n\nA prefix of `Bot` before the bot token such as `Bot abcdef` is supported and can be used to avoid ambiguity but is not required. The default auth scheme if no prefix is given depends on the endpoint: Endpoints which have only one auth scheme will use that auth scheme while endpoints with multiple will always use `Bot` for backward compatibility", scheme_name="Bot")
 
-user_auth_header = APIKeyHeader(name="Authorization", description="These endpoints require a user token. You can get this from your profile under the User Token section. If you are using this for voting, make sure to allow users to opt out!\n\nA prefix of `User` before the user token such as `User abcdef` is supported and can be used to avoid ambiguity but is not required outside of endpoints that have both a user and a bot authentication option such as Get Votes. In such endpoints, the default will always be a bot auth unless you prefix the token with `User`", scheme_name="User")
-
 server_auth_header = APIKeyHeader(name="Authorization", description="These endpoints require a server token which you can get using /get API Token in your server. Same warnings and information from the other authentication types apply here. A prefix of ``Server`` before the server token is supported and can be used to avoid ambiguity but is not required.", scheme_name="Server")
 
 async def _bot_auth(request: Request, bot_id: int, api_token: str):
@@ -36,23 +34,6 @@ async def _server_auth(request: Request, server_id: int, api_token: str):
         api_token = api_token.replace("Server ", "", 1)
     return await db.fetchval("SELECT guild_id FROM servers WHERE guild_id = $1 AND api_token = $2", server_id, str(api_token))
 
-async def _user_auth(request: Request, user_id: int, api_token: str):
-    db = request.app.state.worker_session.postgres
-    if isinstance(user_id, int):
-        pass
-    elif user_id.isdigit():
-        user_id = int(user_id)
-    else:
-        return None
-    if api_token.startswith("User "):
-        api_token = api_token.replace("User ", "", 1)
-    user = await db.fetchrow("SELECT user_id, state FROM users WHERE user_id = $1 AND api_token = $2", user_id, str(api_token))
-    if not user:
-        return
-    if user["state"] in (enums.UserState.api_ban, enums.UserState.global_ban):
-        raise HTTPException(status_code=400, detail="This user has been banned from using the Fates List API")
-    return user["user_id"]
-
 async def server_auth_check(request: Request, guild_id: int, server_auth: str = Security(server_auth_header)):
     if server_auth.startswith("Server "):
         server_auth = server_auth.replace("Server ", "")
@@ -66,13 +47,6 @@ async def bot_auth_check(request: Request, bot_id: int, bot_auth: str = Security
     id = await _bot_auth(request, bot_id, bot_auth)
     if id is None:
         raise HTTPException(status_code=401, detail="Invalid Bot Token")
-
-async def user_auth_check(request: Request, user_id: int, user_auth: str = Security(user_auth_header)):
-    if user_auth.startswith("User "):
-        user_auth = user_auth.replace("User ", "", 1)
-    id = await _user_auth(request, user_id, user_auth)
-    if id is None:
-        raise HTTPException(status_code=401, detail=f"Invalid User Token")
 
 # All bot_server auth endpoints must use target_id and probably uses target_type
 async def bot_server_auth_check(request: Request, target_id: int, target_type: enums.ReviewType, bot_auth: str = Security(bot_auth_header), server_auth: str = Security(server_auth_header)):

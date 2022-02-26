@@ -9,18 +9,6 @@ router = APIRouter(
     tags = [f"API v{API_VERSION} - Custom Resources"],
 )
 
-@router.get(
-    "/{target_id}", 
-    response_model = List[dict],
-    operation_id="get_resources"
-)
-async def get_resources(request:  Request, target_id: int, target_type: enums.ReviewType, filter: Optional[str] = None, lang: str = "default"):
-    db = request.app.worker_session.postgres
-    resources = await db.fetch("SELECT id, resource_title, resource_link, resource_description FROM resources WHERE target_id = $1 AND target_type = $2", target_id, target_type.value)
-    if not resources:
-        return abort(404)
-    return resources
-
 @router.post(
     "/{target_id}",
     dependencies=[

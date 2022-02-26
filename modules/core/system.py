@@ -17,8 +17,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse, HTMLResponse
 from fastapi.routing import APIRoute
 from lynxfall.core.classes import Singleton
-from lynxfall.oauth.models import OauthConfig
-from lynxfall.oauth.providers.discord import DiscordOauth
 from lynxfall.utils.fastapi import api_versioner, include_routers
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -123,16 +121,6 @@ class FatesListRequestHandler(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
        
         return response if response else PlainTextResponse("Something went wrong!")
         
-class FatesWorkerOauth(Singleton):  # pylint: disable=too-few-public-methods
-    """Stores all oauths (currently only discord)"""
-    
-    def __init__(
-        self,
-        *,
-        discord_oauth: DiscordOauth
-    ):
-        self.discord = discord_oauth
-
 class FatesWorkerSession(Singleton):  # pylint: disable=too-many-instance-attributes
     """Stores a worker session"""
 
@@ -143,16 +131,12 @@ class FatesWorkerSession(Singleton):  # pylint: disable=too-many-instance-attrib
         session_id: str,
         postgres: asyncpg.Pool,
         redis: aioredis.Connection,
-        oauth: FatesWorkerOauth,
         worker_count: int
     ):
         self.id = session_id
         self.postgres = postgres
         self.redis = redis
-        self.oauth = oauth
         self.worker_count = worker_count
-        self.tags = {}
-        self.tags_fixed = []
         self.app = app
 
         # Record basic stats and initially set workers to None
@@ -213,15 +197,6 @@ async def init_fates_worker(app, session_id, workers):
         session_id=session_id,
         postgres=dbs["postgres"],
         redis=dbs["redis"],
-        oauth=FatesWorkerOauth(
-            discord_oauth=DiscordOauth(
-                oc=OauthConfig(
-                    client_id=discord_client_id,
-                    client_secret=discord_client_secret,
-                    redirect_uri=discord_redirect_uri
-                ),
-            )
-        ),
         worker_count=workers
     )
    

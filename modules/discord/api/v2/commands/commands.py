@@ -9,30 +9,6 @@ router = APIRouter(
     tags = [f"API v{API_VERSION} - Commands"],
 )
 
-@router.get(
-    "/{bot_id}/commands", 
-    response_model = BotCommandsGet,
-    operation_id="get_commands"
-)
-async def get_commands(
-    request:  Request, 
-    bot_id: int, 
-    filter: Optional[str] = None, 
-    lang: str = "default"
-):
-    """
-    Gets the command list of a bot
-
-    **The `get_bot_commands` function used by this API is internally
-    called by the Get Bot Page API and as such this API endpoint itself is
-    not used by Sunbeam for those curious**
-    """
-    db = request.app.state.worker_session.postgres
-    cmd = await get_bot_commands(db, bot_id, lang, filter)
-    if cmd == {}:
-        return abort(404)
-    return cmd
-
 @router.post(
     "/{bot_id}/commands",
     dependencies=[
