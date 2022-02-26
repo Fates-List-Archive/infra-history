@@ -26,10 +26,12 @@ from tables import Bot, Reviews, BotTag, User, Vanity, BotListTags, ServerTags, 
 import orjson
 import aioredis
 from modules.core import redis_ipc_new
-from config import bot_logs
 from discord import Embed
 from piccolo.apps.user.tables import BaseUser
 from lynxfall.utils.string import get_token
+
+with open("config/data/discord.json") as json:
+    bot_logs = orjson.loads(json.read())["channels"]["bot_logs"]
 
 admin = create_admin(
     [LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews, UserBotLogs], 
