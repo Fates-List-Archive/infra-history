@@ -39,12 +39,10 @@ def _fappgen(session_id, workers, static_assets):
     from fastapi import FastAPI
     from fastapi.responses import ORJSONResponse
 
-    from modules.discord.api.v2.base import responses
     from modules.core.system import init_fates_worker
 
     _app = FastAPI(
         title="Fates List",
-        responses=responses,
         version="W1",
         terms_of_service="https://fateslist.xyz/frostpaw/tos",
         license_info={

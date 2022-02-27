@@ -17,7 +17,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse, HTMLResponse
 from fastapi.routing import APIRoute
 from lynxfall.core.classes import Singleton
-from lynxfall.utils.fastapi import api_versioner, include_routers
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from loguru import logger
@@ -101,7 +100,8 @@ async def init_fates_worker(app, session_id, workers):
     )
                
     # Include all routers
-    include_routers(app, "Discord", "modules/discord")
+    from modules.infra.widgets.widgets import router
+    app.include_router(router)
 
     # Fix operation ids
     fix_operation_ids(app)

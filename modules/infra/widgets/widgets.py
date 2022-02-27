@@ -1,4 +1,3 @@
-from modules.core import *
 from lynxfall.utils.string import human_format
 from lynxfall.utils.fastapi import api_error, abort
 from fastapi.responses import PlainTextResponse, StreamingResponse
@@ -8,8 +7,15 @@ from starlette.concurrency import run_in_threadpool
 from math import floor
 from jinja2 import Environment, BaseLoader, select_autoescape
 from fastapi import APIRouter, Request, Response, BackgroundTasks
-
-from ..base import API_VERSION
+from typing import Optional
+import orjson
+import aiohttp
+from loguru import logger 
+import uuid
+from modules.core.ipc import redis_ipc_new
+from modules.models import enums
+import os
+from fastapi.responses import HTMLResponse
 
 router = APIRouter(
     include_in_schema = True,
@@ -62,6 +68,50 @@ def is_color_like(c):
         return True
     except ValueError: # The color code was not found
         return False
+
+# User fetcher
+async def _user_fetch(
+    user_id: str,
+    *, 
+    worker_session
+) -> Optional[dict]:
+    """
+    Internal function to fetch a user. 
+    If worker_session is not explicitly specified, this will error
+    """
+    db = worker_session.postgres
+    redis = worker_session.redis
+    
+    if len(user_id) not in (17, 18, 19, 20): # Snowflake can be 17 - 20
+        logger.debug(f"Ignoring blatantly wrong User ID: {user_id}")
+        return None # This is impossible to actually exist on the discord API or on our cache
+
+    # Query redis cache for some important info
+    cache = await redis.get("user-cache:"+user_id) # This is bot in cache
+    if cache: # We got a match
+        cache = orjson.loads(cache)
+        return cache
+
+    logger.debug(f"Making API call to get user {user_id}")
+    cmd_id = uuid.uuid4()
+    data = await redis_ipc_new(redis, "GETCH", args=[str(user_id)], worker_session=worker_session)
+    if data is None:
+        return None
+    else:
+        data = orjson.loads(data)
+
+    if data["bot"]: # Update cached username in postgres if valid username in asyncio background task
+        try:
+            await db.execute("UPDATE bots SET username_cached = $2 WHERE bot_id = $1", int(user_id), data["username"])
+        except Exception:
+            pass # Sometimes this cannot be done
+       
+    # Add/Update redis
+    await redis.set(
+        "user-cache:"+user_id,
+        value = orjson.dumps(cache),
+        ex=60*60*8
+    ) 
 
 @router.get("/{target_id}", operation_id="get_widget")
 async def get_widget(
@@ -145,7 +195,7 @@ async def get_widget(
     
     #bt.add_task(add_ws_event, redis, target_id, {"m": {"e": event}, "ctx": {"user": request.session.get('user_id'), "widget": True}}, type=_type)
     if target_type == enums.WidgetType.bot:
-        data = {"bot": bot, "user": await get_bot(target_id, worker_session = request.app.state.worker_session)}
+        data = {"bot": bot, "user": await _user_fetch(str(target_id), worker_session = request.app.state.worker_session)}
     else:
         data = {"bot": bot, "user": await db.fetchrow("SELECT name_cached AS username, avatar_cached AS avatar FROM servers WHERE guild_id = $1", target_id)}
     bot_obj = data["user"]
