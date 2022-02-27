@@ -127,8 +127,6 @@ class Reviews(Table, tablename="reviews"):
     user_id = ForeignKey(references=User)
     star_rating = Float(help_text = "Amount of stars a bot has")
     review_text = Text(null=False)
-    review_upvotes = Array(base_column = BigInt(), default = [])
-    review_downvotes = Array(base_column = BigInt(), default=[])
     flagged = Boolean(default=False)
     epoch = Array(base_column = BigInt(), default=[])
     parent_id =  ForeignKey(references="Reviews")
@@ -136,3 +134,7 @@ class Reviews(Table, tablename="reviews"):
     #@classmethod
     #def get_readable(cls):
     #    return Readable(template="%s", columns=[cls.name])
+class ReviewVotes(Table, tablename="review_votes"):
+    id = ForeignKey(references="Reviews")
+    user_id = ForeignKey(references=User)
+    upvote = Boolean(help_text="Whether the user upvoted or downvoted")

@@ -25,7 +25,7 @@ from piccolo_api.fastapi.endpoints import FastAPIWrapper
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Mount
 from starlette.types import Scope, Message
-from tables import Bot, Reviews, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, LeaveOfAbsence, UserBotLogs
+from tables import Bot, Reviews, ReviewVotes, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, LeaveOfAbsence, UserBotLogs
 import orjson
 import aioredis
 from modules.core import redis_ipc_new
@@ -44,7 +44,7 @@ with open("config/data/discord.json") as json:
     bot_logs = orjson.loads(json.read())["channels"]["bot_logs"]
 
 admin = create_admin(
-    [LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews, UserBotLogs], 
+    [LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews, ReviewVotes, UserBotLogs], 
     allowed_hosts = ["lynx.fateslist.xyz"], 
     production = True,
 )
@@ -109,7 +109,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         # Perm check
         if request.url.path.startswith("/api"):
             if request.url.path == "/api/tables/" and perm < 4:
-                return ORJSONResponse(["reviews", "bot_packs", "vanity", "leave_of_absence"])
+                return ORJSONResponse(["reviews", "review_votes", "bot_packs", "vanity", "leave_of_absence"])
             elif request.url.path == "/api/tables/users/ids/" and request.method == "GET":
                 pass
             elif request.url.path in ("/api/forms/", "/api/user/", "/api/openapi.json") or request.url.path.startswith("/api/docs"):
@@ -137,7 +137,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                     if user_id != request.scope["sunbeam_user"]["user"]["id"]:
                         return ORJSONResponse({"error": "You do not have permission to update this leave of absence"}, status_code=403)
 
-                elif not request.url.path.startswith(("/api/tables/reviews", "/api/tables/bot_packs", "/api/tables/leave_of_absence")):
+                elif not request.url.path.startswith(("/api/tables/reviews", "/api/tables/review_votes", "/api/tables/bot_packs", "/api/tables/leave_of_absence")):
                     return ORJSONResponse({"error": "You do not have permission to access this page"}, status_code=403)
 
         key = "rl:%s" % request.scope["sunbeam_user"]["user"]["id"]
