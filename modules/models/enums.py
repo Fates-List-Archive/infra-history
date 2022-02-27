@@ -10,6 +10,11 @@ class VoteReminderMode(IntEnum):
     disable = 0, "Disable vote reminders"
     enable = 1, "Enable vote reminders"
 
+class WidgetType(Enum):
+    _init_ = "value __doc__"
+    bot = "bot", ""
+    server = "server", ""
+
 class WidgetFormat(Enum):
     _init_ = "value __doc__"
     json = "json", "JSON Widget"

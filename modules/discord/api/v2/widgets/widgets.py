@@ -69,7 +69,7 @@ async def get_widget(
     response: Response,
     bt: BackgroundTasks, 
     target_id: int, 
-    target_type: enums.ReviewType, 
+    target_type: enums.WidgetType, 
     format: enums.WidgetFormat,
     bgcolor: str  = 'black', 
     textcolor: str ='white', 
@@ -126,7 +126,7 @@ async def get_widget(
     db = worker_session.postgres
     redis = worker_session.redis
    
-    if target_type == enums.ReviewType.bot:
+    if target_type == enums.WidgetType.bot:
         col = "bot_id"
         table = "bots"
         event = enums.APIEvents.bot_view
@@ -143,8 +143,8 @@ async def get_widget(
     
     bot = dict(bot)
     
-    bt.add_task(add_ws_event, redis, target_id, {"m": {"e": event}, "ctx": {"user": request.session.get('user_id'), "widget": True}}, type=_type)
-    if target_type == enums.ReviewType.bot:
+    #bt.add_task(add_ws_event, redis, target_id, {"m": {"e": event}, "ctx": {"user": request.session.get('user_id'), "widget": True}}, type=_type)
+    if target_type == enums.WidgetType.bot:
         data = {"bot": bot, "user": await get_bot(target_id, worker_session = request.app.state.worker_session)}
     else:
         data = {"bot": bot, "user": await db.fetchrow("SELECT name_cached AS username, avatar_cached AS avatar FROM servers WHERE guild_id = $1", target_id)}

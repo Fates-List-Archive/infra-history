@@ -45,18 +45,7 @@ def _fappgen(session_id, workers, static_assets):
     _app = FastAPI(
         title="Fates List",
         responses=responses,
-        description=f"""
-            Current API: v3
-            Default API: v3
-            API URL: https://api.fateslist.xyz
-            API Docs: https://docs.fateslist.xyz
-            Enum Reference: https://docs.fateslist.xyz/structures/enums.autogen
-        
-            **This is the legacy API v2 docs**
-        
-            Note: Many API endpoints have moved to API v3. Check there if you cant find something
-        """,
-        version="0.5.0",
+        version="W1",
         terms_of_service="https://fateslist.xyz/frostpaw/tos",
         license_info={
             "name": "MIT",
@@ -68,8 +57,8 @@ def _fappgen(session_id, workers, static_assets):
         openapi_url=f"/docs/openapi",
         servers=[
             {
-                "url": "https://legacy.fateslist.xyz",
-                "description": "Fates List Legacy API"
+                "url": "https://widgets.fateslist.xyz",
+                "description": "Fates List Widgets API"
             }, 
         ]
     )
