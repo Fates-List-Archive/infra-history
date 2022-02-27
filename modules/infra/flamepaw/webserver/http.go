@@ -15,6 +15,7 @@ import (
 	"flamepaw/types"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -57,6 +58,15 @@ func document(method, route, name, docs string, reqBody interface{}, resBody int
 	}
 	Docs += "**Request Body:**\n```json\n" + string(ibody) + "\n```\n\n"
 	Docs += "**Response Body:**\n```json\n" + string(body) + "\n```\n\n"
+}
+
+// Introduce random delay
+const min = 1
+const max = 60
+
+func randomDelay() {
+	rand.Seed(time.Now().UnixNano())
+	time.Sleep(time.Duration(rand.Intn(max-min+1)+min) * time.Millisecond)
 }
 
 // API return
@@ -621,6 +631,11 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			"bot_id":  vote.BotID,
 			"test":    vote.Test,
 		}).Info("User vote")
+
+		// Apply random delay so multiple requests hopefully don't take the same amount of time and as such dont all succeed
+		randomDelay()
+		randomDelay()
+		randomDelay()
 
 		ok, res := VoteBot(db, redis, vote.UserID, vote.BotID, vote.Test)
 		if ok {
