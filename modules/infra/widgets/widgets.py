@@ -1,12 +1,10 @@
-from lynxfall.utils.string import human_format
-from lynxfall.utils.fastapi import api_error, abort
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse, ORJSONResponse
 from PIL import Image, ImageDraw, ImageFont
 import io, textwrap, aiofiles
 from starlette.concurrency import run_in_threadpool
 from math import floor
 from jinja2 import Environment, BaseLoader, select_autoescape
-from fastapi import APIRouter, Request, Response, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Request, Response, BackgroundTasks
 from typing import Optional
 import orjson
 import aiohttp
@@ -22,6 +20,20 @@ router = APIRouter(
 )
 
 from colour import Color
+
+def human_format(num: int) -> str:
+    if abs(num) < 1000:
+        return str(abs(num))
+    formatter = '{:.3g}'
+    num = float(formatter.format(num))
+    magnitude = 0
+    while abs(num) >= 1000:
+        magnitude += 1
+        if magnitude == 31:
+            num /= 10
+        num /= 1000.0
+    return '{} {}'.format('{:f}'.format(num).rstrip('0').rstrip('.'), ['', 'K', 'M', 'B', 'T', "Quad.", "Quint.", "Sext.", "Sept.", "Oct.", "Non.", "Dec.", "Tre.", "Quat.", "quindec.", "Sexdec.", "Octodec.", "Novemdec.", "Vigint.", "Duovig.", "Trevig.", "Quattuorvig.", "Quinvig.", "Sexvig.", "Septenvig.", "Octovig.", "Nonvig.", "Trigin.", "Untrig.", "Duotrig.", "Googol."][magnitude])
+
 
 # Convert hexcode to rgb for pillow
 def hex_to_rgb(value):
@@ -154,7 +166,7 @@ async def get_widget(
         else:
             # Converting 'deep sky blue' to 'deepskyblue'
             if not is_color_like(str(bgcolor)):
-                return api_error("Invalid bgcolor")
+                return ORJSONResponse({"detail": "Invalid bgcolor"})
             if isinstance(bgcolor, str):
                 bgcolor=bgcolor.split('.')[0]
                 bgcolor = floor(int(bgcolor)) if bgcolor.isdigit() or bgcolor.isdecimal() else bgcolor
@@ -164,7 +176,7 @@ async def get_widget(
             textcolor = hex_to_rgb(textcolor)
         else:
             if not is_color_like(str(textcolor)):
-                return api_error("Invalid textcolor")
+                return ORJSONResponse({"detail": "Invalid textcolor"})
             if isinstance(textcolor, str):
                 textcolor=textcolor.split('.')[0]
                 textcolor = floor(int(textcolor)) if textcolor.isdigit() or textcolor.isdecimal() else textcolor
@@ -189,7 +201,7 @@ async def get_widget(
 
     bot = await db.fetchrow(f"SELECT guild_count, votes, description FROM {table} WHERE {col} = $1", target_id)
     if not bot:
-        return abort(404)
+        raise HTTPException(status_code=404)
     
     bot = dict(bot)
     
@@ -201,7 +213,7 @@ async def get_widget(
     bot_obj = data["user"]
     
     if not bot_obj:
-        return abort(404)
+        raise HTTPException(status_code=404)
 
     if format == enums.WidgetFormat.json:
         return data

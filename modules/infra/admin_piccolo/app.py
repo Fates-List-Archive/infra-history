@@ -31,7 +31,14 @@ import aioredis
 from modules.core import redis_ipc_new
 from discord import Embed
 from piccolo.apps.user.tables import BaseUser
-from lynxfall.utils.string import get_token
+import secrets
+import string
+
+def get_token(length: int) -> str:
+    secure_str = ""
+    for i in range(0, length):
+        secure_str += secrets.choice(string.ascii_letters + string.digits)
+    return secure_str
 
 with open("config/data/discord.json") as json:
     bot_logs = orjson.loads(json.read())["channels"]["bot_logs"]

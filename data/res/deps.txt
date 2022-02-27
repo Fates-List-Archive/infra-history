@@ -8,7 +8,6 @@ aio-pika
 gunicorn 
 uvicorn[standard]==0.17.4
 orjson  
-lxml 
 sentry_sdk
 isort
 itsdangerous
@@ -30,7 +29,6 @@ async_generator>=1.10,<2.0.0
 
 # These links may change in the future, are needed
 git+https://github.com/DisnakeDev/disnake
-git+https://github.com/Fates-List/lynxfall
 git+https://github.com/aio-libs/aioredis-py
 git+https://github.com/Python-Markdown/markdown.git
 git+https://github.com/aaugustin/websockets

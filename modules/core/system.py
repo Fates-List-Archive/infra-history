@@ -16,7 +16,6 @@ import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse, HTMLResponse
 from fastapi.routing import APIRoute
-from lynxfall.core.classes import Singleton
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from loguru import logger
@@ -45,7 +44,7 @@ class FatesListRequestHandler(BaseHTTPMiddleware):
            
         return response if response else PlainTextResponse("Something went wrong!")
         
-class FatesWorkerSession(Singleton):  # pylint: disable=too-many-instance-attributes
+class FatesWorkerSession:  # pylint: disable=too-many-instance-attributes
     """Stores a worker session"""
 
     def __init__(
