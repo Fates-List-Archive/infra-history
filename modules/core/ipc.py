@@ -1,7 +1,6 @@
 import asyncio
 import time
 import uuid
-import warnings
 from typing import Sequence
 import orjson
 from loguru import logger

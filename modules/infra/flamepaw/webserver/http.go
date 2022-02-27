@@ -221,20 +221,20 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 
 	r.Use(ginlogrus.Logger(logger), gin.Recovery())
 
-	document("PPROF", "/api/dragon/pprof", "pprof", "Golang pprof (debugging, may not always exist!)", nil, nil)
-	pprof.Register(r, "api/dragon/pprof")
+	document("PPROF", "/pprof", "pprof", "Golang pprof (debugging, may not always exist!)", nil, nil)
+	pprof.Register(r, "flamepaw/pprof")
 
 	r.NoRoute(func(c *gin.Context) {
 		apiReturn(c, 404, false, "Not Found", nil)
 	})
-	router := r.Group("/api/dragon")
+	router := r.Group("/flamepaw")
 
-	document("GET", "/api/dragon/ping", "ping_server", "Ping the server", nil, types.APIResponse{})
+	document("GET", "/ping", "ping_server", "Ping the server", nil, types.APIResponse{})
 	router.GET("/ping", func(c *gin.Context) {
 		apiReturn(c, 200, true, nil, nil)
 	})
 
-	document("GET", "/api/dragon/__stats", "get_stats", "Get stats of websocket server", nil, nil)
+	document("GET", "/__stats", "get_stats", "Get stats of websocket server", nil, nil)
 	router.GET("/__stats", func(c *gin.Context) {
 		stats := "Websocket server stats:\n\n"
 		i := 0
@@ -255,7 +255,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		c.String(200, stats)
 	})
 
-	document("POST", "/api/dragon/github", "github_webhook", "Post to github webhook. Needs authorization", types.GithubWebhook{}, types.APIResponse{})
+	document("POST", "/github", "github_webhook", "Post to github webhook. Needs authorization", types.GithubWebhook{}, types.APIResponse{})
 	router.POST("/github", func(c *gin.Context) {
 		var bodyBytes []byte
 		if c.Request.Body != nil {
@@ -558,7 +558,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		apiReturn(c, 200, true, nil, nil)
 	})
 
-	document("OPTIONS", "/api/dragon/bots/:id/votes", "vote_bot", "Creates a vote for a bot. Needs authorization. This is the CORS code", nil, nil)
+	document("OPTIONS", "/bots/:id/votes", "vote_bot", "Creates a vote for a bot. Needs authorization. This is the CORS code", nil, nil)
 	router.OPTIONS("/bots/:id/votes", func(c *gin.Context) {
 		var origin string = c.GetHeader("Origin")
 		var ref string = c.GetHeader("Referer")
@@ -574,7 +574,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		c.Header("Access-Control-Allow-Credentials", "true")
 	})
 
-	document("PATCH", "/api/dragon/bots/:id/votes", "vote_bot", "Creates a vote for a bot. Needs authorization. This is the actual route", types.UserVote{}, types.APIResponse{})
+	document("PATCH", "/bots/:id/votes", "vote_bot", "Creates a vote for a bot. Needs authorization. This is the actual route", types.UserVote{}, types.APIResponse{})
 	router.PATCH("/bots/:id/votes", func(c *gin.Context) {
 		var origin string = c.GetHeader("Origin")
 		if origin == "" {
@@ -645,7 +645,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		}
 	})
 
-	document("WS", "/api/dragon/ws", "websocket", "The websocket gateway for Fates List", nil, nil)
+	document("WS", "/ws", "websocket", "The websocket gateway for Fates List", nil, nil)
 	router.GET("/ws", func(c *gin.Context) {
 		serveWs(hub, c.Writer, c.Request)
 	})

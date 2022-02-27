@@ -1,18 +1,18 @@
 from modules.core import *
 from lynxfall.utils.string import human_format
+from lynxfall.utils.fastapi import api_error, abort
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from PIL import Image, ImageDraw, ImageFont
 import io, textwrap, aiofiles
 from starlette.concurrency import run_in_threadpool
 from math import floor
 from jinja2 import Environment, BaseLoader, select_autoescape
+from fastapi import APIRouter, Request, Response, BackgroundTasks
 
 from ..base import API_VERSION
 
 router = APIRouter(
-    prefix = f"/widgets",
     include_in_schema = True,
-    tags = [f"API v{API_VERSION} - Widgets"],
 )
 
 from colour import Color

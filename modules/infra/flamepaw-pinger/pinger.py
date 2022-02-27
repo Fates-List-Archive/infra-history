@@ -9,7 +9,7 @@ reload_cmds = [
 
 while True:
     print("Flamepaw test begin")
-    res = requests.get("https://api.fateslist.xyz/api/dragon/ping")
+    res = requests.get("https://api.fateslist.xyz/flamepaw/ping")
     if res.status_code == 408:
         print("Flamepaw is down")
         for cmd in reload_cmds:

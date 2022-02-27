@@ -134,7 +134,7 @@ CREATE TABLE bot_packs (
 );
 
 CREATE TABLE bot_commands (
-   id uuid primary key DEFAULT uuid_generate_v4(),
+   id uuid DEFAULT uuid_generate_v4(),
    bot_id bigint,
    cmd_type integer not null, -- 0 = no, 1 = guild, 2 = global
    cmd_groups text[] not null default '{Default}',
@@ -146,7 +146,8 @@ CREATE TABLE bot_commands (
    premium_only boolean default false, -- premium status
    notes text[], -- notes on said command
    doc_link text, -- link to documentation of command
-   CONSTRAINT bots_fk FOREIGN KEY (bot_id) REFERENCES bots(bot_id) ON DELETE CASCADE ON UPDATE CASCADE
+   CONSTRAINT bots_fk FOREIGN KEY (bot_id) REFERENCES bots(bot_id) ON DELETE CASCADE ON UPDATE CASCADE,
+   PRIMARY KEY (id, cmd_name)
 );
 
 CREATE TABLE bot_stats_votes_pm (

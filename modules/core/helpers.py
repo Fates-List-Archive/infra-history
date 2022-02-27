@@ -8,7 +8,7 @@ import aioredis
 
 from .auth import *
 from .cache import *
-from .imports import *
+from fastapi import Request
 
 def worker_session(request: Request):
     return request.app.state.worker_session
