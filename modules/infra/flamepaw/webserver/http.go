@@ -41,7 +41,7 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 var logger = log.New()
 
-var Docs string = "# Flamepaw\nFlamepaw is internally used by the bot to provide a RESTful API for tasks requiring high concurrency.\n\n"
+var Docs string = "# Flamepaw\nFlamepaw is internally used by the bot to provide a RESTful API for tasks requiring high concurrency. The base url is ``https://api.fateslist.xyz/flamepaw``\n\n"
 
 // Given name and docs,
 func document(method, route, name, docs string, reqBody interface{}, resBody interface{}) {
