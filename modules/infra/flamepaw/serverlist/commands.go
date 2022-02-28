@@ -666,7 +666,7 @@ func CmdInit() map[string]types.SlashCommand {
 						voteMsg = "You have successfully voted for this server (note: this server does not support vote rewards if you were expecting a reward)"
 					} else {
 						voteMsg = "You have successfully voted for this server"
-						common.WebhookReq(context.Context, context.Postgres, eventId, webhookURL, secret, voteStr, 0)
+						common.WebhookReq(context.Context, context.Redis, context.Postgres, eventId, webhookURL, secret, voteStr, userId, context.Interaction.GuildID, 0)
 						log.Debug("Got webhook type of " + strconv.Itoa(int(webhookType)))
 					}
 				}()

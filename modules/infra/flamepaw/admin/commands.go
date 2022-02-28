@@ -427,6 +427,22 @@ func CmdInit() map[string]types.SlashCommand {
 		},
 	}
 
+	commands["RESETBREQKEY"] = AdminOp{
+		InternalName: "resetbreqkey",
+		Cooldown:     types.CooldownNone,
+		Description:  "Resets all bot-req keys",
+		MinimumPerm:  5,
+		SlashRaw:     true,
+		Event:        types.EventNone,
+		Server:       common.StaffServer,
+		Handler: func(context types.SlashContext) string {
+			keys := context.Redis.Keys(context.Context, "block-req:*").Val()
+			slashbot.SendIResponse(common.DiscordMain, context.Interaction, "Removed "+strconv.Itoa(len(keys))+" keys", false)
+			context.Redis.Del(context.Context, keys...)
+			return "Done"
+		},
+	}
+
 	commands["PANICCHECK"] = AdminOp{
 		InternalName: "paniccheck",
 		Cooldown:     types.CooldownNone,

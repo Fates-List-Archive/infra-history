@@ -533,12 +533,15 @@ func MessageHandler(
 		}
 
 		voteCheck := rdb.Exists(ctx, "vote_lock:"+i.Member.User.ID).Val()
-		if voteCheck != 0 {
+		if voteCheck == 0 {
 			slashbot.SendIResponseEphemeral(common.DiscordMain, i, "You have not yet voted for a bot on Fates List in the last 8 hours!", false)
 			return
 		}
 
 		rdb.Del(ctx, "vote_lock:"+i.Member.User.ID)
+		keys := rdb.Keys(ctx, "block-req:"+i.Member.User.ID+"*").Val()
+		rdb.Del(ctx, keys...)
+		slashbot.SendIResponseEphemeral(common.DiscordMain, i, "DEBUG: Removed "+strconv.Itoa(len(keys))+" block request keys", false)
 		rdb.Set(ctx, "redeem:"+i.Member.User.ID, "1", time.Hour*24)
 		slashbot.SendIResponseEphemeral(common.DiscordMain, i, "You have redeemed your daily free upvote successfully", false)
 	} else if data.CustomID == "get-old-roles" {

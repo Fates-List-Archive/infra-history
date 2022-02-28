@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-redis/redis/v8"
+
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
@@ -53,7 +55,17 @@ func GetWebhook(ctx context.Context, table_name string, id string, db *pgxpool.P
 	return true, webhookType.Int, secret, webhookURL.String
 }
 
-func WebhookReq(ctx context.Context, db *pgxpool.Pool, eventId string, webhookURL string, secret string, data string, tries int) bool {
+func WebhookReq(ctx context.Context, redis *redis.Client, db *pgxpool.Pool, eventId string, webhookURL string, secret string, data string, userId string, botId string, tries int) bool {
+	// Ensure we aren't sending multiple votes
+	// Webhooks are only sent on votes, so we
+	// can just add locking here
+	check := redis.Exists(ctx, "block-req:"+userId+":"+botId).Val()
+
+	if check > 0 {
+		log.Error("Request to " + userId + " locked with bot id of " + botId)
+		return false
+	}
+
 	if tries > 5 {
 		_, err := db.Exec(ctx, "UPDATE bot_api_event SET posted = $1 WHERE id = $2", types.WebhookPostError, eventId)
 		if err != nil {
@@ -71,7 +83,7 @@ func WebhookReq(ctx context.Context, db *pgxpool.Pool, eventId string, webhookUR
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest("POST", webhookURL, body)
 	if err != nil {
-		return WebhookReq(ctx, db, eventId, webhookURL, secret, data, tries+1)
+		return WebhookReq(ctx, redis, db, eventId, webhookURL, secret, data, userId, botId, tries+1)
 	}
 	req.Header.Set("Authorization", secret)
 	req.Header.Set("Content-Type", "application/json")
@@ -79,19 +91,20 @@ func WebhookReq(ctx context.Context, db *pgxpool.Pool, eventId string, webhookUR
 	req.Header.Set("X-Request-Sig", exportedMAC)
 	errHandle(err)
 	if err != nil {
-		return WebhookReq(ctx, db, eventId, webhookURL, secret, data, tries+1)
+		return WebhookReq(ctx, redis, db, eventId, webhookURL, secret, data, userId, botId, tries+1)
 	}
 	resp, err := client.Do(req)
 	errHandle(err)
 	if err != nil {
-		return WebhookReq(ctx, db, eventId, webhookURL, secret, data, tries+1)
+		return WebhookReq(ctx, redis, db, eventId, webhookURL, secret, data, userId, botId, tries+1)
 	}
 	log.WithFields(log.Fields{
 		"status_code": resp.StatusCode,
 	}).Debug("Got response")
 	if resp.StatusCode >= 400 && resp.StatusCode != 401 {
-		return WebhookReq(ctx, db, eventId, webhookURL, secret, data, tries+1)
+		return WebhookReq(ctx, redis, db, eventId, webhookURL, secret, data, userId, botId, tries+1)
 	}
+	redis.Set(ctx, "block-req:"+userId+":"+botId, "0", time.Hour*4)
 	_, err = db.Exec(ctx, "UPDATE bot_api_event SET posted = $1 WHERE id = $2", types.WebhookPostSuccess, eventId)
 	errHandle(err)
 	return true
