@@ -8,6 +8,7 @@ import (
 	"flamepaw/types"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -15,6 +16,10 @@ import (
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	mutex sync.Mutex
 )
 
 func GetWebhook(ctx context.Context, table_name string, id string, db *pgxpool.Pool) (ok bool, w_type int32, w_secret string, w_url string) {
@@ -55,59 +60,99 @@ func GetWebhook(ctx context.Context, table_name string, id string, db *pgxpool.P
 	return true, webhookType.Int, secret, webhookURL.String
 }
 
-func WebhookReq(ctx context.Context, redis *redis.Client, db *pgxpool.Pool, eventId string, webhookURL string, secret string, data string, userId string, botId string, tries int) bool {
-	// Ensure we aren't sending multiple votes
-	// Webhooks are only sent on votes, so we
-	// can just add locking here
-	check := redis.Exists(ctx, "block-req:"+userId+":"+botId).Val()
+// Contains a webhook request
+type request struct {
+	eventId    string
+	webhookURL string
+	secret     string
+	data       string
+	userId     string
+	botId      string
+	tries      int
+}
+
+func channelWebhookReq(
+	ctx context.Context,
+	db *pgxpool.Pool,
+	redis *redis.Client,
+	data request,
+) bool {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	check := redis.Exists(ctx, "block-req:"+data.userId+":"+data.botId).Val()
 
 	if check > 0 {
-		log.Error("Request to " + userId + " locked with bot id of " + botId)
+		log.Error("Request to " + data.userId + " locked with bot id of " + data.botId)
 		return false
 	}
 
-	if tries > 5 {
-		_, err := db.Exec(ctx, "UPDATE bot_api_event SET posted = $1 WHERE id = $2", types.WebhookPostError, eventId)
+	if data.tries > 5 {
+		_, err := db.Exec(ctx, "UPDATE bot_api_event SET posted = $1 WHERE id = $2", types.WebhookPostError, data.eventId)
 		if err != nil {
 			log.Error(err)
 			return false
 		}
 		return false
 	}
+
+	data.tries++
+
 	// Create HMAC request signature
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(data))
+	mac := hmac.New(sha256.New, []byte(data.secret))
+	mac.Write([]byte(data.data))
 	exportedMAC := hex.EncodeToString(mac.Sum(nil))
 
-	body := strings.NewReader(data)
+	body := strings.NewReader(data.data)
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("POST", webhookURL, body)
+	req, err := http.NewRequest("POST", data.webhookURL, body)
+
 	if err != nil {
-		return WebhookReq(ctx, redis, db, eventId, webhookURL, secret, data, userId, botId, tries+1)
+		log.Error(err)
+		return channelWebhookReq(ctx, db, redis, data)
 	}
-	req.Header.Set("Authorization", secret)
+	req.Header.Set("Authorization", data.secret)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "Dragon/0.1a0")
 	req.Header.Set("X-Request-Sig", exportedMAC)
-	errHandle(err)
+
 	if err != nil {
-		return WebhookReq(ctx, redis, db, eventId, webhookURL, secret, data, userId, botId, tries+1)
+		log.Error(err)
+		return channelWebhookReq(ctx, db, redis, data)
 	}
+
 	resp, err := client.Do(req)
-	errHandle(err)
 	if err != nil {
-		return WebhookReq(ctx, redis, db, eventId, webhookURL, secret, data, userId, botId, tries+1)
+		log.Error(err)
+		return channelWebhookReq(ctx, db, redis, data)
 	}
+
 	log.WithFields(log.Fields{
 		"status_code": resp.StatusCode,
 	}).Debug("Got response")
+
 	if resp.StatusCode >= 400 && resp.StatusCode != 401 {
-		return WebhookReq(ctx, redis, db, eventId, webhookURL, secret, data, userId, botId, tries+1)
+		log.Error(err)
+		return channelWebhookReq(ctx, db, redis, data)
 	}
-	redis.Set(ctx, "block-req:"+userId+":"+botId, "0", time.Hour*4)
-	_, err = db.Exec(ctx, "UPDATE bot_api_event SET posted = $1 WHERE id = $2", types.WebhookPostSuccess, eventId)
-	errHandle(err)
+
+	redis.Set(ctx, "block-req:"+data.userId+":"+data.botId, "0", time.Hour*4)
+	_, err = db.Exec(ctx, "UPDATE bot_api_event SET posted = $1 WHERE id = $2", types.WebhookPostSuccess, data.eventId)
+	log.Error(err)
 	return true
+}
+
+func WebhookReq(ctx context.Context, redis *redis.Client, db *pgxpool.Pool, eventId string, webhookURL string, secret string, data string, userId string, botId string, tries int) bool {
+	reqData := request{
+		eventId:    eventId,
+		webhookURL: webhookURL,
+		secret:     secret,
+		data:       data,
+		userId:     userId,
+		botId:      botId,
+		tries:      tries,
+	}
+	return channelWebhookReq(ctx, db, redis, reqData)
 }
 
 func errHandle(err error) {

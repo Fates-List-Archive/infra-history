@@ -18,6 +18,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	docencoder "encoding/json"
@@ -37,11 +38,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
-
-var logger = log.New()
-
-var Docs string = "# Flamepaw\nFlamepaw is internally used by the bot to provide a RESTful API for tasks requiring high concurrency. The base url is ``https://api.fateslist.xyz/flamepaw``\n\n"
+var (
+	json          = jsoniter.ConfigCompatibleWithStandardLibrary
+	logger        = log.New()
+	Docs   string = "# Flamepaw\nFlamepaw is internally used by the bot to provide a RESTful API for tasks requiring high concurrency. The base url is ``https://api.fateslist.xyz/flamepaw``\n\n"
+	mutex  sync.Mutex
+)
 
 // Given name and docs,
 func document(method, route, name, docs string, reqBody interface{}, resBody interface{}) {
@@ -121,6 +123,9 @@ func addUserVote(db *pgxpool.Pool, redis *redis.Client, userID string, botID str
 }
 
 func VoteBot(db *pgxpool.Pool, redis *redis.Client, userID string, botID string, test bool) (bool, string) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	key := "vote_lock:" + userID
 	check := redis.PTTL(ctx, key).Val()
 
@@ -631,11 +636,6 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			"bot_id":  vote.BotID,
 			"test":    vote.Test,
 		}).Info("User vote")
-
-		// Apply random delay so multiple requests hopefully don't take the same amount of time and as such dont all succeed
-		randomDelay()
-		randomDelay()
-		randomDelay()
 
 		ok, res := VoteBot(db, redis, vote.UserID, vote.BotID, vote.Test)
 		if ok {
