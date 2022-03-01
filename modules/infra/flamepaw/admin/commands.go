@@ -472,66 +472,6 @@ func CmdInit() map[string]types.SlashCommand {
 		},
 	}
 
-	commands["GETACCESS"] = AdminOp{
-		InternalName: "getaccess",
-		Cooldown:     types.CooldownBan,
-		Description:  "Get access to the staff server",
-		MinimumPerm:  0,
-		Critical:     true,
-		SlashRaw:     true,
-		Event:        types.EventNone,
-		Server:       common.StaffServer,
-		ModalResponses: map[string]types.SlashHandler{
-			"staff_verify": func(context types.SlashContext) string {
-				if context.StaffPerm < 2 {
-					return "You are not a Fates List Staff Member"
-				}
-
-				verifyVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "verify-code", false)
-				verify, ok := verifyVal.(string)
-
-				if !ok {
-					return "You did not input a verification code"
-				}
-
-				if verify != common.VerificationCode(context.User.ID) {
-					return "Incorrect verification code!"
-				}
-
-				common.DiscordMain.GuildMemberRoleAdd(common.StaffServer, context.User.ID, common.AccessGrantedRole)
-				// Get correct role with needed perm
-				for _, v := range common.StaffRoles {
-					if v.Perm == context.StaffPerm {
-						common.DiscordMain.GuildMemberRoleAdd(common.StaffServer, context.User.ID, v.StaffID)
-					}
-				}
-
-				// Set verification code
-				context.Postgres.Exec(context.Context, "UPDATE users SET staff_verify_code = $1 WHERE user_id = $2", verify, context.User.ID)
-
-				return "Welcome back... master!"
-			},
-		},
-		Handler: func(context types.SlashContext) string {
-			err := slashbot.SendModal(common.DiscordMain, context.Interaction, "Staff Verification", "staff_verify", "_", []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:    "verify-code",
-							Label:       "Verification Code",
-							Style:       discordgo.TextInputStyleParagraph,
-							Placeholder: "Read the staff guide and enter the code",
-							Required:    true,
-							MinLength:   10,
-						},
-					},
-				},
-			})
-			log.Error(err)
-			return "See modal, if you can't see it, upgrade your discord client"
-		},
-	}
-
 	// Adds a staff to our team!
 	commands["ADDSTAFF"] = AdminOp{
 		InternalName: "addstaff",

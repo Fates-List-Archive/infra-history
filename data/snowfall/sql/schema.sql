@@ -286,6 +286,7 @@ CREATE TABLE servers (
     webhook_type integer DEFAULT 1,
     webhook text,
     webhook_secret text,
+    webhook_hmac_only boolean default false,
     description text,
     user_blacklist text[] default '{}',
     user_whitelist text[] default '{}',

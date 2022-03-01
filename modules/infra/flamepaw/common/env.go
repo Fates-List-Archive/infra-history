@@ -19,8 +19,8 @@ const version = "2"
 
 // Staff Verification Code (sigh, people don't read staff info anymore)
 func VerificationCode(userId string) string {
-	hasher := sha3.New224()
-	hasher.Write([]byte("Shadowsight/BristleXRoot/" + userId))
+	hasher := sha3.New384()
+	hasher.Write([]byte("Baypaw/Flamepaw/Sunbeam/Lightleap::" + userId))
 	sha := hex.EncodeToString(hasher.Sum(nil))
 	return sha
 }

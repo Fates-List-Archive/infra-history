@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import Union
 import orjson
 from http import HTTPStatus
+import hashlib
 
 sys.path.append(".")
 sys.path.append("modules/infra/admin_piccolo")
@@ -32,6 +33,7 @@ from modules.core import redis_ipc_new
 from discord import Embed
 from piccolo.apps.user.tables import BaseUser
 import secrets
+import aiohttp
 import string
 
 def get_token(length: int) -> str:
@@ -41,13 +43,41 @@ def get_token(length: int) -> str:
     return secure_str
 
 with open("config/data/discord.json") as json:
-    bot_logs = orjson.loads(json.read())["channels"]["bot_logs"]
+    json = orjson.loads(json.read())
+    bot_logs = json["channels"]["bot_logs"]
+    staff_server = json["servers"]["staff"]
+    access_granted_role = json["roles"]["staff_server_access_granted_role"]
+
+with open("config/data/secrets.json") as json:
+    main_bot_token = orjson.loads(json.read())["token_main"]
+
+async def add_role(member, role):
+    url = f"https://discord.com/api/v10/guilds/{staff_server}/members/{member}/roles/{role}"
+    async with aiohttp.ClientSession() as sess:
+        async with sess.put(url, headers={
+            "Authorization": f"Bot {main_bot_token}",
+            "X-Audit-Log-Reason": "[LYNX] Staff Verification"
+        }) as resp:
+            if resp.status == HTTPStatus.NO_CONTENT:
+                return None
+            return await resp.json()
 
 admin = create_admin(
     [LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews, ReviewVotes, UserBotLogs], 
     allowed_hosts = ["lynx.fateslist.xyz"], 
     production = True,
 )
+
+def code_check(code: str, user_id: int):
+    expected = hashlib.sha3_384()
+    expected.update(
+        f"Baypaw/Flamepaw/Sunbeam/Lightleap::{user_id}".encode()
+    )
+    expected = expected.hexdigest()
+    print(f"Expected: {expected}, but got {code}")
+    if code != expected:
+        return False
+    return True
 
 class Unknown:
     username = "Unknown"
@@ -100,9 +130,132 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         if not check:
             return HTMLResponse("<h1>Login and logout of Fates List to continue</h1>")
 
-        _, perm, _ = await is_staff(None, int(request.scope["sunbeam_user"]["user"]["id"]), 2, redis=app.state.redis)
+        _, perm, member = await is_staff(None, int(request.scope["sunbeam_user"]["user"]["id"]), 2, redis=app.state.redis)
 
-        # Only allow moderators to access the admin panel
+        # Before erroring, ensure they are perm of at least 2 and have no staff_verify_code set
+        if perm >= 2:
+            staff_verify_code = await app.state.db.fetchval(
+                "SELECT staff_verify_code FROM users WHERE user_id = $1", 
+                int(request.scope["sunbeam_user"]["user"]["id"])
+            )
+
+            if not staff_verify_code or not code_check(staff_verify_code, int(request.scope["sunbeam_user"]["user"]["id"])):
+                if request.method == "POST" and request.url.path == "/_verify":
+                    body = await request.json()
+                    if not code_check(body["code"], int(request.scope["sunbeam_user"]["user"]["id"])):
+                        return ORJSONResponse({"detail": "Invalid code"}, status_code=400)
+                    else:
+                        await app.state.db.execute(
+                            "UPDATE users SET staff_verify_code = $1 WHERE user_id = $2", 
+                            body["code"],
+                            int(request.scope["sunbeam_user"]["user"]["id"]),
+                        )
+
+                        await add_role(request.scope["sunbeam_user"]["user"]["id"], access_granted_role)
+                        print(f"Going to add staff role {member.staff_id}")
+                        await add_role(request.scope["sunbeam_user"]["user"]["id"], member.staff_id)
+                        
+                        return ORJSONResponse({"detail": "Successfully verified staff member"})
+                return HTMLResponse("""
+                <h1>Welcome to Fates List</h1>
+                <h2>Staff Verification</h2>
+                <h3>In order to continue, you will need to make sure you are
+                up to date with our rules</h3>
+                <pre>
+                <strong>You can find our staff guide <a href="https://docs.fateslist.xyz/staff-guide/info/">here</a></strong>
+                
+                - The code is somewhere in the staff guide so please read the full guide
+                - Look up terms you do not understand on Google!
+                <strong>Once you complete this, you will automatically recieve your roles in the staff server</strong>
+                
+                <div style="margin-left: auto; margin-right: auto; text-align: center;">
+                    <textarea 
+                        id="staff-verify-code"
+                        placeholder="Enter staff verification code here"
+                        style="background: #c8e3dd; width: 100%; height: 200px; font-size: 20px !important; resize: none; border-top: none; border-bottom: none; border-right: none"
+                    ></textarea>
+                </div>
+                </pre>
+                <br/>
+                <strong>
+                By continuing, you agree to:
+                    <ul>
+                        <li>Abide by Discord ToS</li>
+                        <li>Abide by Fates List ToS</li>
+                        <li>Be able to join group chats (group DMs) if required by Fates List Admin+</li>
+                    </ul>
+                    If you disagree with any of the above, you should stop now and consider taking a 
+                    Leave Of Absence or leaving the staff team though we hope it won't come to this...
+                    <br/><br/>
+
+                    Please <em>read</em> the staff guide carefully. Do NOT just Ctrl-F. If you ask questions
+                    already in the staff guide, you will just be told to reread the staff guide!
+                </strong>
+                <br/>
+                <div id="verify-parent">
+                    <button id="verify-btn" onclick="verify()">Verify</button>
+                </div>
+                <footer>
+                    <small>&copy Copyright 2022 Fates List | <a href="https://github.com/Fates-List">Powered by Lynx</a></small>
+                </footer>
+                <style>
+                pre, code {
+                    white-space: pre-line;
+                }
+
+                html {
+                    background: #c8e3dd;
+                    font-size: 18px;
+                    padding: 3px;
+                }
+
+                footer {
+                    margin-top: 20px;
+                    text-align: center;
+                    font-weight: bold;
+                }
+
+                #verify-btn {
+                    width: 100px;
+                    background-color: red;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    margin-top: 10px;
+                    padding: 10px;
+                }
+
+                #verify-parent {
+                    text-align: center;
+                }
+                </style>
+                <script>
+                async function verify() {
+                    document.querySelector("#verify-btn").innerText = "Verifying...";
+
+                    let res = await fetch("/_verify", {
+                        method: "POST",
+                        credentials: 'same-origin',
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            "code": document.querySelector("#staff-verify-code").value
+                        })
+                    })
+
+                    if(res.ok) {
+                        document.write("<h1>Verified</h1><pre>You can now leave this page</pre>")
+                    } else {
+                        let json = await res.json()
+                        alert("Error: " + json.detail)
+                        document.querySelector("#verify-btn").innerText = "Verify";
+                    }
+                }
+                </script>
+            """)
+
+        # Only allow mod+ to access the admin panel
         if perm < 3:
             return HTMLResponse("<h1>You do not have permission to access this page</h1>")
 
