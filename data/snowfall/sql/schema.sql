@@ -159,15 +159,21 @@ CREATE TABLE bot_stats_votes_pm (
 CREATE TABLE bot_voters (
     bot_id bigint,
     user_id bigint,
-    timestamps timestamptz[] DEFAULT '{NOW()}',
-    CONSTRAINT bots_fk FOREIGN KEY (bot_id) REFERENCES bots(bot_id) ON DELETE CASCADE ON UPDATE CASCADE
+    timestamps timestamptz[] DEFAULT '{}',
+    CONSTRAINT bots_fk FOREIGN KEY (bot_id) REFERENCES bots(bot_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    primary key(user_id, bot_id)
+);
+
+CREATE TABLE user_vote_table (
+	user_id bigint PRIMARY KEY,
+	bot_id bigint NOT NULL,
+	expires_on timestamptz DEFAULT NOW() + '8 hours'
 );
 
 CREATE TABLE users (
     id bigint not null, -- Used by piccolo, must be equal to user_id
     user_id bigint not null unique,
     api_token text not null,
-    vote_epoch timestamptz,
     description text DEFAULT 'This user prefers to be an enigma',
     badges text[],
     username text,

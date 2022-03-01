@@ -4,7 +4,6 @@ import (
 	"flamepaw/common"
 	"flamepaw/slashbot"
 	"flamepaw/types"
-	"flamepaw/webserver"
 	"strconv"
 	"strings"
 
@@ -67,7 +66,7 @@ func CmdInit() map[string]types.SlashCommand {
 				botId = botVal.ID
 			}
 
-			ok, res := webserver.VoteBot(context.Postgres, context.Redis, context.User.ID, botId, false)
+			ok, res := true, "This system is currently under maintenance. Try voting on the site but it should be fixed in a hour or two!"
 
 			// Check if they have signed up vote reminders
 			var voteReminders pgtype.TextArray
