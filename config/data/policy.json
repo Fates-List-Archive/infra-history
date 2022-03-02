@@ -67,6 +67,7 @@
     "privacy_policy": {
         "basics": {
             "terms_of_service": [
+                "Fates List is the legal entity owning this site and by using the site, you agree to be bound by these terms",
                 "We reserve the right to make changes to our privacy policy at any time with an announcement on our support server. We also reserve the right to edit bot pages at any time to protect our site",
                 "We may store cookies on your browser in order to keep you signed in and to potentially improve the site experience",
                 "You must be at least 13 years old in order to use this service",
@@ -74,15 +75,18 @@
                 "You may not leak private information on another user's bots, such as API tokens, without permission from the bot owner or from a Head Admin or higher. This is legally binding and will be enforced to the fullest degree permitted by law",
                 "May log you IP address which may be used by Fates List to protect against abuse of our service or by approved third parties, such as Digital Ocean and local law enforcement. Most sites log IP addresses and they are usually changed periodically by your Internet Service Provider",
                 "You agree that we are not responsible for any possible accidents that may happen such as leaked IP addresses or leaked API tokens. We aim to never have this happen but accidents can and do happen at times",
-                "You must follow Discord's Terms Of Service"
+                "Many bot logs are public to your users for auditing purposes",
+                "You must follow Discord's Terms Of Service",
+                "All user information on the site is cached for 8 hours. Data is kept only for the amount of time required",
+                "All complaints and legal issues regarding the site should be made to Rootspring#6701"
             ],
             "security": [
                 "Our site is secure and we try to ensure that only you and Fates List Staff can edit your bot and that all actions require proper permission and clearance to be used. We may regenerate API tokens if needed.",
-                "We backup our database on Google Drive."
+                "We backup our database on Google Drive. This backup is encrypted by rclone using AES and the configuration file for rclone is also encrypted"
             ],
             "privacy": [
-                "Your privacy matters to us. By continuing, you agree to your data being processed and/or stored for analytical purpose as per our privacy policy.",
-                "The data we collect is your IP address, username, user id, avatar, your discord presence and any info you submit to us.",
+                "Your privacy matters to us. By continuing, you agree to your data being processed and/or stored for analytical purpose such as statistics as per our privacy policy. This information is not shared with third-parties whatsoever and is kept confidential",
+                "The data we collect is your IP address, username, user id, avatar and any info you submit to us.",
                 "We may also use IPs for access logs. Due to technical reasons, these cannot be easily deleted from our servers so please use a VPN if you do not want your IP to be exposed to us.",
                 "We also store timestamps of when you vote for a bot and these timestamps are exposed to bot owners via our API which they may then use for their own purposes such as determining whether you can vote for a bot or not."
             ],

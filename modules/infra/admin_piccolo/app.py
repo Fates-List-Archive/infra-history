@@ -11,11 +11,12 @@ import orjson
 from http import HTTPStatus
 import hashlib
 
+
 sys.path.append(".")
 sys.path.append("modules/infra/admin_piccolo")
 from fastapi import FastAPI
 from typing import Callable, Awaitable, Tuple, Dict, List
-from starlette.responses import Response, StreamingResponse, RedirectResponse, HTMLResponse
+from starlette.responses import Response, StreamingResponse, RedirectResponse, HTMLResponse, PlainTextResponse
 from starlette.requests import Request
 from starlette.concurrency import iterate_in_threadpool
 from fastapi.responses import ORJSONResponse
@@ -72,7 +73,7 @@ admin = create_admin(
 def code_check(code: str, user_id: int):
     expected = hashlib.sha3_384()
     expected.update(
-        f"Baypaw/Flamepaw/Sunbeam/Lightleap::{user_id}".encode()
+        f"Baypaw/Flamepaw/Sunbeam/Lightleap::{user_id}+Mew".encode()
     )
     expected = expected.hexdigest()
     print(f"Expected: {expected}, but got {code}")
@@ -407,7 +408,12 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
 
         # Only mods have rw access to this, but bot reviewers have ro access
         if perm < 2:
-            return HTMLResponse("<h1>You do not have permission to access this page</h1>")
+            if request.headers.get("Frostpaw-Staff-Notify"):
+                return ORJSONResponse({
+                    "title": "Permission Error",
+                    "data": "<h2>You do not have permission to access this page</h2>"
+                })
+            return HTMLResponse(lynx_form_html)
 
         # Perm check
         if request.url.path.startswith("/api"):
@@ -468,12 +474,18 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             return ORJSONResponse({"piccolo_admin_version": "0.1a1", "site_name": "Lynx Admin"})
 
         response = await call_next(request)
-        
+
+        # Content length adjustment
+        if response.headers.get("Content-Length"):
+            del response.headers["Content-Length"]
+        elif response.status_code == 204:
+            return PlainTextResponse(status_code=204, headers=response.headers)
+
         embed.add_field(name="Status Code", value=f"{response.status_code} {HTTPStatus(response.status_code).phrase}")
 
         asyncio.create_task(redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"", "embed": embed.to_dict(), "channel_id": "935168801480261733"}))
 
-        if not request.url.path.startswith("/api/"):
+        if not request.url.path.startswith("/api/") and not request.url.path.endswith(".js"):
             # Inject our own scripts here
             response_body = [section async for section in response.body_iterator]
             response.body_iterator = iterate_in_threadpool(iter(response_body))
@@ -509,9 +521,6 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                         }
                     </style>
                 """
-                if response.status_code == 204:
-                    content = ""
-                del response.headers["Content-Length"]
                 return HTMLResponse(content, status_code=response.status_code, headers=response.headers)
 
         if not response.status_code < 400:
@@ -543,6 +552,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                 url=f"https://fateslist.xyz/bot/{bot_id}"
             )
             await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
         return response
 
 admin = CustomHeaderMiddleware(admin)
