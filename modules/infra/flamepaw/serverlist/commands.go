@@ -207,6 +207,14 @@ func CmdInit() map[string]types.SlashCommand {
 						Name:  "Vote Roles",
 						Value: "autorole_votes",
 					},
+					{
+						Name:  "Whitelist Only",
+						Value: "whitelist_only",
+					},
+					{
+						Name:  "Whitelist Form",
+						Value: "whitelist_form",
+					},
 				},
 				Required: true,
 			},
@@ -299,7 +307,7 @@ func CmdInit() map[string]types.SlashCommand {
 			}
 
 			// Handle keep banner decor
-			if field == "keep_banner_decor" || field == "requires_login" {
+			if field == "keep_banner_decor" || field == "login_required" || field == "whitelist_only" {
 				if value == "true" || value == "yes" {
 					value = "true"
 				} else if value == "false" || value == "no" {
@@ -310,7 +318,7 @@ func CmdInit() map[string]types.SlashCommand {
 			}
 
 			// Handle website
-			if field == "website" || field == "banner_card" || field == "banner_page" || field == "webhook" {
+			if field == "whitelist_form" || field == "website" || field == "banner_card" || field == "banner_page" || field == "webhook" {
 				if value != "" {
 					if !strings.HasPrefix(value, "https://") {
 						return "That is not a valid URL!"
@@ -519,7 +527,7 @@ func CmdInit() map[string]types.SlashCommand {
 						Value: "audit_logs",
 					},
 					{
-						Name:  "Requirss Login",
+						Name:  "Requires Login",
 						Value: "login_required",
 					},
 					{
@@ -529,6 +537,14 @@ func CmdInit() map[string]types.SlashCommand {
 					{
 						Name:  "Vote Roles",
 						Value: "autorole_votes",
+					},
+					{
+						Name:  "Whitelist Only",
+						Value: "whitelist_only",
+					},
+					{
+						Name:  "Whitelist Form",
+						Value: "whitelist_form",
 					},
 				},
 				Required: true,

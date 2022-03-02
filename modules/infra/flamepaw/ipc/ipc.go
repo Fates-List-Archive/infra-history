@@ -12,10 +12,8 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 
-	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-redis/redis/v8"
-	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
 )
@@ -113,108 +111,6 @@ func setupCommands() {
 		Handler: func(cmd []string, context types.IPCContext) string {
 			return webserver.Docs
 		},
-	}
-
-	// GUILDINVITE <COMMAND ID> <GUILD ID> <USER ID>
-	ipcActions["GUILDINVITE"] = types.IPCCommand{
-		Handler: func(cmd []string, context types.IPCContext) string {
-			guildId := cmd[2]
-			userId := cmd[3]
-			log.Info("Creating invite for user ", userId)
-			var state pgtype.Int4
-			var inviteUrl pgtype.Text
-			var inviteChannel pgtype.Text
-			var finalInv string
-			var userWhitelist pgtype.TextArray
-			var userBlacklist pgtype.TextArray
-			var loginRequired pgtype.Bool
-			err := context.Postgres.QueryRow(ctx, "SELECT state, invite_url, invite_channel, user_whitelist, user_blacklist, login_required FROM servers WHERE guild_id = $1", guildId).Scan(&state, &inviteUrl, &inviteChannel, &userWhitelist, &userBlacklist, &loginRequired)
-			if err != nil {
-				log.Error(err)
-				return "Something went wrong: " + err.Error()
-			}
-			if types.GetBotState(int(state.Int)) == types.BotStatePrivateViewable {
-				return "This server is private and not accepting invites at this time!"
-			} else if types.GetBotState(int(state.Int)) == types.BotStateBanned {
-				return "This server has been banned from Fates List. If you are a staff member, contact Fates List Support for more information."
-			} else if types.GetBotState(int(state.Int)) == types.BotStatePrivateStaffOnly {
-				if userId == "0" {
-					if guildId == common.StaffServer {
-						return "You need to login as a Fates List Staff Member (for new staff, this is just your discord login) to join this server"
-					}
-					return "Login to Fates List before trying to join this server"
-				}
-				// The needed perm
-				var perm float32 = 2
-				if guildId == common.StaffServer {
-					// Staff server exception, only need permlevel of 2 for staff server
-					perm = 2
-				}
-				_, isStaff, _ := common.GetPerms(common.DiscordMain, userId, perm)
-				if !isStaff {
-					return "This server is only open to Fates List Staff Members at this time."
-				}
-			} else if loginRequired.Bool && userId == "0" {
-				return "This server requires you to be logged in to join it!"
-			}
-
-			var whitelisted bool
-			if userWhitelist.Status == pgtype.Present && len(userWhitelist.Elements) > 0 {
-				if !ElementInSlice(userWhitelist.Elements, pgtype.Text{String: userId, Status: pgtype.Present}) {
-					return "You need to be whitelisted to join this server!"
-				}
-				whitelisted = true
-			}
-
-			if !whitelisted && userBlacklist.Status == pgtype.Present && len(userBlacklist.Elements) > 0 {
-				if ElementInSlice(userBlacklist.Elements, pgtype.Text{String: userId, Status: pgtype.Present}) {
-					return "You have been blacklisted from joining this server!"
-				}
-			}
-
-			if inviteUrl.Status != pgtype.Present || inviteUrl.String == "" {
-				// Create invite using serverlist bot
-				guild, err := common.DiscordServerList.State.Guild(guildId)
-				if err != nil {
-					log.Error(err)
-					return "Something went wrong: " + err.Error()
-				}
-
-				var channelId string
-				if inviteChannel.Status == pgtype.Present {
-					channelId = inviteChannel.String
-				} else {
-					channelId = guild.RulesChannelID
-					if channelId == "" {
-						channelId = guild.SystemChannelID
-					}
-					if channelId == "" {
-						channelId = guild.Channels[0].ID
-					}
-					if channelId == "" {
-						return "Could not find channel to invite you to... Please ask the owner of this server to set an invite or set the invite channel for this server"
-					}
-				}
-
-				invite, err := common.DiscordServerList.ChannelInviteCreateWithReason(channelId, "Created invite for user: "+userId, discordgo.Invite{
-					MaxAge:    60 * 15,
-					MaxUses:   1,
-					Temporary: false,
-					Unique:    true,
-				})
-				if err != nil {
-					log.Error(err)
-					return "Something went wrong: " + err.Error()
-				}
-				finalInv = "https://discord.gg/" + invite.Code
-			} else {
-				finalInv = inviteUrl.String
-			}
-			context.Postgres.Exec(ctx, "UPDATE servers SET invite_amount = invite_amount + 1 WHERE guild_id = $1", guildId)
-			return finalInv
-		},
-		MinArgs: 4,
-		MaxArgs: 4,
 	}
 }
 

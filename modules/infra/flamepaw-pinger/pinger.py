@@ -14,4 +14,4 @@ while True:
         print("Flamepaw is down")
         for cmd in reload_cmds:
             os.system(cmd)
-    time.sleep(5)
+    time.sleep(30)

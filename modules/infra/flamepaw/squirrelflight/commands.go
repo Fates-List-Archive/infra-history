@@ -1,11 +1,15 @@
 package squirrelflight
 
 import (
+	"encoding/json"
 	"flamepaw/common"
 	"flamepaw/slashbot"
 	"flamepaw/types"
+	"io"
+	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Fates-List/discordgo"
 	"github.com/jackc/pgtype"
@@ -66,12 +70,68 @@ func CmdInit() map[string]types.SlashCommand {
 				botId = botVal.ID
 			}
 
-			ok, res := true, "This system is currently under maintenance. Try voting on the site but it should be fixed in a hour or two!"
+			body := strings.NewReader("")
+			client := &http.Client{Timeout: 10 * time.Second}
+			req, err := http.NewRequest("PATCH", "https://api.fateslist.xyz/users/"+context.User.ID+"/bots/"+botId+"/votes?test=false", body)
+
+			if err != nil {
+				log.Error(err)
+				return err.Error()
+			}
+
+			var userToken pgtype.Text
+
+			err = context.Postgres.QueryRow(context.Context, "SELECT api_token FROM users WHERE user_id = $1", context.User.ID).Scan(&userToken)
+
+			if err != nil {
+				return err.Error()
+			}
+
+			req.Header.Set("Authorization", userToken.String)
+			req.Header.Set("Content-Type", "application/json")
+
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Error(err)
+				return err.Error()
+			}
+
+			log.WithFields(log.Fields{
+				"status_code": resp.StatusCode,
+			}).Debug("Got response")
+
+			var fjson map[string]any
+
+			defer resp.Body.Close()
+
+			respBody, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return err.Error()
+			}
+			err = json.Unmarshal(respBody, &fjson)
+
+			if err != nil {
+				return err.Error()
+			}
+
+			if resp.StatusCode == 200 {
+				ok = true
+			} else {
+				ok = false
+			}
+
+			var response string
+
+			response, success := fjson["reason"].(string)
+
+			if !success {
+				response = "Unknown error"
+			}
 
 			// Check if they have signed up vote reminders
 			var voteReminders pgtype.TextArray
 
-			err := context.Postgres.QueryRow(context.Context, "SELECT vote_reminders::text[] FROM users WHERE user_id = $1", context.User.ID).Scan(&voteReminders)
+			err = context.Postgres.QueryRow(context.Context, "SELECT vote_reminders::text[] FROM users WHERE user_id = $1", context.User.ID).Scan(&voteReminders)
 			if err != nil {
 				log.Error(err)
 				voteReminders = pgtype.TextArray{
@@ -89,12 +149,12 @@ func CmdInit() map[string]types.SlashCommand {
 			}
 
 			if !hasRemindersEnabled {
-				res += "\n\nWant to be reminded when you can next vote for this bot?"
+				response += "\n\nWant to be reminded when you can next vote for this bot?"
 
 				slashbot.SendIResponseFull(
 					common.DiscordMain,
 					context.Interaction,
-					res,
+					response,
 					true,
 					0,
 					[]string{},
@@ -112,7 +172,7 @@ func CmdInit() map[string]types.SlashCommand {
 				return ""
 			}
 
-			return res
+			return response
 		},
 	}
 

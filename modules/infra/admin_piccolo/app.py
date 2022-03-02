@@ -141,7 +141,12 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
 
             if not staff_verify_code or not code_check(staff_verify_code, int(request.scope["sunbeam_user"]["user"]["id"])):
                 if request.method == "POST" and request.url.path == "/_verify":
-                    body = await request.json()
+                    try:
+                        body = await request.json()
+                        code = body["code"]
+                    except:
+                        return ORJSONResponse({"detail": "Bad Request"}, status_code=400)
+
                     if not code_check(body["code"], int(request.scope["sunbeam_user"]["user"]["id"])):
                         return ORJSONResponse({"detail": "Invalid code"}, status_code=400)
                     else:
@@ -159,41 +164,43 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                 return HTMLResponse("""
                 <h1>Welcome to Fates List</h1>
                 <h2>Staff Verification</h2>
-                <h3>In order to continue, you will need to make sure you are
-                up to date with our rules</h3>
-                <pre>
-                <strong>You can find our staff guide <a href="https://docs.fateslist.xyz/staff-guide/info/">here</a></strong>
-                
-                - The code is somewhere in the staff guide so please read the full guide
-                - Look up terms you do not understand on Google!
-                <strong>Once you complete this, you will automatically recieve your roles in the staff server</strong>
-                
-                <div style="margin-left: auto; margin-right: auto; text-align: center;">
-                    <textarea 
-                        id="staff-verify-code"
-                        placeholder="Enter staff verification code here"
-                        style="background: #c8e3dd; width: 100%; height: 200px; font-size: 20px !important; resize: none; border-top: none; border-bottom: none; border-right: none"
-                    ></textarea>
-                </div>
-                </pre>
-                <br/>
-                <strong>
-                By continuing, you agree to:
-                    <ul>
-                        <li>Abide by Discord ToS</li>
-                        <li>Abide by Fates List ToS</li>
-                        <li>Be able to join group chats (group DMs) if required by Fates List Admin+</li>
-                    </ul>
-                    If you disagree with any of the above, you should stop now and consider taking a 
-                    Leave Of Absence or leaving the staff team though we hope it won't come to this...
-                    <br/><br/>
+                <h3>In order to continue, you will need to make sure you are up to date with our rules</h3>
+                <div id="verify-screen">
+                    <pre>
+                    <strong>You can find our staff guide <a href="https://docs.fateslist.xyz/staff-guide/info/">here</a></strong>
+                    
+                    - The code is somewhere in the staff guide so please read the full guide
+                    - Look up terms you do not understand on Google!
+                    <strong>Once you complete this, you will automatically recieve your roles in the staff server</strong>
+                    
+                    <div style="margin-left: auto; margin-right: auto; text-align: center;">
+                        <textarea 
+                            id="staff-verify-code"
+                            placeholder="Enter staff verification code here"
+                            style="background: #c8e3dd; width: 100%; height: 200px; font-size: 20px !important; resize: none; border-top: none; border-bottom: none; border-right: none"
+                        ></textarea>
+                    </div>
+                    </pre>
+                    <br/>
+                    <strong>
+                    By continuing, you agree to:
+                        <ul>
+                            <li>Abide by Discord ToS</li>
+                            <li>Abide by Fates List ToS</li>
+                            <li>Agree to try and be at least partially active on the list</li>
+                            <li>Be able to join group chats (group DMs) if required by Fates List Admin+</li>
+                        </ul>
+                        If you disagree with any of the above, you should stop now and consider taking a 
+                        Leave Of Absence or leaving the staff team though we hope it won't come to this...
+                        <br/><br/>
 
-                    Please <em>read</em> the staff guide carefully. Do NOT just Ctrl-F. If you ask questions
-                    already in the staff guide, you will just be told to reread the staff guide!
-                </strong>
-                <br/>
-                <div id="verify-parent">
-                    <button id="verify-btn" onclick="verify()">Verify</button>
+                        Please <em>read</em> the staff guide carefully. Do NOT just Ctrl-F. If you ask questions
+                        already in the staff guide, you will just be told to reread the staff guide!
+                    </strong>
+                    <br/>
+                    <div id="verify-parent">
+                        <button id="verify-btn" onclick="verify()">Verify</button>
+                    </div>
                 </div>
                 <footer>
                     <small>&copy Copyright 2022 Fates List | <a href="https://github.com/Fates-List">Powered by Lynx</a></small>
@@ -245,7 +252,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                     })
 
                     if(res.ok) {
-                        document.write("<h1>Verified</h1><pre>You can now leave this page</pre>")
+                        document.querySelector("#verify-screen").innerHTML = "<h4>Verified</h4><pre>You can now leave this page</pre>"
                     } else {
                         let json = await res.json()
                         alert("Error: " + json.detail)
@@ -255,8 +262,8 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                 </script>
             """)
 
-        # Only allow mod+ to access the admin panel
-        if perm < 3:
+        # Only mods have rw access to this, but bot reviewers have ro access
+        if perm < 2:
             return HTMLResponse("<h1>You do not have permission to access this page</h1>")
 
         # Perm check
@@ -290,7 +297,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                     if user_id != request.scope["sunbeam_user"]["user"]["id"]:
                         return ORJSONResponse({"error": "You do not have permission to update this leave of absence"}, status_code=403)
 
-                elif not request.url.path.startswith(("/api/tables/reviews", "/api/tables/review_votes", "/api/tables/bot_packs", "/api/tables/leave_of_absence")):
+                elif (perm < 3) or not request.url.path.startswith(("/api/tables/reviews", "/api/tables/review_votes", "/api/tables/bot_packs", "/api/tables/leave_of_absence")):
                     return ORJSONResponse({"error": "You do not have permission to access this page"}, status_code=403)
 
         key = "rl:%s" % request.scope["sunbeam_user"]["user"]["id"]
