@@ -32,7 +32,7 @@ class User(Table, tablename="users"):
     api_token = Text()
 
 class UserBotLogs(Table, tablename="user_bot_logs"):
-    user_id = ForeignKey(references=User)
+    user_id = ForeignKey(references=User, primary_key=True)
     bot_id = BigInt()
     action_time = Timestamptz(default=datetime.datetime.now())
     action = Integer(choices=enums.UserBotAction)
@@ -78,6 +78,11 @@ class Bot(Table, tablename="bots"):
     flags = Array(base_column = Integer(), default = [])
     uptime_checks_total = BigInt()
     uptime_checks_failed = BigInt()
+
+class BotVotes(Table, tablename="user_vote_table"):
+    user_id = BigInt(primary_key=True, help_text="The user id of the user who voted")
+    bot_id = BigInt(null=False)
+    expires_on = Timestamptz(default=datetime.datetime.now())
 
 class BotPack(Table, tablename="bot_packs"):
     id = UUID(primary_key=True)
