@@ -707,6 +707,7 @@ func CmdInit() map[string]types.SlashCommand {
 				}
 
 				if !test {
+					voteMsg = "You have successfully voted for this server"
 					context.Postgres.Exec(context.Context, "UPDATE servers SET votes = votes + 1, total_votes = total_votes + 1 WHERE guild_id = $1", context.Interaction.GuildID)
 					context.Redis.Set(context.Context, key, 0, 8*time.Hour)
 				}
@@ -724,7 +725,7 @@ func CmdInit() map[string]types.SlashCommand {
 	commands["BUMP"] = ServerListCommand{
 		InternalName: "bump",
 		Handler: func(context types.SlashContext) string {
-			return commands["VOTE"].Handler(context)
+			return commands["VOTESERVER"].Handler(context)
 		},
 	}
 
