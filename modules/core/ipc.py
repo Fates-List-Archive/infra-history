@@ -12,9 +12,8 @@ async def redis_ipc_new(
     msg: dict = None, 
     timeout: int = 30, 
     args: Sequence[str] = None, 
-    no_wait: bool = False,
-    *,
-    worker_session = None
+    *_,
+    **__,
 ):
     if cmd == "GETCH":
         async with aiohttp.ClientSession() as sess:
@@ -51,9 +50,6 @@ async def redis_ipc_new(
             data = await redis.get(id)
             if data is not None:
                 return data
-
-        if not no_wait:
-            return await redis_ipc_new(redis, cmd, msg=msg, timeout=timeout, args=args.split(" "), no_wait=True, worker_session=worker_session)
 
     if timeout:
         return await wait(cmd_id)

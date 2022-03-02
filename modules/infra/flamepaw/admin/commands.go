@@ -466,8 +466,7 @@ func CmdInit() map[string]types.SlashCommand {
 		Server:       common.StaffServer,
 		SlashRaw:     true,
 		Handler: func(context types.SlashContext) string {
-			context.Postgres.Exec(context.Context, "DELETE FROM piccolo_user WHERE username = $1", context.User.Username)
-			context.Postgres.Exec(context.Context, "UPDATE users SET api_token = $1 WHERE user_id = $2", common.RandString(101), context.User.ID)
+			context.Postgres.Exec(context.Context, "UPDATE users SET api_token = $1, staff_verify_code = NULL WHERE user_id = $2", common.RandString(101), context.User.ID)
 			return "Go to https://lynx.fateslist.xyz to get new credentials"
 		},
 	}
