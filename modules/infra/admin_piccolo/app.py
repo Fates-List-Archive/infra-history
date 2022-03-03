@@ -703,6 +703,8 @@ already in the staff guide, you will just be told to reread the staff guide!
 <br/>
 
 In case, you haven't went through staff verification and you somehow didn't get redirected to it, click <a href="/staff-verify">here</a> 
+<br/><br/>
+<a href="/links">Some Useful Links!</a>
 """
     })
 
