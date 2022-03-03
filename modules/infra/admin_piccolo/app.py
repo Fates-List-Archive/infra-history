@@ -210,6 +210,9 @@ lynx_form_html = """
             if(body.pre) {
                 document.querySelector("#verify-screen").innerHTML += `<a href='${body.pre}'>Back to previous page</a>`
             }
+        } else {
+            document.querySelector("#title").innerHTML = "Animus magic is broken today!"
+            document.querySelector("#verify-screen").innerHTML = `<h1>${res.status}</h1><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a>`
         }
     })
     </script>
@@ -393,7 +396,6 @@ md = (
 
 staff_guide = md.render(staff_guide_md)
 
-
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         if request.url.path.startswith(("/staff-guide", "/requests", "/links")):
@@ -444,48 +446,12 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                 int(request.scope["sunbeam_user"]["user"]["id"])
             )
 
+            request.state.is_verified = True
+
             if not staff_verify_code or not code_check(staff_verify_code, int(request.scope["sunbeam_user"]["user"]["id"])):                    
-                if request.method == "POST" and request.url.path == "/_verify":
-                    try:
-                        body = await request.json()
-                        code = body["code"]
-                    except:
-                        return ORJSONResponse({"detail": "Bad Request"}, status_code=400)
-
-                    if not code_check(body["code"], int(request.scope["sunbeam_user"]["user"]["id"])):
-                        return ORJSONResponse({"detail": "Invalid code"}, status_code=400)
-                    else:
-                        username = request.scope["sunbeam_user"]["user"]["username"]
-                        password = get_token(96)
-
-                        try:
-                            await app.state.db.execute("DELETE FROM piccolo_user WHERE username = $1", username)
-                            await BaseUser.create_user(
-                                username=username, 
-                                password=password,
-                                email=username + "@fateslist.xyz", 
-                                active=True,
-                                admin=True
-                            )
-                        except:
-                            return ORJSONResponse({"detail": "Failed to create user on lynx"}, status_code=500)
-
-                        await app.state.db.execute(
-                            "UPDATE users SET staff_verify_code = $1 WHERE user_id = $2", 
-                            body["code"],
-                            int(request.scope["sunbeam_user"]["user"]["id"]),
-                        )
-
-                        await add_role(request.scope["sunbeam_user"]["user"]["id"], access_granted_role)
-                        print(f"Going to add staff role {member.staff_id}")
-                        await add_role(request.scope["sunbeam_user"]["user"]["id"], member.staff_id)
-                        
-                        return ORJSONResponse({"detail": "Successfully verified staff member", "pass": password})
-                
-                if not request.url.path.startswith("/staff-verify"):
+                request.state.is_verified = False
+                if request.method == "GET" and not request.url.path.startswith("/staff-verify"):
                     return RedirectResponse("/staff-verify")
-            elif request.method == "POST" and request.url.path == "/_verify":
-                return ORJSONResponse({"detail": "Already verified"}, status_code=400)
 
         # Only mods have rw access to this, but bot reviewers have ro access
         if perm < 2:
@@ -606,6 +572,16 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
 
 admin = CustomHeaderMiddleware(admin)
 
+class NoCacher(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        #if request.url.path.startswith(("/admin", "/meta")) or request.headers.get("Frostpaw-Staff-Notify"):
+        #    response.headers["Cache-Control"] = "no-store"
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+admin = NoCacher(admin)
+
 async def server_error(request, exc):
     return HTMLResponse(content="Error", status_code=exc.status_code)
 
@@ -656,28 +632,29 @@ already in the staff guide, you will just be told to reread the staff guide!
 </div>""",
         "script": """
 async function verify() {
-document.querySelector("#verify-btn").innerText = "Verifying...";
+    document.querySelector("#verify-btn").innerText = "Verifying...";
 
-let res = await fetch("/_verify", {
-    method: "POST",
-    credentials: 'same-origin',
-    headers: {
-        "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-        "code": document.querySelector("#staff-verify-code").value
+    let res = await fetch("/verify-code", {
+        method: "POST",
+        credentials: 'same-origin',
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            "code": document.querySelector("#staff-verify-code").value
+        })
     })
-})
 
-if(res.ok) {
-    let json = await res.json()
-    document.querySelector("#verify-screen").innerHTML = `<h4>Verified</h4><pre>Your lynx password is ${json.pass}</pre><br/><div id="verify-parent"><button id="verify-btn" onclick="window.location.href = '/'">Open Lynx</button></div>`
-} else {
-    let json = await res.json()
-    alert("Error: " + json.detail)
-    document.querySelector("#verify-btn").innerText = "Verify";
+    if(res.ok) {
+        let json = await res.json()
+        document.querySelector("#verify-screen").innerHTML = `<h4>Verified</h4><pre>Your lynx password is ${json.pass}</pre><br/><div id="verify-parent"><button id="verify-btn" onclick="window.location.href = '/'">Open Lynx</button></div>`
+    } else {
+        let json = await res.json()
+        alert("Error: " + json.detail)
+        document.querySelector("#verify-btn").innerText = "Verify";
+    }
 }
-}""" 
+""" 
     })
 
 @app.get("/")
@@ -792,11 +769,15 @@ def staff_guide_route(request: Request):
                 .info:before {
                     content: "Info";
                     font-size: 26px;
+                    font-weight: bold;
+                    color: blue;
                 }
 
                 .warning:before {
                     content: "Warning";
                     font-size: 26px;
+                    font-weight: bold;
+                    color: red;
                 }
 
                 .info {
@@ -847,13 +828,46 @@ def reset(request: Request):
         Use the <strong>/lynxreset</strong> command to reset your lynx credentials if you ever forget them
         </pre>
 
-        <p>But if you're locked out of your discord account, just click the <pre>Reset Credentials</pre> button</p>
+        <p>But if you're locked out of your discord account, just click the 'Reset' button. It will do the same
+        thing as <strong>/lynxreset</strong></p>
 
         <div id="verify-parent">
             <button id="verify-btn" onclick="reset()">Reset</button>
         </div>
+        """,
+        "script": """
+            async function reset() {
+                document.querySelector("#verify-btn").innerText = "Resetting...";
+
+                let res = await fetch("/reset-creds", {
+                    method: "POST",
+                    credentials: 'same-origin',
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                })
+
+                if(res.ok) {
+                    let json = await res.json()
+                    document.querySelector("#verify-screen").innerHTML = `<h4>Done</h4>`
+                } else {
+                    let json = await res.json()
+                    alert("Error: " + json.detail)
+                    document.querySelector("#verify-btn").innerText = "Reset";
+                }
+            }
         """
     })
+
+@app.post("/reset-creds")
+async def reset_creds(request: Request):
+    # Remove from db
+    await app.state.db.execute(
+        "UPDATE users SET api_token = $1, staff_verify_code = NULL WHERE user_id = $2",
+        get_token(132),
+        int(request.scope["sunbeam_user"]["user"]["id"])
+    )
+    return ORJSONResponse({"detail": "Done"})
 
 @app.get("/loa")
 def loa(request: Request):
@@ -909,6 +923,50 @@ async def lynx_request_logs():
         """
     })        
 
+@app.post("/verify-code")
+async def verify_code(request: Request):
+    if request.state.is_verified:
+        return ORJSONResponse({
+            "detail": "You are already verified"
+        },
+        status_code=400
+        )
+    try:
+        body = await request.json()
+        code = body["code"]
+    except:
+        return ORJSONResponse({"detail": "Bad Request"}, status_code=400)
+
+    if not code_check(body["code"], int(request.scope["sunbeam_user"]["user"]["id"])):
+        return ORJSONResponse({"detail": "Invalid code"}, status_code=400)
+    else:
+        username = request.scope["sunbeam_user"]["user"]["username"]
+        password = get_token(96)
+
+        try:
+            await app.state.db.execute("DELETE FROM piccolo_user WHERE username = $1", username)
+            await BaseUser.create_user(
+                username=username, 
+                password=password,
+                email=username + "@fateslist.xyz", 
+                active=True,
+                admin=True
+            )
+        except:
+            return ORJSONResponse({"detail": "Failed to create user on lynx"}, status_code=500)
+
+        await app.state.db.execute(
+            "UPDATE users SET staff_verify_code = $1 WHERE user_id = $2", 
+            body["code"],
+            int(request.scope["sunbeam_user"]["user"]["id"]),
+        )
+
+        await add_role(request.scope["sunbeam_user"]["user"]["id"], access_granted_role)
+        print(f"Going to add staff role {request.state.member.staff_id}")
+        await add_role(request.scope["sunbeam_user"]["user"]["id"], request.state.member.staff_id)
+        
+        return ORJSONResponse({"detail": "Successfully verified staff member", "pass": password})
+
 @app.on_event("startup")
 async def startup():
     engine = engine_finder()
@@ -922,3 +980,4 @@ async def close():
     await app.state.engine.close_connection_pool()
 
 app.add_middleware(CustomHeaderMiddleware)
+app.add_middleware(NoCacher)
