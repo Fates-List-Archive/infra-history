@@ -11,6 +11,7 @@ import orjson
 from http import HTTPStatus
 import hashlib
 import bleach
+import copy
 
 sys.path.append(".")
 sys.path.append("modules/infra/admin_piccolo")
@@ -36,6 +37,13 @@ from piccolo.apps.user.tables import BaseUser
 import secrets
 import aiohttp
 import string
+from markdown_it import MarkdownIt
+from mdit_py_plugins.front_matter import front_matter_plugin
+from mdit_py_plugins.footnote import footnote_plugin
+from mdit_py_plugins.anchors import anchors_plugin
+from mdit_py_plugins.field_list import fieldlist_plugin
+from mdit_py_plugins.container import container_plugin
+from fastapi.staticfiles import StaticFiles
 
 async def fetch_user(user_id: int):
     async with aiohttp.ClientSession() as sess:
@@ -129,7 +137,7 @@ async def is_staff(staff_json: dict | None, user_id: int, base_perm: int, json: 
     return rc, sm.perm, sm
 
 lynx_form_html = """
-    <link href='https://fonts.googleapis.com/css?family=Merriweather' rel='stylesheet'>
+    <link href='https://fonts.googleapis.com/css?family=Lexend Deca' rel='stylesheet'>
     <h1>Welcome to Lynx!</h1>
     <h2 id="title">Loading...</h2>
     <div id="verify-screen">
@@ -147,7 +155,7 @@ lynx_form_html = """
         background: #c8e3dd;
         font-size: 18px;
         padding: 3px;
-        font-family: 'Merriweather';
+        font-family: 'Lexend Deca';
     }
 
     footer {
@@ -207,15 +215,195 @@ lynx_form_html = """
     </script>
 """
 
+staff_guide_md = """
+## Contributing
+
+If you believe you have found a bug or wish to suggest an improvement to these docs, please make a PR [here](https://github.com/Fates-List/apidocs)
+
+When making the PR, clone the Fates-List repository, add dragon to your PATH and then run the `./build` in your forked/modified repository to build
+the changes. **If you do not have a linux machine or if you do not understand the above, just say so in the PR and allow edits from others so we can build the new site docs for you**
+
+## How to apply
+
+Join our support server, enter the [`#ashfur-sys`](https://discord.com/channels/789934742128558080/848605596936437791) channel and click `Apply` Button
+
+## Important Info
+
+**It is very importat to keep going back to this document every few days if there are ever any changes or otherwise as a refresher**
+
+Flamepaw is our staff and testing server. [Invite](https://fateslist.xyz/banappeal/invite)
+
+## Moderation Rules
+
+::: warning
+
+Please don’t abuse our bots please.
+
+People **higher in clearance *override* statements made by people lower** (Head Admin word overrides Admin’s word) 
+but **please feel free to privately report bad staff to an owner or via FL Kremlin/FL Secret Kremlin (if you have access to those)**
+
+*Never bash or complain about things in the Testing Channels. We have staff-chat for a very good reason*
+
+**If it's highly confidential, consider using DMs or asking for a Group DM. Staff chat is visible to bots with the Administrator permission**
+
+:::
+
+::: info
+
+On main server, Minotaur and Wick can be used. Use Xenon as a backup bot
+
+On Flamepaw, Minotaur is the only moderation bot as antinuke on a test server is dumb**
+
+:::
+
+## Ashfur Bot Usage
+
+Fates List uses Ashfur to handle bots (using slash commands)
+
+/claim - Claims a bot, **be sure to unclaim it if you are not reviewing it anymore or else I might have to do another 3000 @everyone pings**
+
+/unclaim - Unclaims a bot
+
+/approve - Approves a bot. Be sure to give good appropriate feedback and be polite and *most importantly* be formal.
+
+/deny - Denies a bot. Once again, be sure to give good appropriate feedback and be polite and *most importantly* be formal. You need to concatenate the four parts of the staff verification code and then hash it with SHA3-384
+
+/requeue - Requeues a bot if it is denied. **This is moderator only**
+
+**Update Discord if you don't see the commands and then DM a Administrator+ if you still cannot see it**
+
+And... that's it! Yes, it's really that easy!
+
+## Reviewing Bots 
+
+Our bot list rules and requirements can be found [here](https://fateslist.xyz/frostpaw/tos). Please read through them before reviewing 
+bots.
+
+Whoever first adds the bot to this server can claim and check that bot. If you need to unclaim however, anyone may check it
+
+Where possible, test at least 70-100% of all bot commands randomly (*it would be preferable to test all of them but this is time consuming 
+and we want to deal with our queue as well...*). 
+
+**Remember, case-by-case basis means use your own judgement and ask other staff members if unsure**
+
+Some things that should be checked for. Note that *all of the below is changeable on a case by case basis*:
+
+- Admin Commands (antinuke is a special case and has an exemption here)
+- Admin-locked bots (antinuke is a special case and has an examption here)
+- NSFW commands with proper channel gating
+- Does the bot follow Discord ToS?
+- Is the bot offline? If so, take a screenshot of the bot being offline. Once you have taken a screenshot, 
+post the media link in the reason for denial. The second half of the staff verification code is /Sunbeam/
+- Quality of the bot. Does it provide *any* unique and interesting features? What is its use case? Is it a copy/fork of another bot? Be careful when dealing with these
+- **Is the bot well-known and known to be high-quality?**
+- **Is the bots owner correct (validate using other bot lists or Head Admins+ if needed), report violations to a Admin+ ASAP**
+- **Quality of bot descriptions and long description**
+
+**Remember. Approve and deny bots without bias. Just because you like/dislike the owner does NOT mean you approve/deny their bots!**
+
+- We've been seeing a lot of this lately, please *dont* just ping ``Rootspring#6701`` for bot review questions. Instead, ping any Admin+ and then come to me. 
+
+::: info
+
+Admins+ may approve known large bots without fully testing them if they are KNOWN to be high quality and have been widely used 
+by them. This is in place to reduce our queue size allowing smaller bots to be tested more quickly and with better feedback
+
+:::
+
+If a bot is in need of verification, it may also be tested on its support server. This also goes for regular bots as well. Be sure to still test the bot though!
+
+## Bots in other languages
+
+Do not deny bots for using other languages. These are officially supported. Instead, do one of the following:
+
+- Use Google Translate: https://translate.google.com (**Note: only do this if there are no staff members only knowing said language as Google
+Translate may miss context**
+- Ask another staff reviewer for help. The fifth part of the staff verification code is +Poketwo. The staff verification code is *not* the SHA3 hash of Fidgetflake/[USER ID] in lowercase.
+- Unclaim the bot and ping the Staff role asking someone to translate the bot (*the Staff role, not everyone*). The third half of the staff verification code is Lightleap::USERID
+
+## Prefix Changes
+
+Do not deny bots for not supporting custom prefixes. This is a suggestion. Instead mute the bot on the support server after approval and adding to the
+main server.
+
+**Same goes with any other suggestions in the rules**
+
+## Partnerships
+
+All partnerships are to be decided by FL Kremlin or Overseers. The fourth part of the verification code is +Mew. If you are not in FL Kremlin, DM any partnership requests to a Head Admin+.
+
+**The same goes with staff applications**
+
+## Getting Help
+
+Feel DM any staff member if you need help with something. We are here to help you. Don't be rude and always strive to be respectful.
+
+## Ban Appeals
+
+We use our [Ban Appeals Server](https://fateslist.xyz/banappeal/invite) to handle Ban Appeals. 
+
+This approach was chosen to ensure that ban appeals are personalised for users. The first half of the staff verification code is Baypaw/Flamepaw .Not everyone that gets banned may want to appeal (some just want the ban reason) and not everyone that gets banned falls into the same category as someone else. 
+
+As staff, you are expected to deal with ban appeals and turn to a higher up when required.
+
+**Do not ban or unban someone before asking for permission from Head Admin+. Warn or kick instead**
+
+## Review Process Quick Start
+
+1. Run ``/claim`` to claim the bot. **Be sure to unclaim it with ``/unclaim`` if you are not reviewing it anymore**
+
+2. Test the bot as per [Reviewing Bots](#reviewing-bots)
+
+3. Use ``/approve`` and ``/deny`` accordingly
+
+## Lynx
+
+Lynx is our admin panel giving you complete control of the database. Access will be monitored and access logs are *public*. You will be removed for abuse. The verification code is not the SHA3-224 of Shadowsight/BristleXRoot/[USER ID]
+
+Lynx can/is slightly buggy at times. Report these bugs to Rootspring#6701 please.
+
+Some ground rules with Lynx:
+
+- See https://lynx.fateslist.xyz/links first after a staff verification
+- When in doubt, ask. Do not change enums/delete rows you think are erroneous, it probably is intentionally like that
+- **Do not, absolutely *do not* share login credentials or access to Lynx with others *without the explicit permission of Rootspring#6701*. This also includes storing access credentials on notes etc.**
+
+**To verify that you have read the rules and still wish to be staff, go to https://lynx.fateslist.xyz/**
+
+## FL Kremlin
+
+Lastly, FL Kremlin. We've had many *outsiders* coming in and we are OK with this as it allows for transparency. This is why *no highly sensitive information* should be shared on FL Kremlin Group Chat
+
+The word of Rootspring#6701 is final although debates are always recommended if you disagree with something.
+
+Don't complain about ``@everyone`` pings. They will happen!
+"""
+
+md = (
+    MarkdownIt()
+    .use(front_matter_plugin)
+    .use(footnote_plugin)
+    .use(anchors_plugin, max_level=3, permalink=True)
+    .use(fieldlist_plugin)
+    .use(container_plugin, name="warning")
+    .use(container_plugin, name="info")
+    .enable('table')
+    .enable('image')
+)
+
+staff_guide = md.render(staff_guide_md)
+
+
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        # First handle the special _admin_code_check header from flamepaw
-        if request.url.path == "/_admin_code_check":
-            query = request.query_params
-            if not code_check(query.get("code", ""), query.get("user_id", 0)):
-                return PlainTextResponse(status_code=HTTPStatus.FORBIDDEN)
-            return PlainTextResponse(status_code=HTTPStatus.NO_CONTENT)
-
+        if request.url.path.startswith(("/staff-guide", "/requests", "/links")):
+            if request.headers.get("Frostpaw-Staff-Notify"):
+                return await call_next(request)
+            else:
+                return HTMLResponse(lynx_form_html)
+        elif request.url.path.startswith("/_admin_code_check"):
+            return await call_next(request)
+        print("Calling custom lynx")
         if request.cookies.get("sunbeam-session:warriorcats"):
             request.scope["sunbeam_user"] = orjson.loads(b64decode(request.cookies.get("sunbeam-session:warriorcats")))
         else:
@@ -241,203 +429,16 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
 
         _, perm, member = await is_staff(None, int(request.scope["sunbeam_user"]["user"]["id"]), 2, redis=app.state.redis)
 
+        request.state.member = member
+
+        if request.url.path.startswith("/my-perms"):
+            if request.headers.get("Frostpaw-Staff-Notify"):
+                return await call_next(request)
+            else:
+                return HTMLResponse(lynx_form_html)
+
         # Before erroring, ensure they are perm of at least 2 and have no staff_verify_code set
-        if perm >= 2:
-            if request.url.path.startswith("/staff-apps"):
-                if request.headers.get("Frostpaw-Staff-Notify"):
-                    # Get staff application list
-                    staff_apps = await app.state.db.fetch("SELECT user_id, app_id, questions, answers, created_at FROM lynx_apps ORDER BY created_at DESC")
-                    app_html = "" 
-
-                    for staff_app in staff_apps:
-                        if str(staff_app["app_id"]) == request.query_params.get("open"):
-                            open_attr = "open"
-                        else:
-                            open_attr = ""
-                        user = await fetch_user(staff_app['user_id'])
-                        user["username"] = bleach.clean(user["username"])
-
-                        questions = orjson.loads(staff_app["questions"])
-                        answers = orjson.loads(staff_app["answers"])
-
-                        questions_html = ""
-
-                        for pane in questions:
-                            questions_html += f"<h3>{pane['title']}</h3><strong>Prelude</strong>: {pane['pre'] or 'No prelude for this section'}<br/>"
-                            for question in pane["questions"]:
-                                questions_html += f"""
-                                    <h4>{question['title']}</h4>
-                                    <pre>
-                                        <strong>ID:</strong> {question['id']}
-                                        <strong>Minimum Length:</strong> {question['min_length']}
-                                        <strong>Maximum Length:</strong> {question['max_length']}
-                                        <strong>Question:</strong> {question['question']}
-                                        <strong>Answer:</strong> {bleach.clean(answers[question['id']])}
-                                    </pre>
-                                """
-
-                        app_html += f"""
-                        <details {open_attr}>
-                            <summary>{staff_app['app_id']}</summary>
-                            <h2>User Info</h2>
-                            <p><strong><em>Created At:</em></strong> {staff_app['created_at']}</p>
-                            <p><strong><em>User:</em></strong> {user['username']} ({user['id']})</p>
-                            <h2>Application:</h2> 
-                            {questions_html}
-                            <br/>
-                        </details>
-                        """
-
-                    return ORJSONResponse({
-                        "title": "Staff Application List",
-                        "pre": "/links",
-                        "data": f"""
-                        <p>Please verify applications fairly</p>
-                        {app_html}
-                        <br/>
-                        """
-                    })
-                else:
-                    return HTMLResponse(lynx_form_html)
-            if request.url.path.startswith("/my-perms"):
-                if request.headers.get("Frostpaw-Staff-Notify"):
-                    return ORJSONResponse({
-                        "title": "My Permissions",
-                        "pre": "/links",
-                        "data": f"""
-                        <pre>
-                            <strong>Permission Number</strong>: {member.perm}
-                            <strong>Role Name</strong>: {member.name}
-                            <strong>Can Access Lynx (limited)</strong>: True
-                            <strong>Can Access Lynx (full)</strong>: {member.perm >= 4}
-                        </pre>
-                        """
-                    })
-                else: 
-                    return HTMLResponse(lynx_form_html)
-            elif request.url.path.startswith("/reset"):
-                if request.headers.get("Frostpaw-Staff-Notify"):
-                    return ORJSONResponse({
-                        "title": "Lynx Credentials Reset",
-                        "pre": "/links",
-                        "data": f"""
-                        <pre>
-                        Just a tip for those new to lynx
-
-                        Use the <strong>/lynxreset</strong> command to reset your lynx credentials if you ever forget them
-                        </pre>
-                        """
-                    })
-                else:
-                    return HTMLResponse(lynx_form_html)
-            elif request.url.path.startswith("/loa"):
-                if request.headers.get("Frostpaw-Staff-Notify"):
-                    return ORJSONResponse({
-                        "title": "Leave Of Absense",
-                        "pre": "/links",
-                        "data": f"""
-                        <pre>
-                        Just a tip for those new to lynx
-
-                        1. Login to lynx
-                        2, Click Leave Of Absense
-                        3. Click 'Add Row'
-                        4. Fill out the nessesary fields
-                        5. Click 'Save'
-                        </pre>
-                        """
-                    })
-                else:
-                    return HTMLResponse(lynx_form_html)
-            elif request.url.path.startswith("/links"):
-                if request.headers.get("Frostpaw-Staff-Notify"):
-                    return ORJSONResponse({
-                        "title": "Some Useful Links",
-                        "data": f"""
-                        <pre>
-                        <a href="/my-perms">My Permissions</a>
-                        <a href="/reset">Lynx Credentials Reset</a>
-                        <a href="/loa">Leave Of Absense</a>
-                        <a href="/staff-apps">Staff Applications</a>
-                        <a href="/links">Some Useful Links</a>
-                        <a href="/staff-verify">Staff Verification</a> (in case you need it)
-                        <a href="https://docs.fateslist.xyz/staff-guide/info/">Staff Guide</a>
-                        </pre>
-                    """
-                    })
-                else:
-                    return HTMLResponse(lynx_form_html)
-            elif request.url.path.startswith("/staff-verify"):
-                if request.headers.get("Frostpaw-Staff-Notify"):
-                    return ORJSONResponse({
-                        "title": "Fates List Staff Verification",
-                        "data": """
-        <h3>In order to continue, you will need to make sure you are up to date with our rules</h3>
-        <pre>
-        <strong>You can find our staff guide <a href="https://docs.fateslist.xyz/staff-guide/info/">here</a></strong>
-        
-        - The code is somewhere in the staff guide so please read the full guide
-        - Look up terms you do not understand on Google!
-        <strong>Once you complete this, you will automatically recieve your roles in the staff server</strong>
-        
-        <div style="margin-left: auto; margin-right: auto; text-align: center;">
-            <textarea 
-                id="staff-verify-code"
-                placeholder="Enter staff verification code here"
-                style="background: #c8e3dd; width: 100%; height: 200px; font-size: 20px !important; resize: none; border-top: none; border-bottom: none; border-right: none"
-            ></textarea>
-        </div>
-        </pre>
-        <br/>
-        <strong>
-        By continuing, you agree to:
-            <ul>
-                <li>Abide by Discord ToS</li>
-                <li>Abide by Fates List ToS</li>
-                <li>Agree to try and be at least partially active on the list</li>
-                <li>Be able to join group chats (group DMs) if required by Fates List Admin+</li>
-            </ul>
-            If you disagree with any of the above, you should stop now and consider taking a 
-            Leave Of Absence or leaving the staff team though we hope it won't come to this...
-            <br/><br/>
-
-            Please <em>read</em> the staff guide carefully. Do NOT just Ctrl-F. If you ask questions
-            already in the staff guide, you will just be told to reread the staff guide!
-        </strong>
-        <br/>
-        <div id="verify-parent">
-            <button id="verify-btn" onclick="verify()">Verify</button>
-        </div>
-                        """,
-                        "script": """
-            async function verify() {
-                document.querySelector("#verify-btn").innerText = "Verifying...";
-
-                let res = await fetch("/_verify", {
-                    method: "POST",
-                    credentials: 'same-origin',
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        "code": document.querySelector("#staff-verify-code").value
-                    })
-                })
-
-                if(res.ok) {
-                    let json = await res.json()
-                    document.querySelector("#verify-screen").innerHTML = `<h4>Verified</h4><pre>Your lynx password is ${json.pass}</pre><br/><div id="verify-parent"><button id="verify-btn" onclick="window.location.href = '/'">Open Lynx</button></div>`
-                } else {
-                    let json = await res.json()
-                    alert("Error: " + json.detail)
-                    document.querySelector("#verify-btn").innerText = "Verify";
-                }
-            }
-                        """ 
-                    })
-                else:
-                    return HTMLResponse(lynx_form_html)
-
+        if member.perm >= 2:
             staff_verify_code = await app.state.db.fetchval(
                 "SELECT staff_verify_code FROM users WHERE user_id = $1", 
                 int(request.scope["sunbeam_user"]["user"]["id"])
@@ -481,7 +482,8 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                         
                         return ORJSONResponse({"detail": "Successfully verified staff member", "pass": password})
                 
-                return RedirectResponse("/staff-verify")
+                if not request.url.path.startswith("/staff-verify"):
+                    return RedirectResponse("/staff-verify")
             elif request.method == "POST" and request.url.path == "/_verify":
                 return ORJSONResponse({"detail": "Already verified"}, status_code=400)
 
@@ -490,28 +492,28 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             if request.headers.get("Frostpaw-Staff-Notify"):
                 return ORJSONResponse({
                     "title": "Permission Error",
-                    "data": "<h2>You do not have permission to access this page</h2>"
+                    "data": "<h2>You do not have permission to access this page. Try <a href='/my-perms'>this page</a> for more information</h2>"
                 })
             return HTMLResponse(lynx_form_html)
 
         # Perm check
-        if request.url.path.startswith("/api"):
-            if request.url.path == "/api/tables/" and perm < 4:
+        if request.url.path.startswith("/admin/api"):
+            if request.url.path == "/admin/api/tables/" and perm < 4:
                 return ORJSONResponse(["reviews", "review_votes", "bot_packs", "vanity", "leave_of_absence", "user_vote_table"])
-            elif request.url.path == "/api/tables/users/ids/" and request.method == "GET":
+            elif request.url.path == "/admin/api/tables/users/ids/" and request.method == "GET":
                 pass
-            elif request.url.path in ("/api/forms/", "/api/user/", "/api/openapi.json") or request.url.path.startswith("/api/docs"):
+            elif request.url.path in ("/admin/api/forms/", "/admin/api/user/", "/admin/api/openapi.json") or request.url.path.startswith("/admin/api/docs"):
                 pass
             elif perm < 4:
-                if request.url.path.startswith("/api/tables/vanity"):
+                if request.url.path.startswith("/admin/api/tables/vanity"):
                     if request.method != "GET":
                         return ORJSONResponse({"error": "You do not have permission to update vanity"}, status_code=403)
                 
-                elif request.url.path.startswith("/api/tables/bot_packs"):
+                elif request.url.path.startswith("/admin/api/tables/bot_packs"):
                     if request.method != "GET":
                         return ORJSONResponse({"error": "You do not have permission to update bot packs"}, status_code=403)
                 
-                elif request.url.path.startswith("/api/tables/leave_of_absence/") and request.method in ("PATCH", "DELETE"):
+                elif request.url.path.startswith("/admin/api/tables/leave_of_absence/") and request.method in ("PATCH", "DELETE"):
                     ids = request.url.path.split("/")
                     loa_id = None
                     for id in ids:
@@ -525,7 +527,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                     if user_id != request.scope["sunbeam_user"]["user"]["id"]:
                         return ORJSONResponse({"error": "You do not have permission to update this leave of absence"}, status_code=403)
 
-                elif not request.url.path.startswith(("/api/tables/reviews", "/api/tables/review_votes", "/api/tables/bot_packs", "/api/tables/user_vote_table", "/api/tables/leave_of_absence")):
+                elif not request.url.path.startswith(("/admin/api/tables/reviews", "/admin/api/tables/review_votes", "/admin/api/tables/bot_packs", "/admin/api/tables/user_vote_table", "/admin/api/tables/leave_of_absence")):
                     return ORJSONResponse({"error": "You do not have permission to access this page"}, status_code=403)
 
         key = "rl:%s" % request.scope["sunbeam_user"]["user"]["id"]
@@ -552,55 +554,23 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/meta"):
             return ORJSONResponse({"piccolo_admin_version": "0.1a1", "site_name": "Lynx Admin"})
 
-        response = await call_next(request)
+        if not request.url.path.startswith("/admin") and not request.url.path.startswith("/_"):
+            if not request.headers.get("Frostpaw-Staff-Notify") and request.method == "GET":
+                return HTMLResponse(lynx_form_html)
+            else:
+                return await call_next(request)
 
-        # Content length adjustment
-        if response.headers.get("Content-Length"):
-            del response.headers["Content-Length"]
-        elif response.status_code in (204, 304):
-            return PlainTextResponse("", status_code=204, headers=response.headers)
+        response = await call_next(request)
 
         embed.add_field(name="Status Code", value=f"{response.status_code} {HTTPStatus(response.status_code).phrase}")
 
-        asyncio.create_task(redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"", "embed": embed.to_dict(), "channel_id": "935168801480261733"}))
-
-        if not request.url.path.startswith("/api/") and not request.url.path.endswith(".js"):
-            # Inject our own scripts here
-            response_body = [section async for section in response.body_iterator]
-            response.body_iterator = iterate_in_threadpool(iter(response_body))
-            content = response_body[0].decode()
-            if not content.startswith("{") and not content.startswith("["):
-                content += """
-                    <script>
-                        var addedHomeScreenH1 = false;
-                        function possibleAddTheme() {
-                            console.log("Possibly adding theme")
-                            if(!addedHomeScreenH1) {
-                                let h1s = document.getElementsByTagName("h1");
-                                for (let i = 0; i < h1s.length; i++) {
-                                    if (h1s[i].innerText.startsWith('Welcome')) {
-                                        let elem = document.createElement("small");
-                                        elem.innerHTML = "<br/>For a guide on how to use this website, please visit <a href='https://lynx.fateslist.xyz/links'>here</a>";
-                                        h1s[i].appendChild(elem)
-                                        addedHomeScreenH1 = true
-                                    }
-                                }
-                            }
-                        }
-
-                        document.addEventListener("DOMContentLoaded", function() {
-                            console.log("Lynx injected");
-                            possibleAddTheme()
-                            document.addEventListener("click", possibleAddTheme)
-                        })
-                    </script>
-                    <style>
-                        html, #app {
-                            background-color: #c8e3dd !important;
-                        }
-                    </style>
-                """
-                return HTMLResponse(content, status_code=response.status_code, headers=response.headers)
+        await app.state.db.execute(
+            "INSERT INTO lynx_logs (user_id, method, url, status_code) VALUES ($1, $2, $3, $4)",
+            int(request.scope["sunbeam_user"]["user"]["id"]),
+            request.method,
+            str(request.url),
+            response.status_code
+        )
 
         if not response.status_code < 400:
             return response
@@ -610,7 +580,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         except:
             request.scope["user"] = Unknown()
 
-        if request.url.path.startswith("/api/tables/leave_of_absence") and request.method == "POST":
+        if request.url.path.startswith("/admin/api/tables/leave_of_absence") and request.method == "POST":
             response_body = [section async for section in response.body_iterator]
             response.body_iterator = iterate_in_threadpool(iter(response_body))
             content = response_body[0]
@@ -618,7 +588,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             await app.state.db.execute("UPDATE leave_of_absence SET user_id = $1 WHERE id = $2", int(request.scope["sunbeam_user"]["user"]["id"]), content_dict[0]["id"])
             return ORJSONResponse(content_dict)
 
-        if request.url.path.startswith("/api/tables/bots") and request.method == "PATCH":
+        if request.url.path.startswith("/admin/api/tables/bots") and request.method == "PATCH":
             print("Got bot edit, sending message")
             path = request.url.path.rstrip("/")
             bot_id = int(path.split("/")[-1])
@@ -639,7 +609,303 @@ admin = CustomHeaderMiddleware(admin)
 async def server_error(request, exc):
     return HTMLResponse(content="Error", status_code=exc.status_code)
 
-app = FastAPI(routes=[Mount("/", admin)])
+app = FastAPI(routes=[
+    Mount("/admin", admin), 
+])
+
+@app.get("/staff-verify")
+def staff_verify(request: Request):
+    return ORJSONResponse({
+        "title": "Fates List Staff Verification",
+        "data": """
+<h3>In order to continue, you will need to make sure you are up to date with our rules</h3>
+<pre>
+<strong>You can find our staff guide <a href="https://lynx.fateslist.xyz/staff-guide">here</a></strong>
+
+- The code is somewhere in the staff guide so please read the full guide
+- Look up terms you do not understand on Google!
+<strong>Once you complete this, you will automatically recieve your roles in the staff server</strong>
+
+<div style="margin-left: auto; margin-right: auto; text-align: center;">
+<textarea 
+id="staff-verify-code"
+placeholder="Enter staff verification code here"
+style="background: #c8e3dd; width: 100%; height: 200px; font-size: 20px !important; resize: none; border-top: none; border-bottom: none; border-right: none"
+></textarea>
+</div>
+</pre>
+<br/>
+<strong>
+By continuing, you agree to:
+<ul>
+<li>Abide by Discord ToS</li>
+<li>Abide by Fates List ToS</li>
+<li>Agree to try and be at least partially active on the list</li>
+<li>Be able to join group chats (group DMs) if required by Fates List Admin+</li>
+</ul>
+If you disagree with any of the above, you should stop now and consider taking a 
+Leave Of Absence or leaving the staff team though we hope it won't come to this...
+<br/><br/>
+
+Please <em>read</em> the staff guide carefully. Do NOT just Ctrl-F. If you ask questions
+already in the staff guide, you will just be told to reread the staff guide!
+</strong>
+<br/>
+<div id="verify-parent">
+<button id="verify-btn" onclick="verify()">Verify</button>
+</div>""",
+        "script": """
+async function verify() {
+document.querySelector("#verify-btn").innerText = "Verifying...";
+
+let res = await fetch("/_verify", {
+    method: "POST",
+    credentials: 'same-origin',
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        "code": document.querySelector("#staff-verify-code").value
+    })
+})
+
+if(res.ok) {
+    let json = await res.json()
+    document.querySelector("#verify-screen").innerHTML = `<h4>Verified</h4><pre>Your lynx password is ${json.pass}</pre><br/><div id="verify-parent"><button id="verify-btn" onclick="window.location.href = '/'">Open Lynx</button></div>`
+} else {
+    let json = await res.json()
+    alert("Error: " + json.detail)
+    document.querySelector("#verify-btn").innerText = "Verify";
+}
+}""" 
+    })
+
+@app.get("/")
+def index(request: Request):
+    return ORJSONResponse({
+        "title": "Index",
+        "data": """
+<h3>Homepage!</h3>
+By continuing, you agree to:
+<ul>
+<li>Abide by Discord ToS</li>
+<li>Abide by Fates List ToS</li>
+<li>Agree to try and be at least partially active on the list</li>
+<li>Be able to join group chats (group DMs) if required by Fates List Admin+</li>
+</ul>
+If you disagree with any of the above, you should stop now and consider taking a 
+Leave Of Absence or leaving the staff team though we hope it won't come to this...
+<br/><br/>
+
+Please <em>read</em> the staff guide carefully. Do NOT just Ctrl-F. If you ask questions
+already in the staff guide, you will just be told to reread the staff guide!
+
+<br/>
+
+In case, you haven't went through staff verification and you somehow didn't get redirected to it, click <a href="/staff-verify">here</a> 
+"""
+    })
+
+@app.get("/staff-apps")
+async def staff_apps(request: Request):
+    # Get staff application list
+    staff_apps = await app.state.db.fetch("SELECT user_id, app_id, questions, answers, created_at FROM lynx_apps ORDER BY created_at DESC")
+    app_html = "" 
+
+    for staff_app in staff_apps:
+        if str(staff_app["app_id"]) == request.query_params.get("open"):
+            open_attr = "open"
+        else:
+            open_attr = ""
+        user = await fetch_user(staff_app['user_id'])
+        user["username"] = bleach.clean(user["username"])
+
+        questions = orjson.loads(staff_app["questions"])
+        answers = orjson.loads(staff_app["answers"])
+
+        questions_html = ""
+
+        for pane in questions:
+            questions_html += f"<h3>{pane['title']}</h3><strong>Prelude</strong>: {pane['pre'] or 'No prelude for this section'}<br/>"
+            for question in pane["questions"]:
+                questions_html += f"""
+                    <h4>{question['title']}</h4>
+                    <pre>
+                        <strong>ID:</strong> {question['id']}
+                        <strong>Minimum Length:</strong> {question['min_length']}
+                        <strong>Maximum Length:</strong> {question['max_length']}
+                        <strong>Question:</strong> {question['question']}
+                        <strong>Answer:</strong> {bleach.clean(answers[question['id']])}
+                    </pre>
+                """
+
+        app_html += f"""
+        <details {open_attr}>
+            <summary>{staff_app['app_id']}</summary>
+            <h2>User Info</h2>
+            <p><strong><em>Created At:</em></strong> {staff_app['created_at']}</p>
+            <p><strong><em>User:</em></strong> {user['username']} ({user['id']})</p>
+            <h2>Application:</h2> 
+            {questions_html}
+            <br/>
+        </details>
+        """
+
+    return ORJSONResponse({
+        "title": "Staff Application List",
+        "pre": "/links",
+        "data": f"""
+        <p>Please verify applications fairly</p>
+        {app_html}
+        <br/>
+        """
+    })
+
+@app.get("/_admin_code_check")
+def code_check_route(request: Request):
+    query = request.query_params
+    if not code_check(query.get("code", ""), query.get("user_id", 0)):
+        return PlainTextResponse(status_code=HTTPStatus.FORBIDDEN)
+    return PlainTextResponse(status_code=HTTPStatus.NO_CONTENT)
+
+@app.get("/staff-guide")
+def staff_guide_route(request: Request):
+    return ORJSONResponse({
+        "title": "Staff Guide",
+        "data": staff_guide + """
+            <style>
+                .header-anchor {
+                    display: none;
+                }
+                h2:hover > .header-anchor {
+                    display: initial;
+                }
+
+                .info, .warning {
+                    border: 3px solid;
+                    margin-bottom: 3px;
+                    padding: 3px;
+                }
+
+                .info:before {
+                    content: "Info";
+                    font-size: 26px;
+                }
+
+                .warning:before {
+                    content: "Warning";
+                    font-size: 26px;
+                }
+
+                .info {
+                    border-color: blue;
+                    background-color: rgba(0, 0, 255, 0.1);
+                }
+
+                .warning {
+                    border-color: red;
+                    background-color: rgba(255, 0, 0, 0.1);
+                }
+
+            </style>
+        """,
+        "script": """
+            docReady(() => {
+                if(window.location.hash) {
+                    document.querySelector(`${window.location.hash}`).scrollIntoView()
+                }
+            })
+        """
+    })
+
+@app.get("/my-perms")
+def my_perms(request: Request):
+    return ORJSONResponse({
+        "title": "My Permissions",
+        "pre": "/links",
+        "data": f"""
+        <pre>
+            <strong>Permission Number</strong>: {request.state.member.perm}
+            <strong>Role Name</strong>: {request.state.member.name}
+            <strong>Can Access Lynx (limited)</strong>: {request.state.member.perm >= 2}
+            <strong>Can Access Lynx (full)</strong>: {request.state.member.perm >= 4}
+        </pre>
+        """
+    })
+
+@app.get("/reset")
+def reset(request: Request):
+    return ORJSONResponse({
+        "title": "Lynx Credentials Reset",
+        "pre": "/links",
+        "data": f"""
+        <pre>
+        Just a tip for those new to lynx
+
+        Use the <strong>/lynxreset</strong> command to reset your lynx credentials if you ever forget them
+        </pre>
+
+        <p>But if you're locked out of your discord account, just click the <pre>Reset Credentials</pre> button</p>
+
+        <div id="verify-parent">
+            <button id="verify-btn" onclick="reset()">Reset</button>
+        </div>
+        """
+    })
+
+@app.get("/loa")
+def loa(request: Request):
+    return ORJSONResponse({
+        "title": "Leave Of Absense",
+        "pre": "/links",
+        "data": f"""
+        <pre>
+        Just a tip for those new to lynx
+
+        1. Login to lynx
+        2, Click Leave Of Absense
+        3. Click 'Add Row'
+        4. Fill out the nessesary fields
+        5. Click 'Save'
+        </pre>
+        """
+    })
+
+@app.get("/links")
+def links(request: Request):
+    return ORJSONResponse({
+        "title": "Some Useful Links",
+        "data": f"""
+        <pre>
+        <a href="/my-perms">My Permissions</a>
+        <a href="/reset">Lynx Credentials Reset</a>
+        <a href="/loa">Leave Of Absense</a>
+        <a href="/staff-apps">Staff Applications</a>
+        <a href="/links">Some Useful Links</a>
+        <a href="/staff-verify">Staff Verification</a> (in case you need it)
+        <a href="/staff-guide">Staff Guide</a>
+        <a href="/admin">Admin Console</a>
+        <a href="/requests">Requests</a>
+        </pre>
+    """
+    })
+
+@app.get("/requests")
+async def lynx_request_logs():
+    requests = await app.state.db.fetch("SELECT user_id, method, url, status_code, request_time from lynx_logs")
+    requests_html = ""
+    for request in requests:
+        requests_html += f"""
+        <p>{request["user_id"]} - {request["method"]} - {request["url"]} - {request["status_code"]} - {request["request_time"]}</p>
+        """
+
+    return ORJSONResponse({
+        "title": "Lynx Request Logs",
+        "pre": "/links",
+        "data": f"""
+        {requests_html}
+        """
+    })        
 
 @app.on_event("startup")
 async def startup():
@@ -652,3 +918,5 @@ async def startup():
 @app.on_event("shutdown")
 async def close():
     await app.state.engine.close_connection_pool()
+
+app.add_middleware(CustomHeaderMiddleware)

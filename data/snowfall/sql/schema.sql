@@ -328,3 +328,11 @@ CREATE TABLE lynx_apps (
     created_at timestamptz default NOW(),
     CONSTRAINT user_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+CREATE TABLE lynx_logs (
+    user_id bigint not null,
+    method text not null,
+    url text not null,
+    status_code integer not null,
+    request_time timestamptz default NOW()
+);
