@@ -1,28 +1,32 @@
 package common
 
 import (
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"runtime"
 
 	"github.com/Fates-List/discordgo"
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fastjson"
-	"golang.org/x/crypto/sha3"
 )
 
 // Put all env variables here
 const version = "2"
 
 // Staff Verification Code (sigh, people don't read staff info anymore)
-func VerificationCode(userId string) string {
-	hasher := sha3.New384()
-	hasher.Write([]byte("Baypaw/Flamepaw/Sunbeam/Lightleap::" + userId + "+Mew"))
-	sha := hex.EncodeToString(hasher.Sum(nil))
-	return sha
+func VerificationCode(userId string, code string) bool {
+	res, err := http.Get("https://lynx.fateslist.xyz/_admin_code_check?user_id=" + userId + "&code=" + code)
+	if err != nil {
+		log.Error(err)
+		return false
+	}
+	if res.StatusCode == 204 {
+		return true
+	}
+	return false
 }
 
 var (

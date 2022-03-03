@@ -119,7 +119,7 @@ func slashIr() map[string]types.SlashCommand {
 				if !adminOp.Critical {
 					var verifyCode pgtype.Text
 					context.Postgres.QueryRow(context.Context, "SELECT staff_verify_code FROM users WHERE user_id = $1", context.User.ID).Scan(&verifyCode)
-					if verifyCode.Status != pgtype.Present || verifyCode.String != common.VerificationCode(context.User.ID) {
+					if verifyCode.Status != pgtype.Present || !common.VerificationCode(context.User.ID, verifyCode.String) {
 						return "You must verify in the staff server again to ensure you are up to date with our rules and staff guide"
 					}
 				}

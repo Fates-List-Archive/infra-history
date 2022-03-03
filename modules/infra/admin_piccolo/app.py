@@ -10,7 +10,7 @@ from typing import Union
 import orjson
 from http import HTTPStatus
 import hashlib
-
+import bleach
 
 sys.path.append(".")
 sys.path.append("modules/infra/admin_piccolo")
@@ -36,6 +36,18 @@ from piccolo.apps.user.tables import BaseUser
 import secrets
 import aiohttp
 import string
+
+async def fetch_user(user_id: int):
+    async with aiohttp.ClientSession() as sess:
+        async with sess.get(f"http://localhost:1234/getch/{user_id}") as resp:
+            if resp.status == 404:
+                return {
+                    "id": "",
+                    "username": "Unknown User",
+                    "avatar": "https://cdn.discordapp.com/embed/avatars/0.png",
+                    "disc": "0000"
+                }
+            return await resp.json()
 
 def get_token(length: int) -> str:
     secure_str = ""
@@ -117,7 +129,8 @@ async def is_staff(staff_json: dict | None, user_id: int, base_perm: int, json: 
     return rc, sm.perm, sm
 
 lynx_form_html = """
-    <h1>Welcome to Fates List!</h1>
+    <link href='https://fonts.googleapis.com/css?family=Merriweather' rel='stylesheet'>
+    <h1>Welcome to Lynx!</h1>
     <h2 id="title">Loading...</h2>
     <div id="verify-screen">
     </div>
@@ -127,12 +140,14 @@ lynx_form_html = """
     <style>
     pre, code {
         white-space: pre-line;
+        word-wrap: break-word;
     }
 
     html {
         background: #c8e3dd;
         font-size: 18px;
         padding: 3px;
+        font-family: 'Merriweather';
     }
 
     footer {
@@ -194,10 +209,17 @@ lynx_form_html = """
 
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
+        # First handle the special _admin_code_check header from flamepaw
+        if request.url.path == "/_admin_code_check":
+            query = request.query_params
+            if not code_check(query.get("code", ""), query.get("user_id", 0)):
+                return PlainTextResponse(status_code=HTTPStatus.FORBIDDEN)
+            return PlainTextResponse(status_code=HTTPStatus.NO_CONTENT)
+
         if request.cookies.get("sunbeam-session:warriorcats"):
             request.scope["sunbeam_user"] = orjson.loads(b64decode(request.cookies.get("sunbeam-session:warriorcats")))
         else:
-            return RedirectResponse("https://fateslist.xyz/frostpaw/herb?redirect=https://lynx.fateslist.xyz")
+            return RedirectResponse(f"https://fateslist.xyz/frostpaw/herb?redirect={request.url}")
 
         check = await app.state.db.fetchval(
             "SELECT user_id FROM users WHERE user_id = $1 AND api_token = $2", 
@@ -221,7 +243,63 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
 
         # Before erroring, ensure they are perm of at least 2 and have no staff_verify_code set
         if perm >= 2:
-            if request.url.path.startswith("/my_perms"):
+            if request.url.path.startswith("/staff-apps"):
+                if request.headers.get("Frostpaw-Staff-Notify"):
+                    # Get staff application list
+                    staff_apps = await app.state.db.fetch("SELECT user_id, app_id, questions, answers, created_at FROM lynx_apps ORDER BY created_at DESC")
+                    app_html = "" 
+
+                    for staff_app in staff_apps:
+                        if str(staff_app["app_id"]) == request.query_params.get("open"):
+                            open_attr = "open"
+                        else:
+                            open_attr = ""
+                        user = await fetch_user(staff_app['user_id'])
+                        user["username"] = bleach.clean(user["username"])
+
+                        questions = orjson.loads(staff_app["questions"])
+                        answers = orjson.loads(staff_app["answers"])
+
+                        questions_html = ""
+
+                        for pane in questions:
+                            questions_html += f"<h3>{pane['title']}</h3><strong>Prelude</strong>: {pane['pre'] or 'No prelude for this section'}<br/>"
+                            for question in pane["questions"]:
+                                questions_html += f"""
+                                    <h4>{question['title']}</h4>
+                                    <pre>
+                                        <strong>ID:</strong> {question['id']}
+                                        <strong>Minimum Length:</strong> {question['min_length']}
+                                        <strong>Maximum Length:</strong> {question['max_length']}
+                                        <strong>Question:</strong> {question['question']}
+                                        <strong>Answer:</strong> {bleach.clean(answers[question['id']])}
+                                    </pre>
+                                """
+
+                        app_html += f"""
+                        <details {open_attr}>
+                            <summary>{staff_app['app_id']}</summary>
+                            <h2>User Info</h2>
+                            <p><strong><em>Created At:</em></strong> {staff_app['created_at']}</p>
+                            <p><strong><em>User:</em></strong> {user['username']} ({user['id']})</p>
+                            <h2>Application:</h2> 
+                            {questions_html}
+                            <br/>
+                        </details>
+                        """
+
+                    return ORJSONResponse({
+                        "title": "Staff Application List",
+                        "pre": "/links",
+                        "data": f"""
+                        <p>Please verify applications fairly</p>
+                        {app_html}
+                        <br/>
+                        """
+                    })
+                else:
+                    return HTMLResponse(lynx_form_html)
+            if request.url.path.startswith("/my-perms"):
                 if request.headers.get("Frostpaw-Staff-Notify"):
                     return ORJSONResponse({
                         "title": "My Permissions",
@@ -277,9 +355,10 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                         "title": "Some Useful Links",
                         "data": f"""
                         <pre>
-                        <a href="/my_perms">My Permissions</a>
+                        <a href="/my-perms">My Permissions</a>
                         <a href="/reset">Lynx Credentials Reset</a>
                         <a href="/loa">Leave Of Absense</a>
+                        <a href="/staff-apps">Staff Applications</a>
                         <a href="/links">Some Useful Links</a>
                         <a href="/staff-verify">Staff Verification</a> (in case you need it)
                         <a href="https://docs.fateslist.xyz/staff-guide/info/">Staff Guide</a>
@@ -478,8 +557,8 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         # Content length adjustment
         if response.headers.get("Content-Length"):
             del response.headers["Content-Length"]
-        elif response.status_code == 204:
-            return PlainTextResponse(status_code=204, headers=response.headers)
+        elif response.status_code in (204, 304):
+            return PlainTextResponse("", status_code=204, headers=response.headers)
 
         embed.add_field(name="Status Code", value=f"{response.status_code} {HTTPStatus(response.status_code).phrase}")
 

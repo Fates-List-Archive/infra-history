@@ -319,52 +319,12 @@ CREATE TABLE servers (
 -- In server tags, owner_guild is the first guild a tag was given to
 create table server_tags (id TEXT NOT NULL UNIQUE, name TEXT NOT NULL UNIQUE, iconify_data TEXT NOT NULL, owner_guild BIGINT NOT NULL);
 
-CREATE TABLE bot_list_partners (
-	id UUID NOT NULL UNIQUE, 
-	mod BIGINT NOT NULL,
-	partner BIGINT NOT NULL, 
-	publish_channel BIGINT, 
-	edit_channel BIGINT NOT NULL UNIQUE,
-	type INTEGER NOT NULL,
-	invite TEXT NOT NULL, 
-	user_count BIGINT NOT NULL,
-	target BIGINT NOT NULL UNIQUE,
-	site_ad TEXT,
-	server_ad TEXT,
-	created_at timestamptz default now(),
-	js_allowed boolean default true,
-	published boolean default false
+CREATE TABLE lynx_apps (
+    user_id bigint,
+    app_id uuid primary key DEFAULT uuid_generate_v4(),
+    questions jsonb,
+    answers jsonb,
+    app_version integer,
+    created_at timestamptz default NOW(),
+    CONSTRAINT user_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
-
-CREATE TABLE bot_list (
-	icon TEXT,
-	url TEXT NOT NULL UNIQUE,
-	api_url TEXT,
-	api_docs TEXT,
-	discord TEXT,
-	description TEXT,
-	no_post boolean default false,
-	supported_features INTEGER[],
-	state INTEGER DEFAULT 0,
-	owners BIGINT[] DEFAULT '{}'
-);
-
-CREATE TABLE bot_list_feature (
-	feature_id INTEGER PRIMARY KEY,
-	name TEXT NOT NULL UNIQUE,
-	iname TEXT NOT NULL UNIQUE, -- Internal Name
-	description TEXT,
-	positive INTEGER
-);
-
-CREATE TABLE bot_list_api (
-	id SERIAL PRIMARY KEY, -- Django'isms and good for us
-	url TEXT NOT NULL,
-	method INTEGER, -- 1 = GET, 2 = POST, 3 = PATCH, 4 = PUT, 5 = DELETE
-	feature INTEGER, -- 1 = Get Bot, 2 = Post Stats
-	supported_fields JSONB, -- Supported fields
-	api_path TEXT NOT NULL,
-	CONSTRAINT url_constraint FOREIGN KEY (url) REFERENCES bot_list(url) ON DELETE CASCADE ON UPDATE CASCADE -- Autoupdate
-);
-
-CREATE TABLE manager_staff (user_id BIGINT, user_token TEXT NOT NULL UNIQUE);

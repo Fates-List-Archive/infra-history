@@ -2,7 +2,6 @@ package supportsystem
 
 import (
 	"context"
-	"encoding/json"
 	"flamepaw/common"
 	"flamepaw/slashbot"
 	"flamepaw/types"
@@ -347,35 +346,19 @@ func SendRolesMessage(s *discordgo.Session, delAndSend bool) {
 		questionCollector(context.ModalData.Components)
 
 		if pageInt+1 == len(staffAppQuestions) {
-			qibliData := map[string]interface{}{
-				"app":          baypawApps[context.User.ID],
-				"questions":    staffAppQuestions,
-				"app_version":  "2",
-				"user":         context.User,
-				"qibli_format": "2",
-			}
-
-			qibliDataJsonB, err := json.Marshal(qibliData)
-			if err != nil {
-				log.Error(err)
-				slashbot.SendIResponseEphemeral(common.DiscordMain, context.Interaction, err.Error(), false)
-			}
-
-			qibliDataJson := string(qibliDataJsonB)
-
 			qibliStorId := common.CreateUUID()
 
-			context.Redis.Set(context.Context, "sapp:"+qibliStorId, qibliDataJson, time.Hour*24*7)
+			_, err = context.Postgres.Exec(context.Context, "INSERT INTO lynx_apps (user_id, app_id, app_version, questions, answers) VALUES ($1, $2, $3, $4, $5)", context.User.ID, qibliStorId, 2, staffAppQuestions, baypawApps[context.User.ID])
+
+			if err != nil {
+				log.Error(err)
+				return err.Error()
+			}
 
 			common.DiscordMain.ChannelMessageSendComplex("936265871784018010", &discordgo.MessageSend{
 				Embed: &discordgo.MessageEmbed{
 					Title: "Staff Application - Qibli",
-					URL:   "https://fateslist.xyz/frostpaw/qibli?data=" + qibliStorId,
-				},
-				File: &discordgo.File{
-					Name:        "qibli.json",
-					ContentType: "application/json",
-					Reader:      strings.NewReader(qibliDataJson),
+					URL:   "https://lynx.fateslist.xyz/staff-apps?open=" + qibliStorId,
 				},
 			})
 
