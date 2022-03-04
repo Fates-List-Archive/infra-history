@@ -12,6 +12,7 @@ from http import HTTPStatus
 import hashlib
 import bleach
 import copy
+import time
 
 sys.path.append(".")
 sys.path.append("modules/infra/admin_piccolo")
@@ -252,6 +253,9 @@ lynx_form_html = """
         h2:hover > .header-anchor {
             display: initial;
         }
+        h3:hover > .header-anchor {
+            display: initial;
+        }
 
         .info, .warning, .aonly, .guidelines, .generic {
             border: 3px solid;
@@ -276,13 +280,6 @@ lynx_form_html = """
 
         .warning:before {
             content: "Warning";
-            font-size: 26px;
-            font-weight: bold;
-            color: red;
-        }
-
-        .generic:before {
-            content: "Action";
             font-size: 26px;
             font-weight: bold;
             color: red;
@@ -627,10 +624,10 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             rl = await app.state.redis.set(key, "0", ex=30)
         if request.method != "GET":
             rl = await app.state.redis.incr(key)
-            if int(rl) > 3:
+            if int(rl) > 5:
                 expire = await app.state.redis.ttl(key)
                 await app.state.db.execute("UPDATE users SET api_token = $1 WHERE user_id = $2", get_token(128), int(request.scope["sunbeam_user"]["user"]["id"]))
-                return ORJSONResponse({"error": f"You have exceeded the rate limit {expire} is TTL. API_TOKEN_RESET"}, status_code=429)
+                return ORJSONResponse({"detail": f"You have exceeded the rate limit {expire} is TTL. API_TOKEN_RESET"}, status_code=429)
 
         embed = Embed(
             title = "Lynx API Request", 
@@ -1008,28 +1005,65 @@ def bot_select(id: str, bot_list: list[str], reason: bool = False):
 
     return select
 
+app.state.valid_csrf = {}
+
 @app.get("/bot-actions")
 async def loa(request: Request, response: Response):
-    queue_select = bot_select("queue", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.pending))
+    queue = await app.state.db.fetch("SELECT bot_id, username_cached, client_id, invite FROM bots WHERE state = $1", enums.BotState.pending)
+
+    queue_select = bot_select("queue", queue)
 
     under_review = await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.under_review)
 
     under_review_select_approved = bot_select("under_review_approved", under_review, reason=True)
     under_review_select_denied = bot_select("under_review_denied", under_review, reason=True)
+    under_review_select_claim = bot_select("under_review_claim", under_review, reason=True)
     
-    ban_select = bot_select("ban", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state != $1", enums.BotState.banned), reason=True)
+    approved = await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.approved)
+
+    ban_select = bot_select("ban", approved, reason=True)
+    certify_select = bot_select("certify", approved, reason=True)
+    unban_select = bot_select("unban", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.banned), reason=True)
+    unverify_select = bot_select("unverify", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.approved), reason=True)
+    uncertify_select = bot_select("uncertify", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.certified), reason=True)
 
     # Easiest way to block cross origin is to just use a hidden input
     csrf_token = get_token(132)
+    app.state.valid_csrf |= {csrf_token: time.time()}
 
     response.set_cookie("csrf_token_ba", csrf_token, max_age=60*10, domain="lynx.fateslist.xyz", path="/bot-actions", secure=True, httponly=True, samesite="Strict")
+
+    queue_md = ""
+
+    for bot in queue:
+        if bot["invite"] and bot["invite"].startswith("https://"):
+            queue_md += f"""
+- {bot['username_cached']} | [Custom Invite]({bot['invite']}) | [Invite](https://discord.com/api/oauth2/authorize?client_id={bot['client_id'] or bot['bot_id']}&scope=bot&application.command)
+"""
+        else:
+            queue_md += f"""
+- {bot['username_cached']} | [Invite](https://discord.com/api/oauth2/authorize?client_id={bot['client_id'] or bot['bot_id']}&scope=bot&application.command) ({bot['invite'] or 'No custom perms'})
+"""
+
+    md = (
+        MarkdownIt()
+        .use(front_matter_plugin)
+        .use(footnote_plugin)
+        .use(anchors_plugin, max_level=3, permalink=True)
+        .use(fieldlist_plugin)
+        .use(container_plugin, name="warning")
+        .use(container_plugin, name="info")
+        .use(container_plugin, name="aonly")
+        .use(container_plugin, name="guidelines")
+        .use(container_plugin, name="generic", validate = lambda *args: True)
+        .enable('table')
+        .enable('image')
+    )
 
     return {
         "title": "Bot Actions (Experiment)",
         "pre": "/links",
         "data": md.render(f"""
-<h3>This is just an experiment</h3>
-
 ::: guidelines
 
 - Please make sure to claim a bot before you start testing it!
@@ -1037,17 +1071,44 @@ async def loa(request: Request, response: Response):
 
 :::
 
+## Queue
+
+{queue_md}
+
+## Actions
+
 ::: action-claim
 
-<h3>Claim Bot</h3>
+### Claim Bot
+
+- Only claim bots you have the *time* to review
+- Please unclaim bots whenever you are no longer actively reviewing them
+- Definition: pending => under_review
+
 {queue_select}
 <button onclick="claim()">Claim</button>
 
 :::
 
+::: action-unclaim
+
+### Unclaim Bot
+
+- Please unclaim bots whenever you are no longer actively reviewing them
+- Definition: under_review => pending
+
+{under_review_select_claim}
+<button onclick="unclaim()">Unclaim</button>
+
+:::
+
 ::: action-approve
 
-<h3>Approve Bot (must be claimed)</h3>
+### Approve Bot 
+
+- You must claim this bot before approving and preferrably before testing
+- Definition: under_review => approved
+
 {under_review_select_approved}
 
 <button onclick="approve()">Approve</button>
@@ -1056,25 +1117,316 @@ async def loa(request: Request, response: Response):
 
 ::: action-deny
 
-<h3>Deny Bot (must be claimed)</h3>
-{under_review_select_denied}
+### Deny Bot
 
+- You must claim this bot before denying and preferrably before testing
+- Definition: under_review => deny
+
+{under_review_select_denied}
 <button onclick="deny()">Deny</button>
 
 :::
 
 ::: action-ban
 
-<h3>Ban Bot</h3>
-{ban_select}
+### Ban Bot 
 
+- Must be approved and *not* certified
+- Definition: approved => banned
+
+{ban_select}
 <button onclick="ban()">Ban</button>
+
+:::
+
+::: action-unban
+
+### Unban Bot
+
+- Must *already* be banned
+- Definition: banned => approved
+
+{unban_select}
+<button onclick="unban()">Unban</button>
+
+:::
+
+::: action-certify
+
+### Certify Bot
+
+- Head Admin+ only
+- Definition: approved => certified
+
+{certify_select}
+<button onclick="certify()">Certify</button>
+
+:::
+
+::: action-uncertify
+
+### Uncertify Bot
+
+- Head Admin+ only
+- Definition: certified => approved
+
+{uncertify_select}
+<button onclick="uncertify()">Uncertify</button>
+
+:::
+
+::: action-unverify
+
+### Unverify Bot
+
+- Moderator+ only
+- Definition: approved => under_review
+
+{unverify_select}
+<button onclick="unverify()">Unverify</button>
+
+:::
+
+::: action-requeue
+
+### Requeue Bot
+
+- Moderator+ only
+- Definition: denied | banned => under_review
+
+{unverify_select}
+<button onclick="unverify()">Unverify</button>
 
 :::
 """), 
     "script": f"""
         var csrfToken = "{csrf_token}"
+    """ + 
+    """
+        function getBotId(id) {
+            return document.querySelector(id+"-alt").value || document.querySelector(id).value
+        }
+
+        async function claim() {
+            let botId = getBotId("#queue")
+            let res = await fetch(`/bot-actions/claim?csrf_token=${csrfToken}`, {
+                method: "POST",
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({"bot_id": botId}),
+            })
+            let json = await res.json()
+            alert(json.detail)
+        }
+
+        async function unclaim() {
+            let botId = getBotId("#under_review_claim")
+            let reason = document.querySelector("#under_review_claim-reason").value
+            let res = await fetch(`/bot-actions/unclaim?csrf_token=${csrfToken}`, {
+                method: "POST",
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({"bot_id": botId, "reason": reason}),
+            })
+            let json = await res.json()
+            alert(json.detail)
+        }
+
+        async function approve() {
+            let botId = getBotId("#under_review_approved")
+            let reason = document.querySelector("#under_review_approved-reason").value
+            let res = await fetch(`/bot-actions/approve?csrf_token=${csrfToken}`, {
+                method: "POST",
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({"bot_id": botId, "reason": reason}),
+            })
+            let json = await res.json()
+            alert(json.detail)
+        }
+
+        async function deny() {
+            let botId = getBotId("#under_review_denied")
+            let reason = document.querySelector("#under_review_denied-reason").value
+            let res = await fetch(`/bot-actions/deny?csrf_token=${csrfToken}`, {
+                method: "POST",
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({"bot_id": botId, "reason": reason}),
+            })
+            let json = await res.json()
+            alert(json.detail)
+        }
+
+        async function ban() {
+            let botId = getBotId("#ban")
+            let reason = document.querySelector("#ban-reason").value
+            let res = await fetch(`/bot-actions/ban?csrf_token=${csrfToken}`, {
+                method: "POST",
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({"bot_id": botId, "reason": reason}),
+            })
+            let json = await res.json()
+            alert(json.detail)
+        }
+
+        async function unban() {
+            let botId = getBotId("#unban")
+            let reason = document.querySelector("#unban-reason").value
+            let res = await fetch(`/bot-actions/unban?csrf_token=${csrfToken}`, {
+                method: "POST",
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({"bot_id": botId, "reason": reason}),
+            })
+            let json = await res.json()
+            alert(json.detail)
+        }
+
+        async function certify() {
+            let botId = getBotId("#certify")
+            let reason = document.querySelector("#certify-reason").value
+            let res = await fetch(`/bot-actions/certify?csrf_token=${csrfToken}`, {
+                method: "POST",
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({"bot_id": botId, "reason": reason}),
+            })
+            let json = await res.json()
+            alert(json.detail)
+        }
+
+        async function uncertify() {
+            let botId = getBotId("#uncertify")
+            let reason = document.querySelector("#uncertify-reason").value
+            let res = await fetch(`/bot-actions/uncertify?csrf_token=${csrfToken}`, {
+                method: "POST",
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({"bot_id": botId, "reason": reason}),
+            })
+            let json = await res.json()
+            alert(json.detail)
+        }
+
+        async function unverify() {
+            let botId = getBotId("#unverify")
+            let reason = document.querySelector("#unverify-reason").value
+            let res = await fetch(`/bot-actions/unverify?csrf_token=${csrfToken}`, {
+                method: "POST",
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({"bot_id": botId, "reason": reason}),
+            })
+            let json = await res.json()
+            alert(json.detail)
+        }
+
+        docReady(() => {
+            if(window.location.hash) {
+                document.querySelector(`${window.location.hash}`).scrollIntoView()
+            }
+        })
 """}
+
+class Action(BaseModel):
+    bot_id: str
+
+class ActionWithReason(Action):
+    bot_id: str
+    reason: str
+
+# TODO: Implement this if we go ahead with this
+@app.post("/bot-actions/claim")
+async def claim(request: Request, csrf_token: str, approve: Action):
+    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
+        return ORJSONResponse({
+            "detail": "CSRF Token is invalid"
+        })
+    return {"detail": "Not implemented"}
+
+@app.post("/bot-actions/unclaim")
+async def unclaim(request: Request, csrf_token: str, approve: ActionWithReason):
+    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
+        return ORJSONResponse({
+            "detail": "CSRF Token is invalid"
+        })
+    return {"detail": "Not implemented"}
+
+@app.post("/bot-actions/approve")
+async def approve(request: Request, csrf_token: str, approve: ActionWithReason):
+    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
+        return ORJSONResponse({
+            "detail": "CSRF Token is invalid"
+        })
+    return {"detail": "Not implemented"}
+
+@app.post("/bot-actions/deny")
+async def deny(request: Request, csrf_token: str, approve: ActionWithReason):
+    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
+        return ORJSONResponse({
+            "detail": "CSRF Token is invalid"
+        })
+    return {"detail": "Not implemented"}
+
+@app.post("/bot-actions/ban")
+async def ban(request: Request, csrf_token: str, approve: ActionWithReason):
+    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
+        return ORJSONResponse({
+            "detail": "CSRF Token is invalid"
+        })
+    return {"detail": "Not implemented"}
+
+@app.post("/bot-actions/unban")
+async def unban(request: Request, csrf_token: str, approve: ActionWithReason):
+    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
+        return ORJSONResponse({
+            "detail": "CSRF Token is invalid"
+        })
+    return {"detail": "Not implemented"}
+
+@app.post("/bot-actions/certify")
+async def certify(request: Request, csrf_token: str, approve: ActionWithReason):
+    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
+        return ORJSONResponse({
+            "detail": "CSRF Token is invalid"
+        })
+    return {"detail": "Not implemented"}
+
+@app.post("/bot-actions/uncertify")
+async def uncertify(request: Request, csrf_token: str, approve: ActionWithReason):
+    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
+        return ORJSONResponse({
+            "detail": "CSRF Token is invalid"
+        })
+    return {"detail": "Not implemented"}
+
+@app.post("/bot-actions/unverify")
+async def unverify(request: Request, csrf_token: str, approve: ActionWithReason):
+    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
+        return ORJSONResponse({
+            "detail": "CSRF Token is invalid"
+        })
+    return {"detail": "Not implemented"}
 
 
 @app.get("/links")
