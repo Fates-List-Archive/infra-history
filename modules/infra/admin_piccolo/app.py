@@ -521,7 +521,7 @@ staff_guide = md.render(staff_guide_md)
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         # TODO: Remove /bot-actions
-        if request.url.path.startswith(("/staff-guide", "/requests", "/links", "/bot-actions")):
+        if request.url.path.startswith(("/staff-guide", "/requests", "/links")):
             if request.headers.get("Frostpaw-Staff-Notify"):
                 return await call_next(request)
             else:
@@ -1468,6 +1468,7 @@ def links(request: Request):
         <a href="/staff-verify">Staff Verification</a> (in case you need it)
         <a href="/staff-guide">Staff Guide</a>
         <a href="/admin">Admin Console</a>
+        <a href="/bot-actions">Bot Actions</a>
         <a href="/requests">Requests</a>
         </pre>
     """
