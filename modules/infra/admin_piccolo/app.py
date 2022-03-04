@@ -1,5 +1,6 @@
 from base64 import b64decode
 from os import abort
+from pickletools import int4
 import random
 import sys
 import asyncpg
@@ -520,7 +521,6 @@ staff_guide = md.render(staff_guide_md)
 
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        # TODO: Remove /bot-actions
         if request.url.path.startswith(("/staff-guide", "/requests", "/links")):
             if request.headers.get("Frostpaw-Staff-Notify"):
                 return await call_next(request)
@@ -642,6 +642,8 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         
         if request.url.path.startswith("/meta"):
             return ORJSONResponse({"piccolo_admin_version": "0.1a1", "site_name": "Lynx Admin"})
+
+        request.state.user_id = int(request.scope["sunbeam_user"]["user"]["id"])
 
         if not request.url.path.startswith("/admin") and not request.url.path.startswith("/_"):
             if not request.headers.get("Frostpaw-Staff-Notify") and request.method == "GET":
@@ -1074,7 +1076,7 @@ async def loa(request: Request, response: Response):
 
 :::
 
-## Queue
+## Bot Queue
 
 {queue_md}
 
@@ -1373,85 +1375,100 @@ class ActionWithReason(Action):
     bot_id: str
     reason: str
 
+def action(states: list[enums.BotState], with_reason: bool, min_perm: int = 2):
+    async def state_check(bot_id: int):
+        bot_state = await app.state.db.fetchval("SELECT state FROM bots WHERE bot_id = $1", bot_id)
+        return bot_state in states
+    
+    async def _core(request: Request, csrf_token: str, data: Action):
+        if request.state.member.perm < min_perm:
+            return ORJSONResponse({
+                "detail": f"This operation has a minimum perm of {min_perm} but you have permission level {request.state.member.perm}"
+            }, status_code=400)
+
+        if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
+            return ORJSONResponse({
+                "detail": "CSRF Token is invalid"
+            }, status_code=400)
+        if not data.bot_id.isdigit():
+            return ORJSONResponse({
+                "detail": "Bot ID is invalid"
+            }, status_code=400)
+        data.bot_id = int(data.bot_id)
+        
+        if not await state_check(data.bot_id):
+            return ORJSONResponse({
+                "detail": f"Bot is not in acceptable states or doesn't exist: Acceptable states are {states}"
+            }, status_code=400)
+
+    def decorator(function):
+        if not with_reason:
+            async def wrapper(request: Request, csrf_token: str, data: Action):
+                if res := await _core(request, csrf_token, data):
+                    return res
+                return await function(request, data)
+        else:
+            async def wrapper(request: Request, csrf_token: str, data: ActionWithReason):
+                if res := await _core(request, csrf_token, data):
+                    return res
+                if len(data.reason) < 5:
+                    return ORJSONResponse({
+                        "detail": "Reason must be more than 5 characters"
+                    }, status_code=400)
+                return await function(request, data)
+        return wrapper
+    return decorator
+
 # TODO: Implement this if we go ahead with this
 @app.post("/bot-actions/claim")
+@action([enums.BotState.pending], with_reason=False)
 async def claim(request: Request, csrf_token: str, approve: Action):
-    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
-        return ORJSONResponse({
-            "detail": "CSRF Token is invalid"
-        })
-    return {"detail": "Not implemented"}
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.approved, request.state.user_id, int(approve.bot_id))
+    return {"detail": "Successfully claimed bot!"}
 
 @app.post("/bot-actions/unclaim")
-async def unclaim(request: Request, csrf_token: str, approve: ActionWithReason):
-    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
-        return ORJSONResponse({
-            "detail": "CSRF Token is invalid"
-        })
+@action([enums.BotState.under_review], with_reason=True)
+async def unclaim(request: Request, approve: ActionWithReason):
     return {"detail": "Not implemented"}
 
 @app.post("/bot-actions/approve")
-async def approve(request: Request, csrf_token: str, approve: ActionWithReason):
-    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
-        return ORJSONResponse({
-            "detail": "CSRF Token is invalid"
-        })
+@action([enums.BotState.under_review], with_reason=True)
+async def approve(request: Request, approve: ActionWithReason):
     return {"detail": "Not implemented"}
 
 @app.post("/bot-actions/deny")
-async def deny(request: Request, csrf_token: str, approve: ActionWithReason):
-    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
-        return ORJSONResponse({
-            "detail": "CSRF Token is invalid"
-        })
+@action([enums.BotState.under_review], with_reason=True)
+async def deny(request: Request, approve: ActionWithReason):
     return {"detail": "Not implemented"}
 
 @app.post("/bot-actions/ban")
-async def ban(request: Request, csrf_token: str, approve: ActionWithReason):
-    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
-        return ORJSONResponse({
-            "detail": "CSRF Token is invalid"
-        })
+@action([enums.BotState.approved], with_reason=True)
+async def ban(request: Request, approve: ActionWithReason):
     return {"detail": "Not implemented"}
 
 @app.post("/bot-actions/unban")
-async def unban(request: Request, csrf_token: str, approve: ActionWithReason):
-    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
-        return ORJSONResponse({
-            "detail": "CSRF Token is invalid"
-        })
+@action([enums.BotState.banned], with_reason=True)
+async def unban(request: Request, approve: ActionWithReason):
     return {"detail": "Not implemented"}
 
 @app.post("/bot-actions/certify")
-async def certify(request: Request, csrf_token: str, approve: ActionWithReason):
-    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
-        return ORJSONResponse({
-            "detail": "CSRF Token is invalid"
-        })
+@action([enums.BotState.approved], with_reason=True)
+async def certify(request: Request, approve: ActionWithReason):
     return {"detail": "Not implemented"}
 
 @app.post("/bot-actions/uncertify")
-async def uncertify(request: Request, csrf_token: str, approve: ActionWithReason):
-    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
-        return ORJSONResponse({
-            "detail": "CSRF Token is invalid"
-        })
+@action([enums.BotState.certified], with_reason=True)
+async def uncertify(request: Request, approve: ActionWithReason):
     return {"detail": "Not implemented"}
 
 @app.post("/bot-actions/unverify")
-async def unverify(request: Request, csrf_token: str, approve: ActionWithReason):
-    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
-        return ORJSONResponse({
-            "detail": "CSRF Token is invalid"
-        })
+@action([enums.BotState.approved], with_reason=True)
+async def unverify(request: Request, approve: ActionWithReason):
     return {"detail": "Not implemented"}
 
 @app.post("/bot-actions/requeue")
-async def requeue(request: Request, csrf_token: str, approve: ActionWithReason):
-    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
-        return ORJSONResponse({
-            "detail": "CSRF Token is invalid"
-        })
+@action([enums.BotState.banned, enums.BotState.denied], with_reason=True)
+async def requeue(request: Request, approve: ActionWithReason):
     return {"detail": "Not implemented"}
 
 @app.get("/links")
