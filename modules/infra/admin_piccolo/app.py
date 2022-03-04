@@ -520,7 +520,8 @@ staff_guide = md.render(staff_guide_md)
 
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        if request.url.path.startswith(("/staff-guide", "/requests", "/links")):
+        # TODO: Remove /bot-actions
+        if request.url.path.startswith(("/staff-guide", "/requests", "/links", "/bot-actions")):
             if request.headers.get("Frostpaw-Staff-Notify"):
                 return await call_next(request)
             else:
@@ -1025,6 +1026,8 @@ async def loa(request: Request, response: Response):
     certify_select = bot_select("certify", approved, reason=True)
     unban_select = bot_select("unban", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.banned), reason=True)
     unverify_select = bot_select("unverify", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.approved), reason=True)
+    requeue_select = bot_select("requeue", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1 OR state = $2", enums.BotState.denied, enums.BotState.banned), reason=True)
+
     uncertify_select = bot_select("uncertify", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.certified), reason=True)
 
     # Easiest way to block cross origin is to just use a hidden input
@@ -1194,8 +1197,8 @@ async def loa(request: Request, response: Response):
 - Moderator+ only
 - Definition: denied | banned => under_review
 
-{unverify_select}
-<button onclick="unverify()">Unverify</button>
+{requeue_select}
+<button onclick="requeue()">Requeue</button>
 
 :::
 """), 
@@ -1341,6 +1344,21 @@ async def loa(request: Request, response: Response):
             alert(json.detail)
         }
 
+        async function requeue() {
+            let botId = getBotId("#requeue")
+            let reason = document.querySelector("#requeue-reason").value
+            let res = await fetch(`/bot-actions/requeue?csrf_token=${csrfToken}`, {
+                method: "POST",
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({"bot_id": botId, "reason": reason}),
+            })
+            let json = await res.json()
+            alert(json.detail)
+        }
+
         docReady(() => {
             if(window.location.hash) {
                 document.querySelector(`${window.location.hash}`).scrollIntoView()
@@ -1428,6 +1446,13 @@ async def unverify(request: Request, csrf_token: str, approve: ActionWithReason)
         })
     return {"detail": "Not implemented"}
 
+@app.post("/bot-actions/requeue")
+async def requeue(request: Request, csrf_token: str, approve: ActionWithReason):
+    if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
+        return ORJSONResponse({
+            "detail": "CSRF Token is invalid"
+        })
+    return {"detail": "Not implemented"}
 
 @app.get("/links")
 def links(request: Request):
