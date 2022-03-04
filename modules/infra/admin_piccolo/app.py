@@ -32,6 +32,7 @@ from tables import Bot, Reviews, ReviewVotes, BotTag, User, Vanity, BotListTags,
 import orjson
 import aioredis
 from modules.core import redis_ipc_new
+from modules.models import enums
 from discord import Embed
 from piccolo.apps.user.tables import BaseUser
 import secrets
@@ -164,7 +165,8 @@ lynx_form_html = """
         font-weight: bold;
     }
 
-    #verify-btn {
+    button {
+        display: block;
         width: 100px;
         background-color: red;
         color: white;
@@ -174,8 +176,35 @@ lynx_form_html = """
         padding: 10px;
     }
 
+    #verify-btn {
+        display: initial;
+    }
+
     #verify-parent {
         text-align: center;
+    }
+
+    label {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    select {
+        width: 100%;
+        padding: 10px;
+    }
+
+    input {
+        width: 100%;
+        padding: 10px;
+    }
+
+    hr {
+        color: black;
+        background-color: black;
+        margin-top: 20px !important;
+        height: 10px;
+        font-weight: bold;
     }
     </style>
     <script>
@@ -216,6 +245,87 @@ lynx_form_html = """
         }
     })
     </script>
+    <style>
+        .header-anchor {
+            display: none;
+        }
+        h2:hover > .header-anchor {
+            display: initial;
+        }
+
+        .info, .warning, .aonly, .guidelines, .generic {
+            border: 3px solid;
+            margin-bottom: 3px;
+            padding: 3px;
+        }
+
+        .info:before {
+            content: "Info";
+            font-size: 26px;
+            font-weight: bold;
+            color: blue;
+        }
+
+        .guidelines:before {
+            content: "Guidelines";
+            font-size: 26px;
+            font-weight: bold;
+            color: green;
+        }
+
+
+        .warning:before {
+            content: "Warning";
+            font-size: 26px;
+            font-weight: bold;
+            color: red;
+        }
+
+        .generic:before {
+            content: "Action";
+            font-size: 26px;
+            font-weight: bold;
+            color: red;
+        }
+
+        .generic {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .aonly:before {
+            content: "Admin Only!";
+            font-size: 26px;
+            font-weight: bold;
+            color: yellow;
+        }
+
+        .info {
+            border-color: blue;
+            background-color: rgba(0, 0, 255, 0.1);
+        }
+
+        .warning {
+            border-color: red;
+            background-color: rgba(255, 0, 0, 0.1);
+        }
+
+        .generic {
+            border-color: red;
+            background-color: rgba(255, 20, 10, 0.1);
+        }
+
+        .aonly {
+            border-color: yellow;
+            background-color: rgba(255, 255, 0, 0.1);
+        }
+
+        .guidelines {
+            border-color: green;
+            background-color: rgba(255, 0, 0, 0.1);
+        }
+
+    </style>
 """
 
 staff_guide_md = """
@@ -289,6 +399,8 @@ and we want to deal with our queue as well...*).
 
 **Remember, case-by-case basis means use your own judgement and ask other staff members if unsure**
 
+::: guidelines
+
 Some things that should be checked for. Note that *all of the below is changeable on a case by case basis*:
 
 - Admin Commands (antinuke is a special case and has an exemption here)
@@ -302,11 +414,13 @@ post the media link in the reason for denial. The second half of the staff verif
 - **Is the bots owner correct (validate using other bot lists or Head Admins+ if needed), report violations to a Admin+ ASAP**
 - **Quality of bot descriptions and long description**
 
+:::
+
 **Remember. Approve and deny bots without bias. Just because you like/dislike the owner does NOT mean you approve/deny their bots!**
 
-- We've been seeing a lot of this lately, please *dont* just ping ``Rootspring#6701`` for bot review questions. Instead, ping any Admin+ and then come to me. 
+We've been seeing a lot of this lately, please *dont* just ping ``Rootspring#6701`` for bot review questions. Instead, ping any Admin+ and then come to me. 
 
-::: info
+::: aonly
 
 Admins+ may approve known large bots without fully testing them if they are KNOWN to be high quality and have been widely used 
 by them. This is in place to reduce our queue size allowing smaller bots to be tested more quickly and with better feedback
@@ -317,12 +431,16 @@ If a bot is in need of verification, it may also be tested on its support server
 
 ## Bots in other languages
 
+::: guidelines
+
 Do not deny bots for using other languages. These are officially supported. Instead, do one of the following:
 
 - Use Google Translate: https://translate.google.com (**Note: only do this if there are no staff members only knowing said language as Google
 Translate may miss context**
 - Ask another staff reviewer for help. The fifth part of the staff verification code is +Poketwo. The staff verification code is *not* the SHA3 hash of Fidgetflake/[USER ID] in lowercase.
 - Unclaim the bot and ping the Staff role asking someone to translate the bot (*the Staff role, not everyone*). The third half of the staff verification code is Lightleap::USERID
+
+:::
 
 ## Prefix Changes
 
@@ -365,11 +483,15 @@ Lynx is our admin panel giving you complete control of the database. Access will
 
 Lynx can/is slightly buggy at times. Report these bugs to Rootspring#6701 please.
 
+::: guidelines
+
 Some ground rules with Lynx:
 
 - See https://lynx.fateslist.xyz/links first after a staff verification
 - When in doubt, ask. Do not change enums/delete rows you think are erroneous, it probably is intentionally like that
 - **Do not, absolutely *do not* share login credentials or access to Lynx with others *without the explicit permission of Rootspring#6701*. This also includes storing access credentials on notes etc.**
+
+:::
 
 **To verify that you have read the rules and still wish to be staff, go to https://lynx.fateslist.xyz/**
 
@@ -390,6 +512,9 @@ md = (
     .use(fieldlist_plugin)
     .use(container_plugin, name="warning")
     .use(container_plugin, name="info")
+    .use(container_plugin, name="aonly")
+    .use(container_plugin, name="guidelines")
+    .use(container_plugin, name="generic", validate = lambda *args: True)
     .enable('table')
     .enable('image')
 )
@@ -751,47 +876,7 @@ def code_check_route(request: Request):
 def staff_guide_route(request: Request):
     return ORJSONResponse({
         "title": "Staff Guide",
-        "data": staff_guide + """
-            <style>
-                .header-anchor {
-                    display: none;
-                }
-                h2:hover > .header-anchor {
-                    display: initial;
-                }
-
-                .info, .warning {
-                    border: 3px solid;
-                    margin-bottom: 3px;
-                    padding: 3px;
-                }
-
-                .info:before {
-                    content: "Info";
-                    font-size: 26px;
-                    font-weight: bold;
-                    color: blue;
-                }
-
-                .warning:before {
-                    content: "Warning";
-                    font-size: 26px;
-                    font-weight: bold;
-                    color: red;
-                }
-
-                .info {
-                    border-color: blue;
-                    background-color: rgba(0, 0, 255, 0.1);
-                }
-
-                .warning {
-                    border-color: red;
-                    background-color: rgba(255, 0, 0, 0.1);
-                }
-
-            </style>
-        """,
+        "data": staff_guide,
         "script": """
             docReady(() => {
                 if(window.location.hash) {
@@ -886,6 +971,111 @@ def loa(request: Request):
         </pre>
         """
     })
+
+def bot_select(id: str, bot_list: list[str], reason: bool = False):
+    select = f"""
+<label for='{id}'>Choose a bot</label><br/>
+<select name='{id}' id='{id}'> 
+<option value="" disabled selected>Select your option</option>
+    """
+
+    for bot in bot_list:
+        select += f"""
+<option value="{bot['bot_id']}">{bot['username_cached'] or 'No cached username'} ({bot['bot_id']})</option>
+        """
+    
+    select += "</select><br/>"
+
+    # Add a input for bot id instead of select
+    select += f"""
+<label for="{id}-alt">Or enter a Bot ID</label><br/>
+<input type="number" id="{id}-alt" name="{id}-alt" />
+<br/>
+    """
+
+    if reason:
+        select += f"""
+<label for="{id}-reason">Reason</label><br/>
+<textarea 
+    type="text" 
+    id="{id}-reason" 
+    name="{id}-reason"
+    placeholder="Enter reason and feedback for improvement here"
+    style="width: 100%; height: 200px; font-size: 20px !important; resize: none;"
+></textarea>
+<br/>
+        """
+
+    return select
+
+@app.get("/bot-actions")
+async def loa(request: Request, response: Response):
+    queue_select = bot_select("queue", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.pending))
+
+    under_review = await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.under_review)
+
+    under_review_select_approved = bot_select("under_review_approved", under_review, reason=True)
+    under_review_select_denied = bot_select("under_review_denied", under_review, reason=True)
+    
+    ban_select = bot_select("ban", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state != $1", enums.BotState.banned), reason=True)
+
+    # Easiest way to block cross origin is to just use a hidden input
+    csrf_token = get_token(132)
+
+    response.set_cookie("csrf_token_ba", csrf_token, max_age=60*10, domain="lynx.fateslist.xyz", path="/bot-actions", secure=True, httponly=True, samesite="Strict")
+
+    return {
+        "title": "Bot Actions (Experiment)",
+        "pre": "/links",
+        "data": md.render(f"""
+<h3>This is just an experiment</h3>
+
+::: guidelines
+
+- Please make sure to claim a bot before you start testing it!
+- Also, make sure to read <a href="/staff-guide">our staff guide</a>
+
+:::
+
+::: action-claim
+
+<h3>Claim Bot</h3>
+{queue_select}
+<button onclick="claim()">Claim</button>
+
+:::
+
+::: action-approve
+
+<h3>Approve Bot (must be claimed)</h3>
+{under_review_select_approved}
+
+<button onclick="approve()">Approve</button>
+
+:::
+
+::: action-deny
+
+<h3>Deny Bot (must be claimed)</h3>
+{under_review_select_denied}
+
+<button onclick="deny()">Deny</button>
+
+:::
+
+::: action-ban
+
+<h3>Ban Bot</h3>
+{ban_select}
+
+<button onclick="ban()">Ban</button>
+
+:::
+"""), 
+    "script": f"""
+        var csrfToken = "{csrf_token}"
+"""}
+
 
 @app.get("/links")
 def links(request: Request):
