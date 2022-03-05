@@ -220,13 +220,13 @@ lynx_form_beta = """
             ></a>
           </li>
           <li class="nav-item d-none d-sm-inline-block">
-            <a href="/" class="nav-link">Home</a>
+            <a href="https://lynx.fateslist.xyz" class="nav-link">Home</a>
           </li>
           <li class="nav-item d-none d-sm-inline-block">
-            <a href="/admin" class="nav-link">Admin</a>
+            <a href="https://lynx.fateslist.xyz/admin" class="nav-link">Admin</a>
           </li>
           <li class="nav-item d-none d-sm-inline-block">
-            <a href="/bot-actions" class="nav-link">Bot Actions</a>
+            <a href="https://lynx.fateslist.xyz/bot-actions" class="nav-link">Bot Actions</a>
           </li>
         </ul>
         <ul class="navbar-nav ml-auto">
@@ -253,6 +253,8 @@ lynx_form_beta = """
               ><i class="fas fa-expand-arrows-alt"></i
             ></a>
           </li>
+          <!-- Extra Code To Add Secret Side Bar
+          
           <li class="nav-item">
             <a
               class="nav-link"
@@ -263,6 +265,7 @@ lynx_form_beta = """
               ><i class="fas fa-th-large"></i
             ></a>
           </li>
+          -->
         </ul>
       </nav>
       <aside class="main-sidebar sidebar-dark-primary elevation-4">
@@ -285,11 +288,28 @@ lynx_form_beta = """
               data-accordion="false"
             >
               <li class="nav-item">
-                <a href="#" class="nav-link"
+                <a href="https://lynx.fateslist.xyz/" class="nav-link"
                   ><i class="nav-icon fa-solid fa-house"></i>
                   <p>Home</p></a
                 >
-              </li>
+                <li class="nav-item">
+                    <a href="https://lynx.fateslist.xyz/admin" class="nav-link"
+                      ><i class="fa-solid fa-server"></i>
+                      <p>Piccolo Admin</p></a
+                    >
+                  </li>
+              </li><li class="nav-item">
+                    <a href="https://lynx.fateslist.xyz/staff-apps" class="nav-link"
+                      ><i class="fa-solid fa-rectangle-list"></i>
+                      <p>Staff Applications</p></a
+                    >
+                  </li>
+               <li class="nav-item">
+                    <a href="https://lynx.fateslist.xyz/links" class="nav-link"
+                      ><i class="fa-solid fa-link"></i>
+                      <p>Links</p></a
+                    >
+                  </li>
               <li class="nav-item menu-open">
                 <a href="#" class="nav-link active"
                   ><i class="nav-icon fa-solid fa-candy-cane"></i>
@@ -297,13 +317,7 @@ lynx_form_beta = """
                 ></a>
                 <ul class="nav nav-treeview">
                   <li class="nav-item">
-                    <a href="/admin" class="nav-link"
-                      ><i class="far fa-circle nav-icon"></i>
-                      <p>Piccolo Admin</p></a
-                    >
-                  </li>
-                  <li class="nav-item">
-                    <a href="/bot-actions" class="nav-link active"
+                    <a href="https://lynx.fateslist.xyz/bot-actions" class="nav-link active"
                       ><i class="far fa-circle nav-icon"></i>
                       <p>
                         Bot Actions
