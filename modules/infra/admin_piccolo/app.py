@@ -372,6 +372,11 @@ lynx_form_beta = """
     </div>
   </body>
   <script>
+    // https://stackoverflow.com/a/46959528
+    function title(str) {
+        return str.replaceAll("_", " ").replace(/(^|\s)\S/g, function(t) { return t.toUpperCase() });
+    }
+
     function docReady(fn) {
         // see if DOM is already available
         if (document.readyState === "complete" || document.readyState === "interactive") {
@@ -383,6 +388,12 @@ lynx_form_beta = """
     }    
 
     docReady(async function() {
+        var currentURL = window.location.pathname
+        console.log('Chnaging Breadcrumb Paths')
+        var currentBreadPath = currentURL.replace('-', ' ').replace('.html', '').replace('/', '')
+        currentBreadPath = title(currentBreadPath)
+        $('#currentBreadPath').append(`<li class="breadcrumb-item active"><a href="${currentURL}">${currentBreadPath}</a></li>`)
+    
         let res = await fetch(window.location.href, {
             method: "GET",
             credentials: 'same-origin',
@@ -521,14 +532,6 @@ lynx_form_beta = """
   </style>
 
 <script>
-    var currentURL = window.location.pathname
-      console.log('Chnaging Breadcrumb Paths')
-      var currentBreadPath = currentURL.replace('-', ' ').replace('.html', '').replace('/', '')
-      currentBreadPath = currentBreadPath.toLowerCase().replace(/\b[a-z]/g, function(letter) {
-    return letter.toUpperCase();
-});
-      $('#currentBreadPath').append(`<li class="breadcrumb-item"><a href="/admin">Admin</a></li>
-                  <li class="breadcrumb-item active"><a href="${(currentURL == '/bot-actions') ? currentURL + '?beta=1' : currentURL}">${currentBreadPath}</a></li>`)
   </script>
 
 </html>
@@ -1887,7 +1890,7 @@ def links(request: Request):
         <a href="/bot-actions">Bot Actions</a><br/>
         <a href="/requests">Requests</a><br/>
 	    <blockquote class="quote">
-            <h5 class="warning">Credits</h5>
+            <h5 id="credits">Credits</h5>
              <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
             </p>
         </blockquote>
