@@ -337,10 +337,8 @@ lynx_form_beta = """
             <div class="row mb-2">
               <div class="col-sm-6"><h1 class="m-0">Welcome to Lynx! (<span id="title"></span>)</h1></div>
               <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
+                <ol class="breadcrumb float-sm-right" id="currentBreadPath">
                   <li class="breadcrumb-item"><a href="#">Home</a></li>
-                  <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
-                  <li class="breadcrumb-item active"><a href="/bot-actions">Bot Actions</a></li>
                 </ol>
               </div>
             </div>
@@ -521,6 +519,20 @@ lynx_form_beta = """
         background-color: rgba(255, 0, 0, 0.1);
     }
   </style>
+
+<script>
+    var currentURL = window.location.pathname
+    console.log(currentURL)
+    if(currentURL == '/Lynx.html') {
+      console.log('Chnaging Breadcrumb Paths')
+      var currentBreadPath = currentURL.replace('-', ' ').replace('.html', '').replace('/', '')
+      currentBreadPath = currentBreadPath.toLowerCase().replace(/\b[a-z]/g, function(letter) {
+    return letter.toUpperCase();
+});
+      $('#currentBreadPath').append(`<li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+                  <li class="breadcrumb-item active"><a href="${(currentURL == '/bot-actions') ? currentURL + '?beta=1' : currentURL}">${currentBreadPath}</a></li>`)
+    }
+  </script>
 
 </html>
 """
