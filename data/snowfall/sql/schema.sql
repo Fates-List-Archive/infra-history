@@ -76,6 +76,7 @@ CREATE TABLE bots (
     banner_page text,
     keep_banner_decor boolean default true,
     created_at timestamptz not null DEFAULT NOW(),
+    last_updated_at timestamptz not null DEFAULT NOW(),
     invite text,
     invite_amount integer DEFAULT 0,
     github TEXT,

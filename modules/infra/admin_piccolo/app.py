@@ -69,18 +69,57 @@ def get_token(length: int) -> str:
 with open("config/data/discord.json") as json:
     json = orjson.loads(json.read())
     bot_logs = json["channels"]["bot_logs"]
+    main_server = json["servers"]["main"]
     staff_server = json["servers"]["staff"]
     access_granted_role = json["roles"]["staff_server_access_granted_role"]
+    bot_developer = json["roles"]["bot_dev_role"]
+    certified_developer = json["roles"]["certified_dev_role"]
+    certified_bot = json["roles"]["certified_bots_role"]
 
 with open("config/data/secrets.json") as json:
     main_bot_token = orjson.loads(json.read())["token_main"]
 
-async def add_role(member, role):
-    url = f"https://discord.com/api/v10/guilds/{staff_server}/members/{member}/roles/{role}"
+async def add_role(server, member, role, reason):
+    print(f"[LYNX] Giving role {role} to member {member} on server {server} for reason: {reason}")
+    url = f"https://discord.com/api/v10/guilds/{server}/members/{member}/roles/{role}"
     async with aiohttp.ClientSession() as sess:
         async with sess.put(url, headers={
             "Authorization": f"Bot {main_bot_token}",
-            "X-Audit-Log-Reason": "[LYNX] Staff Verification"
+            "X-Audit-Log-Reason": f"[LYNX] {reason}"
+        }) as resp:
+            if resp.status == HTTPStatus.NO_CONTENT:
+                return None
+            return await resp.json()
+
+async def del_role(server, member, role, reason):
+    print(f"[LYNX] Removing role {role} to member {member} on server {server} for reason: {reason}")
+    url = f"https://discord.com/api/v10/guilds/{server}/members/{member}/roles/{role}"
+    async with aiohttp.ClientSession() as sess:
+        async with sess.delete(url, headers={
+            "Authorization": f"Bot {main_bot_token}",
+            "X-Audit-Log-Reason": f"[LYNX] {reason}"
+        }) as resp:
+            if resp.status == HTTPStatus.NO_CONTENT:
+                return None
+            return await resp.json()
+
+async def ban_user(server, member, reason):
+    url = f"https://discord.com/api/v10/guilds/{server}/bans/{member}"
+    async with aiohttp.ClientSession() as sess:
+        async with sess.put(url, headers={
+            "Authorization": f"Bot {main_bot_token}",
+            "X-Audit-Log-Reason": f"[LYNX] Bot Banned: {reason[:14]+'...'}"
+        }) as resp:
+            if resp.status == HTTPStatus.NO_CONTENT:
+                return None
+            return await resp.json()
+
+async def unban_user(server, member, reason):
+    url = f"https://discord.com/api/v10/guilds/{server}/bans/{member}"
+    async with aiohttp.ClientSession() as sess:
+        async with sess.delete(url, headers={
+            "Authorization": f"Bot {main_bot_token}",
+            "X-Audit-Log-Reason": f"[LYNX] Bot Unbanned: {reason[:14]+'...'}"
         }) as resp:
             if resp.status == HTTPStatus.NO_CONTENT:
                 return None
@@ -1012,7 +1051,7 @@ app.state.valid_csrf = {}
 
 @app.get("/bot-actions")
 async def loa(request: Request, response: Response):
-    queue = await app.state.db.fetch("SELECT bot_id, username_cached, client_id, invite FROM bots WHERE state = $1", enums.BotState.pending)
+    queue = await app.state.db.fetch("SELECT bot_id, username_cached, client_id, invite FROM bots WHERE state = $1 ORDER BY created_at DESC", enums.BotState.pending)
 
     queue_select = bot_select("queue", queue)
 
@@ -1022,7 +1061,7 @@ async def loa(request: Request, response: Response):
     under_review_select_denied = bot_select("under_review_denied", under_review, reason=True)
     under_review_select_claim = bot_select("under_review_claim", under_review, reason=True)
     
-    approved = await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.approved)
+    approved = await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1 ORDER BY created_at DESC", enums.BotState.approved)
 
     ban_select = bot_select("ban", approved, reason=True)
     certify_select = bot_select("certify", approved, reason=True)
@@ -1110,6 +1149,8 @@ async def loa(request: Request, response: Response):
 ::: action-approve
 
 ### Approve Bot 
+
+<span id='approve-invite'></span>
 
 - You must claim this bot before approving and preferrably before testing
 - Definition: under_review => approved
@@ -1254,6 +1295,10 @@ async def loa(request: Request, response: Response):
             })
             let json = await res.json()
             alert(json.detail)
+            if(res.ok) {
+                // Now put the invite to the bot
+                document.querySelector("#approve-invite").innerHTML = `Please invite it to the main server: <a href='https://discord.com/api/oauth2/authorize?client_id=${botId}&scope=bot&application.command&guild_id=${json.guild_id}'>Invite</a>`
+            }
         }
 
         async function deny() {
@@ -1370,12 +1415,19 @@ async def loa(request: Request, response: Response):
 
 class Action(BaseModel):
     bot_id: str
+    owners: list[dict] | None = None # This is filled in by action decorator
+    main_owner: int | None = None # This is filled in by action decorator
 
 class ActionWithReason(Action):
     bot_id: str
     reason: str
 
-def action(states: list[enums.BotState], with_reason: bool, min_perm: int = 2):
+def action(
+    states: list[enums.BotState], 
+    with_reason: bool, 
+    min_perm: int = 2,
+    action_log: enums.UserBotAction | None = None
+):
     async def state_check(bot_id: int):
         bot_state = await app.state.db.fetchval("SELECT state FROM bots WHERE bot_id = $1", bot_id)
         return bot_state in states
@@ -1400,13 +1452,23 @@ def action(states: list[enums.BotState], with_reason: bool, min_perm: int = 2):
             return ORJSONResponse({
                 "detail": f"Bot is not in acceptable states or doesn't exist: Acceptable states are {states}"
             }, status_code=400)
+        
+        data.owners = await app.state.db.fetch("SELECT owner, main FROM bot_owner WHERE bot_id = $1", data.bot_id)
+
+        for owner in data.owners:
+            if owner["main"]:
+                data.main_owner = owner["owner"]
+                break
 
     def decorator(function):
         if not with_reason:
             async def wrapper(request: Request, csrf_token: str, data: Action):
                 if res := await _core(request, csrf_token, data):
                     return res
-                return await function(request, data)
+                res = await function(request, data)
+                if action_log:
+                    ... 
+                return res
         else:
             async def wrapper(request: Request, csrf_token: str, data: ActionWithReason):
                 if res := await _core(request, csrf_token, data):
@@ -1415,61 +1477,220 @@ def action(states: list[enums.BotState], with_reason: bool, min_perm: int = 2):
                     return ORJSONResponse({
                         "detail": "Reason must be more than 5 characters"
                     }, status_code=400)
-                return await function(request, data)
+                res = await function(request, data)
+                if action_log:
+                    ...
+                return res
         return wrapper
     return decorator
 
 # TODO: Implement this if we go ahead with this
 @app.post("/bot-actions/claim")
 @action([enums.BotState.pending], with_reason=False)
-async def claim(request: Request, csrf_token: str, approve: Action):
-    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.approved, request.state.user_id, int(approve.bot_id))
+async def claim(request: Request, data: Action):
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.under_review, request.state.user_id, int(data.bot_id))
+    
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0x00ff00,
+        title="Bot Claimed",
+        description=f"<@{request.state.user_id}> has claimed <@{data.bot_id}> and this bot is now under review.\n**If all goes well, this bot should be approved (or denied) soon!**\n\nThank you for using Fates List :heart:",
+    )
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
     return {"detail": "Successfully claimed bot!"}
 
 @app.post("/bot-actions/unclaim")
 @action([enums.BotState.under_review], with_reason=True)
-async def unclaim(request: Request, approve: ActionWithReason):
-    return {"detail": "Not implemented"}
+async def unclaim(request: Request, data: ActionWithReason):
+    await app.state.db.execute("UPDATE bots SET state = $1 WHERE bot_id = $2", enums.BotState.pending, data.bot_id)
+
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0x00ff00,
+        title="Bot Unclaimed",
+        description=f"<@{request.state.user_id}> has stopped testing <@{data.bot_id}> for now and this bot is now pending review from another bot reviewer.\n**This is perfectly normal. All bot reviewers need breaks too! If all goes well, this bot should be approved (or denied) soon!**\n\nThank you for using Fates List :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully unclaimed bot"}
 
 @app.post("/bot-actions/approve")
 @action([enums.BotState.under_review], with_reason=True)
-async def approve(request: Request, approve: ActionWithReason):
-    return {"detail": "Not implemented"}
+async def approve(request: Request, data: ActionWithReason):
+    # Get approximate guild count
+    async with aiohttp.ClientSession() as sess:
+        async with sess.get(f"https://japi.rest/discord/v1/application/{data.bot_id}") as resp:
+            if resp.status != 200:
+                return ORJSONResponse({
+                    "detail": f"Bot does not exist or japi.rest is down. Got status code {resp.status}"
+                }, status_code=400)
+            japi = await resp.json()
+            approx_guild_count = japi["data"]["bot"]["approximate_guild_count"]
+
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2, guild_count = $3 WHERE bot_id = $4", enums.BotState.approved, request.state.user_id, approx_guild_count, data.bot_id)
+    
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0x00ff00,
+        title="Bot Approved!",
+        description=f"<@{request.state.user_id}> has approved <@{data.bot_id}>\nCongratulations on your accompishment and thank you for using Fates List :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+    embed.add_field(name="Guild Count (approx)", value=str(approx_guild_count))
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    
+    for owner in data.owners:
+        asyncio.create_task(add_role(main_server, owner["owner"], bot_developer, "Bot Approved"))
+
+    return {"detail": "Successfully approved bot", "guild_id": str(main_server)}
 
 @app.post("/bot-actions/deny")
 @action([enums.BotState.under_review], with_reason=True)
-async def deny(request: Request, approve: ActionWithReason):
-    return {"detail": "Not implemented"}
+async def deny(request: Request, data: ActionWithReason):
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.denied, request.state.user_id, data.bot_id)
+
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0xe74c3c,
+        title="Bot Denied",
+        description=f"<@{request.state.user_id}> has denied <@{data.bot_id}>!\n**Once you've fixed what we've asked you to fix, please resubmit your bot by going to `Bot Settings`.**\n\nThank you for using Fates List :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully denied bot"}
 
 @app.post("/bot-actions/ban")
 @action([enums.BotState.approved], with_reason=True)
-async def ban(request: Request, approve: ActionWithReason):
-    return {"detail": "Not implemented"}
+async def ban(request: Request, data: ActionWithReason):
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.banned, request.state.user_id, data.bot_id)
+
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0xe74c3c,
+        title="Bot Banned",
+        description=f"<@{request.state.user_id}> has banned <@{data.bot_id}>!\n**Once you've fixed what we've need you to fix, please appeal your ban by going to `Bot Settings`.**\n\nThank you for using Fates List :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+
+    asyncio.create_task(ban_user(main_server, data.bot_id, data.reason))
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully banned bot"}
 
 @app.post("/bot-actions/unban")
 @action([enums.BotState.banned], with_reason=True)
-async def unban(request: Request, approve: ActionWithReason):
-    return {"detail": "Not implemented"}
+async def unban(request: Request, data: ActionWithReason):
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.approved, request.state.user_id, data.bot_id)
+
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0x00ff00,
+        title="Bot Unbanned",
+        description=f"<@{request.state.user_id}> has unbanned <@{data.bot_id}>!\n\nThank you for using Fates List again and sorry for any inconveniences caused! :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+
+    asyncio.create_task(unban_user(main_server, data.bot_id, data.reason))
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully unbanned bot"}
 
 @app.post("/bot-actions/certify")
-@action([enums.BotState.approved], with_reason=True)
-async def certify(request: Request, approve: ActionWithReason):
-    return {"detail": "Not implemented"}
+@action([enums.BotState.approved], with_reason=True, min_perm=5)
+async def certify(request: Request, data: ActionWithReason):
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.certified, request.state.user_id, data.bot_id)
+
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0x00ff00,
+        title="Bot Certified",
+        description=f"<@{request.state.user_id}> has certified <@{data.bot_id}>.\n**Good Job!!!**\n\nThank you for using Fates List :heart:",
+    )
+
+    embed.add_field(name="Feedback", value=data.reason)
+
+    for owner in data.owners:
+        asyncio.create_task(add_role(main_server, owner["owner"], certified_developer, "Bot certified - owner gets role"))
+
+    # Add certified bot role to bot
+    asyncio.create_task(add_role(main_server, data.bot_id, certified_bot, "Bot certified - add bots role"))
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully certified bot"}
 
 @app.post("/bot-actions/uncertify")
-@action([enums.BotState.certified], with_reason=True)
-async def uncertify(request: Request, approve: ActionWithReason):
-    return {"detail": "Not implemented"}
+@action([enums.BotState.certified], with_reason=True, min_perm=5)
+async def uncertify(request: Request, data: ActionWithReason):
+    await app.state.db.execute("UPDATE bots SET state = $1 WHERE bot_id = $2", enums.BotState.approved, data.bot_id)
+
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0xe74c3c,
+        title="Bot Uncertified",
+        description=f"<@{request.state.user_id}> has uncertified <@{data.bot_id}>.\n\nThank you for using Fates List but this was a necessary action :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+
+    for owner in data.owners:
+        asyncio.create_task(del_role(main_server, owner["owner"], certified_developer, "Bot uncertified - Owner gets role"))
+
+    # Add certified bot role to bot
+    asyncio.create_task(del_role(main_server, data.bot_id, certified_bot, "Bot uncertified - Bots Role"))
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully uncertified bot"}
 
 @app.post("/bot-actions/unverify")
-@action([enums.BotState.approved], with_reason=True)
-async def unverify(request: Request, approve: ActionWithReason):
-    return {"detail": "Not implemented"}
+@action([enums.BotState.approved], with_reason=True, min_perm=3)
+async def unverify(request: Request, data: ActionWithReason):
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.pending, request.state.user_id, data.bot_id)
+
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0xe74c3c,
+        title="Bot Unverified",
+        description=f"<@{request.state.user_id}> has unverified <@{data.bot_id}> due to some issues we are looking into!\n\nThank you for using Fates List and we thank you for your patience :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully unverified bot"}
 
 @app.post("/bot-actions/requeue")
-@action([enums.BotState.banned, enums.BotState.denied], with_reason=True)
-async def requeue(request: Request, approve: ActionWithReason):
-    return {"detail": "Not implemented"}
+@action([enums.BotState.banned, enums.BotState.denied], with_reason=True, min_perm=3)
+async def requeue(request: Request, data: ActionWithReason):
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.pending, request.state.user_id, data.bot_id)
+
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0x00ff00,
+        title="Bot Requeued",
+        description=f"<@{request.state.user_id}> has requeued <@{data.bot_id}> for re-review!\n\nThank you for using Fates List and we thank you for your patience :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully requeued bot"}
 
 @app.get("/links")
 def links(request: Request):
@@ -1546,9 +1767,8 @@ async def verify_code(request: Request):
             int(request.scope["sunbeam_user"]["user"]["id"]),
         )
 
-        await add_role(request.scope["sunbeam_user"]["user"]["id"], access_granted_role)
-        print(f"Going to add staff role {request.state.member.staff_id}")
-        await add_role(request.scope["sunbeam_user"]["user"]["id"], request.state.member.staff_id)
+        await add_role(staff_server, request.scope["sunbeam_user"]["user"]["id"], access_granted_role, "Access granted to server")
+        await add_role(staff_server, request.scope["sunbeam_user"]["user"]["id"], request.state.member.staff_id, "Gets corresponding staff role")
         
         return ORJSONResponse({"detail": "Successfully verified staff member", "pass": password})
 
