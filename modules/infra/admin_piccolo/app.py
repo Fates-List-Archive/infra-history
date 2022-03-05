@@ -178,78 +178,190 @@ async def is_staff(staff_json: dict | None, user_id: int, base_perm: int, json: 
         return rc, sm.perm, sm.dict()
     return rc, sm.perm, sm
 
-lynx_form_html = """
-    <link href='https://fonts.googleapis.com/css?family=Lexend Deca' rel='stylesheet'>
-    <h1>Welcome to Lynx!</h1>
-    <h2 id="title">Loading...</h2>
-    <div id="verify-screen">
+lynx_form_beta = """
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <link
+      href="https://fonts.googleapis.com/css?family=Lexend Deca"
+      rel="stylesheet"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://adminlte.io/themes/v3/plugins/jquery/jquery.min.js"></script>
+    <script src="https://adminlte.io/themes/v3/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="https://adminlte.io/themes/v3/dist/js/adminlte.min.js?v=3.2.0"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback"
+    />
+  </head>
+  <body class="sidebar-mini sidebar-closed sidebar-collapse">
+    <div class="wrapper">
+      <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link" data-widget="pushmenu" href="#" role="button"
+              ><i class="fas fa-bars"></i
+            ></a>
+          </li>
+          <li class="nav-item d-none d-sm-inline-block">
+            <a href="/" class="nav-link">Home</a>
+          </li>
+          <li class="nav-item d-none d-sm-inline-block">
+            <a href="/admin" class="nav-link">Admin</a>
+          </li>
+          <li class="nav-item d-none d-sm-inline-block">
+            <a href="/bot-actions" class="nav-link">Bot Actions</a>
+          </li>
+        </ul>
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item dropdown">
+            <a class="nav-link" data-toggle="dropdown" href="#"
+              ><i class="far fa-bell"></i
+              ><span class="badge badge-warning navbar-badge">0</span></a
+            >
+            <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+              <span class="dropdown-header">No Announcements</span>
+              <div class="dropdown-divider"></div>
+				  
+	<a href="#" class="dropdown-item">
+	<i class="fas fa-envelope mr-2"></i> 1 new messages
+	<span class="float-right text-muted text-sm">Test</span>
+	</a>
+	
+	<div class="dropdown-divider"></div>
+	<a href="#" class="dropdown-item dropdown-footer">See All Notifications</a>
+            </div>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-widget="fullscreen" href="#" role="button"
+              ><i class="fas fa-expand-arrows-alt"></i
+            ></a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              data-widget="control-sidebar"
+              data-slide="true"
+              href="#"
+              role="button"
+              ><i class="fas fa-th-large"></i
+            ></a>
+          </li>
+        </ul>
+      </nav>
+      <aside class="main-sidebar sidebar-dark-primary elevation-4">
+        <a href="/" class="brand-link"
+          ><img
+            src="https://api.fateslist.xyz/static/botlisticon.webp"
+            alt="Fates Logo"
+            class="brand-image img-circle elevation-3"
+            style="opacity:.8"
+          /><span class="brand-text font-weight-light">Fates List</span></a
+        >
+        <div class="sidebar">
+          <div class="form-inline">
+          </div>
+          <nav class="mt-2">
+            <ul
+              class="nav nav-pills nav-sidebar flex-column"
+              data-widget="treeview"
+              role="menu"
+              data-accordion="false"
+            >
+              <li class="nav-item">
+                <a href="#" class="nav-link"
+                  ><i class="nav-icon fa-solid fa-house"></i>
+                  <p>Home</p></a
+                >
+              </li>
+              <li class="nav-item menu-open">
+                <a href="#" class="nav-link active"
+                  ><i class="nav-icon fa-solid fa-candy-cane"></i>
+                  <p>Admin Panel <i class="right fas fa-angle-left"></i></p
+                ></a>
+                <ul class="nav nav-treeview">
+                  <li class="nav-item">
+                    <a href="/admin" class="nav-link"
+                      ><i class="far fa-circle nav-icon"></i>
+                      <p>Piccolo Admin</p></a
+                    >
+                  </li>
+                  <li class="nav-item">
+                    <a href="/bot-actions" class="nav-link active"
+                      ><i class="far fa-circle nav-icon"></i>
+                      <p>
+                        Bot Actions
+                        <span class="right badge badge-info">Beta</span>
+                      </p></a
+                    >
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </aside>
+      <div class="content-wrapper" style="min-height:490px">
+        <div class="content-header">
+          <div class="container-fluid">
+            <div class="row mb-2">
+              <div class="col-sm-6"><h1 class="m-0">Welcome to Lynx! (<span id="title"></span>)</h1></div>
+              <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                  <li class="breadcrumb-item"><a href="#">Home</a></li>
+                  <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+                  <li class="breadcrumb-item active"><a href="/bot-actions?beta=1">Bot Actions</a></li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="content">
+          <div class="container-fluid">
+            <div class="row">
+              <blockquote class="quote">
+                <h5 id="warning">Important Info</h5>
+                <p>
+                  Please make sure to claim a bot before you start testing it!
+                  Also, make sure to read our<strong
+                    ><a href="/staff-guide?beta=true"> staff guide</a></strong
+                  >
+                </p>
+              </blockquote>
+            </div>
+            <div id="verify-screen">
+            </div>
+          </div>
+        </div>
+      </div>
+      <footer class="main-footer">
+        <div class="float-right d-none d-sm-inline">Lynx Panel</div>
+        <strong
+          >Copyright © 2022
+          <a href="https://fateslist.xyz">Fateslist.xyz</a>.</strong
+        >
+        All rights reserved.
+      </footer>
+      <div id="sidebar-overlay"></div>
     </div>
-    <footer>
-        <small>&copy Copyright 2022 Fates List | <a href="https://github.com/Fates-List">Powered by Lynx</a></small>
-    </footer>
-    <style>
-    pre, code {
-        white-space: pre-line;
-        word-wrap: break-word;
-    }
-
-    html {
-        background: #c8e3dd;
-        font-size: 18px;
-        padding: 3px;
-        font-family: 'Lexend Deca';
-    }
-
-    footer {
-        margin-top: 20px;
-        text-align: center;
-        font-weight: bold;
-    }
-
-    button {
-        display: block;
-        width: 100px;
-        background-color: red;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        margin-top: 10px;
-        padding: 10px;
-    }
-
-    #verify-btn {
-        display: initial;
-    }
-
-    #verify-parent {
-        text-align: center;
-    }
-
-    label {
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-
-    select {
-        width: 100%;
-        padding: 10px;
-    }
-
-    input {
-        width: 100%;
-        padding: 10px;
-    }
-
-    hr {
-        color: black;
-        background-color: black;
-        margin-top: 20px !important;
-        height: 10px;
-        font-weight: bold;
-    }
-    </style>
-    <script>
-
+  </body>
+  <script>
     function docReady(fn) {
         // see if DOM is already available
         if (document.readyState === "complete" || document.readyState === "interactive") {
@@ -285,84 +397,120 @@ lynx_form_html = """
             document.querySelector("#verify-screen").innerHTML = `<h1>${res.status}</h1><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a>`
         }
     })
-    </script>
-    <style>
-        .header-anchor {
-            display: none;
-        }
-        h2:hover > .header-anchor {
-            display: initial;
-        }
-        h3:hover > .header-anchor {
-            display: initial;
-        }
+  </script>
+  <style>
+    pre, code {
+        white-space: pre-line;
+        word-wrap: break-word;
+    }
 
-        .info, .warning, .aonly, .guidelines, .generic {
-            border: 3px solid;
-            margin-bottom: 3px;
-            padding: 3px;
-        }
+    button {
+        display: block;
+        width: 100px;
+        background-color: red;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        margin-top: 10px;
+        padding: 10px;
+    }
 
-        .info:before {
-            content: "Info";
-            font-size: 26px;
-            font-weight: bold;
-            color: blue;
-        }
+    #verify-btn {
+        display: initial;
+    }
 
-        .guidelines:before {
-            content: "Guidelines";
-            font-size: 26px;
-            font-weight: bold;
-            color: green;
-        }
+    label {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    select {
+        width: 100%;
+        padding: 10px;
+    }
+
+    input {
+        width: 100%;
+        padding: 10px;
+    }
+
+    .header-anchor {
+        display: none;
+    }
+    h2:hover > .header-anchor {
+        display: initial;
+    }
+    h3:hover > .header-anchor {
+        display: initial;
+    }
+
+    .info, .warning, .aonly, .guidelines, .generic {
+        border: 3px solid;
+        margin-bottom: 3px;
+        padding: 3px;
+    }
+
+    .info:before {
+        content: "Info";
+        font-size: 26px;
+        font-weight: bold;
+        color: blue;
+    }
+
+    .guidelines:before {
+        content: "Guidelines";
+        font-size: 26px;
+        font-weight: bold;
+        color: green;
+    }
 
 
-        .warning:before {
-            content: "Warning";
-            font-size: 26px;
-            font-weight: bold;
-            color: red;
-        }
+    .warning:before {
+        content: "Warning";
+        font-size: 26px;
+        font-weight: bold;
+        color: red;
+    }
 
-        .generic {
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
+    .generic {
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
 
-        .aonly:before {
-            content: "Admin Only!";
-            font-size: 26px;
-            font-weight: bold;
-            color: yellow;
-        }
+    .aonly:before {
+        content: "Admin Only!";
+        font-size: 26px;
+        font-weight: bold;
+        color: yellow;
+    }
 
-        .info {
-            border-color: blue;
-            background-color: rgba(0, 0, 255, 0.1);
-        }
+    .info {
+        border-color: blue;
+        background-color: rgba(0, 0, 255, 0.1);
+    }
 
-        .warning {
-            border-color: red;
-            background-color: rgba(255, 0, 0, 0.1);
-        }
+    .warning {
+        border-color: red;
+        background-color: rgba(255, 0, 0, 0.1);
+    }
 
-        .generic {
-            border-color: red;
-            background-color: rgba(255, 20, 10, 0.1);
-        }
+    .generic {
+        border-color: red;
+        background-color: rgba(255, 20, 10, 0.1);
+    }
 
-        .aonly {
-            border-color: yellow;
-            background-color: rgba(255, 255, 0, 0.1);
-        }
+    .aonly {
+        border-color: yellow;
+        background-color: rgba(255, 255, 0, 0.1);
+    }
 
-        .guidelines {
-            border-color: green;
-            background-color: rgba(255, 0, 0, 0.1);
-        }
+    .guidelines {
+        border-color: green;
+        background-color: rgba(255, 0, 0, 0.1);
+    }
+  </style>
 
-    </style>
+</html>
 """
 
 staff_guide_md = """
@@ -551,6 +699,8 @@ staff_guide = md.render(staff_guide_md)
 
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
+        lynx_form_html = lynx_form_beta.replace("%username%", "Not logged in")
+
         if request.url.path.startswith(("/staff-guide", "/requests", "/links")):
             if request.headers.get("Frostpaw-Staff-Notify"):
                 return await call_next(request)
@@ -761,7 +911,7 @@ def staff_verify(request: Request):
 <textarea 
 id="staff-verify-code"
 placeholder="Enter staff verification code here"
-style="background: #c8e3dd; width: 100%; height: 200px; font-size: 20px !important; resize: none; border-top: none; border-bottom: none; border-right: none"
+style="width: 100%; height: 200px; font-size: 20px !important; resize: none;"
 ></textarea>
 </div>
 </pre>
@@ -1085,7 +1235,7 @@ async def loa(request: Request, response: Response):
 {bot['username_cached']} | [Site Page](https://fateslist.xyz/bot/{bot['bot_id']})
 
 - Prefix: {bot['prefix'] or '/'}
-- Description: {bot['description']}
+- Description: {bleach.clean(bot['description'])}
 - Owners: {owners_md}
 
 """
@@ -1705,18 +1855,16 @@ def links(request: Request):
     return ORJSONResponse({
         "title": "Some Useful Links",
         "data": f"""
-        <pre>
-        <a href="/my-perms">My Permissions</a>
-        <a href="/reset">Lynx Credentials Reset</a>
-        <a href="/loa">Leave Of Absense</a>
-        <a href="/staff-apps">Staff Applications</a>
-        <a href="/links">Some Useful Links</a>
-        <a href="/staff-verify">Staff Verification</a> (in case you need it)
-        <a href="/staff-guide">Staff Guide</a>
-        <a href="/admin">Admin Console</a>
-        <a href="/bot-actions">Bot Actions</a>
-        <a href="/requests">Requests</a>
-        </pre>
+        <a href="/my-perms">My Permissions</a><br/>
+        <a href="/reset">Lynx Credentials Reset</a><br/>
+        <a href="/loa">Leave Of Absense</a><br/>
+        <a href="/staff-apps">Staff Applications</a><br/>
+        <a href="/links">Some Useful Links</a><br/>
+        <a href="/staff-verify">Staff Verification</a> (in case you need it)<br/>
+        <a href="/staff-guide">Staff Guide</a><br/>
+        <a href="/admin">Admin Console</a><br/>
+        <a href="/bot-actions">Bot Actions</a><br/>
+        <a href="/requests">Requests</a><br/>
     """
     })
 
