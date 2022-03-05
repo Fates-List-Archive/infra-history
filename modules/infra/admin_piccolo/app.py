@@ -522,8 +522,6 @@ lynx_form_beta = """
 
 <script>
     var currentURL = window.location.pathname
-    console.log(currentURL)
-    if(currentURL == '/Lynx.html') {
       console.log('Chnaging Breadcrumb Paths')
       var currentBreadPath = currentURL.replace('-', ' ').replace('.html', '').replace('/', '')
       currentBreadPath = currentBreadPath.toLowerCase().replace(/\b[a-z]/g, function(letter) {
@@ -531,7 +529,6 @@ lynx_form_beta = """
 });
       $('#currentBreadPath').append(`<li class="breadcrumb-item"><a href="/admin">Admin</a></li>
                   <li class="breadcrumb-item active"><a href="${(currentURL == '/bot-actions') ? currentURL + '?beta=1' : currentURL}">${currentBreadPath}</a></li>`)
-    }
   </script>
 
 </html>
