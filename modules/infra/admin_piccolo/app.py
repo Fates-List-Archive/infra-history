@@ -406,28 +406,12 @@ On Flamepaw, Minotaur is the only moderation bot as antinuke on a test server is
 
 :::
 
-## Ashfur Bot Usage
-
-Fates List uses Ashfur to handle bots (using slash commands)
-
-/claim - Claims a bot, **be sure to unclaim it if you are not reviewing it anymore or else I might have to do another 3000 @everyone pings**
-
-/unclaim - Unclaims a bot
-
-/approve - Approves a bot. Be sure to give good appropriate feedback and be polite and *most importantly* be formal.
-
-/deny - Denies a bot. Once again, be sure to give good appropriate feedback and be polite and *most importantly* be formal. You need to concatenate the four parts of the staff verification code and then hash it with SHA3-384
-
-/requeue - Requeues a bot if it is denied. **This is moderator only**
-
-**Update Discord if you don't see the commands and then DM a Administrator+ if you still cannot see it**
-
-And... that's it! Yes, it's really that easy!
-
 ## Reviewing Bots 
 
 Our bot list rules and requirements can be found [here](https://fateslist.xyz/frostpaw/tos). Please read through them before reviewing 
 bots.
+
+Please see <a href="https://lynx.fateslist.xyz/bot-actions">Bot Actions</a> to check the queue or to approve/deny (etc) bots.
 
 Whoever first adds the bot to this server can claim and check that bot. If you need to unclaim however, anyone may check it
 
@@ -1051,7 +1035,7 @@ app.state.valid_csrf = {}
 
 @app.get("/bot-actions")
 async def loa(request: Request, response: Response):
-    queue = await app.state.db.fetch("SELECT bot_id, username_cached, client_id, invite FROM bots WHERE state = $1 ORDER BY created_at DESC", enums.BotState.pending)
+    queue = await app.state.db.fetch("SELECT bot_id, username_cached, description, prefix FROM bots WHERE state = $1 ORDER BY created_at DESC", enums.BotState.pending)
 
     queue_select = bot_select("queue", queue)
 
@@ -1080,13 +1064,23 @@ async def loa(request: Request, response: Response):
     queue_md = ""
 
     for bot in queue:
-        if bot["invite"] and bot["invite"].startswith("https://"):
-            queue_md += f"""
-- {bot['username_cached']} | [Custom Invite]({bot['invite']}) | [Invite](https://discord.com/api/oauth2/authorize?client_id={bot['client_id'] or bot['bot_id']}&scope=bot&application.command)
-"""
-        else:
-            queue_md += f"""
-- {bot['username_cached']} | [Invite](https://discord.com/api/oauth2/authorize?client_id={bot['client_id'] or bot['bot_id']}&scope=bot&application.command) ({bot['invite'] or 'No custom perms'})
+        owners = await app.state.db.fetch("SELECT owner, main FROM bot_owner WHERE bot_id = $1", bot["bot_id"])
+        
+        owners_md = ""
+
+        for owner in owners:
+            user = await fetch_user(owner["owner"])
+            owners_md += f"""
+{user['username']}  ({owner['owner']}) |  main -> {owner["main"]}
+            """
+        
+        queue_md += f"""
+{bot['username_cached']} | [Site Page](https://fateslist.xyz/bot/{bot['bot_id']})
+
+- Prefix: {bot['prefix'] or '/'}
+- Description: {bot['description']}
+- Owners: {owners_md}
+
 """
 
     md = (
@@ -1105,7 +1099,7 @@ async def loa(request: Request, response: Response):
     )
 
     return {
-        "title": "Bot Actions (Experiment)",
+        "title": "Bot Actions",
         "pre": "/links",
         "data": md.render(f"""
 ::: guidelines
@@ -1116,6 +1110,12 @@ async def loa(request: Request, response: Response):
 :::
 
 ## Bot Queue
+
+::: info 
+
+Please check site pages before approving/denying. You can save lots of time by doing this!
+
+:::
 
 {queue_md}
 
