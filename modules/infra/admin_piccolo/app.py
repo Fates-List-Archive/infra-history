@@ -1879,6 +1879,11 @@ def links(request: Request):
         <a href="/admin">Admin Console</a><br/>
         <a href="/bot-actions">Bot Actions</a><br/>
         <a href="/requests">Requests</a><br/>
+	<blockquote class="quote">
+                <h5 id="warning">Credits</h5>
+             <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
+            </p>
+        </blockquote>
     """
     })
 
