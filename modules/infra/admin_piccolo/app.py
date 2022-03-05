@@ -1455,7 +1455,7 @@ Please check site pages before approving/denying. You can save lots of time by d
             alert(json.detail)
             if(res.ok) {
                 // Now put the invite to the bot
-                document.querySelector("#approve-invite").innerHTML = `Please invite it to the main server: <a href='https://discord.com/api/oauth2/authorize?client_id=${botId}&scope=bot&application.command&guild_id=${json.guild_id}'>Invite</a>`
+                window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${botId}&scope=bot&application.command&guild_id=${json.guild_id}`
             }
         }
 
@@ -1598,7 +1598,7 @@ def action(
 
         if csrf_token != request.cookies.get("csrf_token_ba") or csrf_token not in app.state.valid_csrf:
             return ORJSONResponse({
-                "detail": "CSRF Token is invalid"
+                "detail": "CSRF Token is invalid. Consider copy pasting reason and reloading your page"
             }, status_code=400)
         if not data.bot_id.isdigit():
             return ORJSONResponse({
