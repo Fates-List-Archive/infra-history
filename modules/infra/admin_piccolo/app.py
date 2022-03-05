@@ -340,7 +340,7 @@ lynx_form_beta = """
                 <ol class="breadcrumb float-sm-right">
                   <li class="breadcrumb-item"><a href="#">Home</a></li>
                   <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
-                  <li class="breadcrumb-item active"><a href="/bot-actions?beta=1">Bot Actions</a></li>
+                  <li class="breadcrumb-item active"><a href="/bot-actions">Bot Actions</a></li>
                 </ol>
               </div>
             </div>
@@ -353,9 +353,7 @@ lynx_form_beta = """
                 <h5 id="warning">Important Info</h5>
                 <p>
                   Please make sure to claim a bot before you start testing it!
-                  Also, make sure to read our<strong
-                    ><a href="/staff-guide?beta=true"> staff guide</a></strong
-                  >
+                  Also, make sure to read our<strong><a href="/staff-guide"> staff guide</a></strong>
                 </p>
               </blockquote>
             </div>
@@ -1879,8 +1877,8 @@ def links(request: Request):
         <a href="/admin">Admin Console</a><br/>
         <a href="/bot-actions">Bot Actions</a><br/>
         <a href="/requests">Requests</a><br/>
-	<blockquote class="quote">
-                <h5 id="warning">Credits</h5>
+	    <blockquote class="quote">
+            <h5 class="warning">Credits</h5>
              <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
             </p>
         </blockquote>
