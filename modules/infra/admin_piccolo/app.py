@@ -411,7 +411,7 @@ On Flamepaw, Minotaur is the only moderation bot as antinuke on a test server is
 Our bot list rules and requirements can be found [here](https://fateslist.xyz/frostpaw/tos). Please read through them before reviewing 
 bots.
 
-Please see <a href="https://lynx.fateslist.xyz/bot-actions">Bot Actions</a> to check the queue or to approve/deny (etc) bots.
+Please see <a href="https://lynx.fateslist.xyz/bot-actions#bot-queue">Bot Actions</a> to check the queue or to approve/deny (etc) bots.
 
 Whoever first adds the bot to this server can claim and check that bot. If you need to unclaim however, anyone may check it
 
@@ -523,6 +523,13 @@ Lastly, FL Kremlin. We've had many *outsiders* coming in and we are OK with this
 The word of Rootspring#6701 is final although debates are always recommended if you disagree with something.
 
 Don't complain about ``@everyone`` pings. They will happen!
+
+::: guidelines
+
+- Please make sure to claim a bot before you start testing it!
+- Also, make sure to read <a href="/staff-guide">our staff guide</a> fully!
+
+:::
 """
 
 md = (
@@ -1102,12 +1109,13 @@ async def loa(request: Request, response: Response):
         "title": "Bot Actions",
         "pre": "/links",
         "data": md.render(f"""
-::: guidelines
+## For refreshers, the staff guide is here:
 
-- Please make sure to claim a bot before you start testing it!
-- Also, make sure to read <a href="/staff-guide">our staff guide</a>
+{staff_guide_md}
 
-:::
+<hr/>
+
+Now that we're all caught up with the staff guide, here are the list of actions you can take:
 
 ## Bot Queue
 
