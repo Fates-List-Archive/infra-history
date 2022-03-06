@@ -337,3 +337,9 @@ CREATE TABLE lynx_logs (
     status_code integer not null,
     request_time timestamptz default NOW()
 );
+
+CREATE TABLE lynx_notifications (
+    acked_users bigint[] not null default '{}',
+    message text not null,
+    type text not null -- alert etc
+);

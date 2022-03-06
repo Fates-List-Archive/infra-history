@@ -79,6 +79,9 @@ with open("config/data/discord.json") as json:
 with open("config/data/secrets.json") as json:
     main_bot_token = orjson.loads(json.read())["token_main"]
 
+with open("config/data/staff_roles.json") as json:
+    staff_roles = orjson.loads(json.read())
+
 async def add_role(server, member, role, reason):
     print(f"[LYNX] Giving role {role} to member {member} on server {server} for reason: {reason}")
     url = f"https://discord.com/api/v10/guilds/{server}/members/{member}/roles/{role}"
@@ -387,6 +390,22 @@ lynx_form_beta = """
         }
     }    
 
+
+    async function getNotifications() {
+        let resp = await fetch("https://lynx.fateslist.xyz/_notifications");
+        if(resp.ok) {
+            let data = await resp.json();
+            data.forEach(function(notif) {
+                if(notif.acked_users.includes(data.user_id)) {
+                    return;
+                }
+                if(notif.type == 'alert') {
+                    document.querySelector("#verify-screen").innerHTML = `<h1>Notification</h1>${notif.message}<button onclick="() => window.location.reload()">Dismiss</button>`
+                }
+            })
+        }
+    }
+
     docReady(async function() {
         var currentURL = window.location.pathname
         console.log('Chnaging Breadcrumb Paths')
@@ -394,6 +413,8 @@ lynx_form_beta = """
         currentBreadPath = title(currentBreadPath)
         $('#currentBreadPath').append(`<li class="breadcrumb-item active"><a href="${currentURL}">${currentBreadPath}</a></li>`)
     
+        //setInterval(getNotifications, 5000)
+
         let res = await fetch(window.location.href, {
             method: "GET",
             credentials: 'same-origin',
@@ -725,13 +746,14 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         lynx_form_html = lynx_form_beta.replace("%username%", "Not logged in")
 
+        if request.url.path.startswith("/_"):
+            return await call_next(request)
+
         if request.url.path.startswith(("/staff-guide", "/requests", "/links")):
             if request.headers.get("Frostpaw-Staff-Notify"):
                 return await call_next(request)
             else:
                 return HTMLResponse(lynx_form_html)
-        elif request.url.path.startswith("/_admin_code_check"):
-            return await call_next(request)
         print("Calling custom lynx")
         if request.cookies.get("sunbeam-session:warriorcats"):
             request.scope["sunbeam_user"] = orjson.loads(b64decode(request.cookies.get("sunbeam-session:warriorcats")))
@@ -1015,10 +1037,16 @@ In case, you haven't went through staff verification and you somehow didn't get 
     })
 
 @app.get("/staff-apps")
-async def staff_apps(request: Request):
+async def staff_apps(request: Request, response: Response):
     # Get staff application list
     staff_apps = await app.state.db.fetch("SELECT user_id, app_id, questions, answers, created_at FROM lynx_apps ORDER BY created_at DESC")
     app_html = "" 
+
+    # Easiest way to block cross origin is to just use a hidden input
+    csrf_token = get_token(132)
+    app.state.valid_csrf_user |= {csrf_token: time.time()}
+
+    response.set_cookie("csrf_token_ua", csrf_token, max_age=60*10, domain="lynx.fateslist.xyz", path="/user-actions", secure=True, httponly=True, samesite="Strict")
 
     for staff_app in staff_apps:
         if str(staff_app["app_id"]) == request.query_params.get("open"):
@@ -1032,6 +1060,8 @@ async def staff_apps(request: Request):
         answers = orjson.loads(staff_app["answers"])
 
         questions_html = ""
+
+
 
         for pane in questions:
             questions_html += f"<h3>{pane['title']}</h3><strong>Prelude</strong>: {pane['pre'] or 'No prelude for this section'}<br/>"
@@ -1056,18 +1086,37 @@ async def staff_apps(request: Request):
             <h2>Application:</h2> 
             {questions_html}
             <br/>
+            <button onclick="window.location.href = '/addstaff?id={user['id']}'">Accept</button>
+            <button onclick="deleteAppByUser('{user['id']}')">Delete</button>
         </details>
         """
 
-    return ORJSONResponse({
+    return {
         "title": "Staff Application List",
         "pre": "/links",
         "data": f"""
         <p>Please verify applications fairly</p>
         {app_html}
         <br/>
+        """,
+        "script": f"""
+        var csrfToken = "{csrf_token}"
+        """ + """
+            async function deleteAppByUser(user_id) {
+                confirm("Are you sure you want to delete this and all application belonging to this user?")
+                let res = await fetch(`/user-actions/staff-apps/ack?csrf_token=${csrfToken}`, {
+                    method: "POST",
+                    credentials: 'same-origin',
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({user_id: user_id})
+                })
+                json = await res.json()
+                alert(json.detail)
+            }
         """
-    })
+    }
 
 @app.get("/_admin_code_check")
 def code_check_route(request: Request):
@@ -1213,6 +1262,7 @@ def bot_select(id: str, bot_list: list[str], reason: bool = False):
     return select
 
 app.state.valid_csrf = {}
+app.state.valid_csrf_user = {}
 
 @app.get("/bot-actions")
 async def loa(request: Request, response: Response):
@@ -1359,6 +1409,7 @@ Please check site pages before approving/denying. You can save lots of time by d
 
 ### Ban Bot 
 
+- Admin+ only
 - Must be approved and *not* certified
 - Definition: approved => banned
 
@@ -1371,6 +1422,7 @@ Please check site pages before approving/denying. You can save lots of time by d
 
 ### Unban Bot
 
+- Admin+ only
 - Must *already* be banned
 - Definition: banned => approved
 
@@ -1751,7 +1803,7 @@ async def deny(request: Request, data: ActionWithReason):
     return {"detail": "Successfully denied bot"}
 
 @app.post("/bot-actions/ban")
-@action([enums.BotState.approved], with_reason=True)
+@action([enums.BotState.approved], min_perm=4, with_reason=True)
 async def ban(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.banned, request.state.user_id, data.bot_id)
 
@@ -1771,7 +1823,7 @@ async def ban(request: Request, data: ActionWithReason):
     return {"detail": "Successfully banned bot"}
 
 @app.post("/bot-actions/unban")
-@action([enums.BotState.banned], with_reason=True)
+@action([enums.BotState.banned], min_perm=4, with_reason=True)
 async def unban(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.approved, request.state.user_id, data.bot_id)
 
@@ -1956,6 +2008,152 @@ async def verify_code(request: Request):
         await add_role(staff_server, request.scope["sunbeam_user"]["user"]["id"], request.state.member.staff_id, "Gets corresponding staff role")
         
         return ORJSONResponse({"detail": "Successfully verified staff member", "pass": password})
+
+@app.get("/_notifications")
+async def notifications(request: Request):
+    return await app.state.db.fetch("SELECT acked_users, message, type FROM lynx_notifications")
+
+@app.get("/addstaff")
+async def addstaff(request: Request, response: Response, id: int | None = None):
+    # Easiest way to block cross origin is to just use a hidden input
+    csrf_token = get_token(132)
+    app.state.valid_csrf_user |= {csrf_token: time.time()}
+
+    response.set_cookie("csrf_token_ua", csrf_token, max_age=60*10, domain="lynx.fateslist.xyz", path="/user-actions", secure=True, httponly=True, samesite="Strict")
+
+    return {
+        "title": "Add a staff member",
+        "data": f"""
+            <label for="staff_user_id">User ID</label>
+            <input id="staff_user_id" name="staff_user_id" placeholder='user id here' type="number" value="{id or ''}" />
+            <button onclick="addStaff()">Add</button>
+        """,
+        "script": f"""
+        var csrfToken = "{csrf_token}"
+        """ + """
+            async function addStaff() {
+                let userId = document.querySelector("#staff_user_id").value
+                let res = await fetch(`/user-actions/addstaff?csrf_token=${csrfToken}`, {
+                    method: "POST",
+                    credentials: 'same-origin',
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({"user_id": userId}),
+                })
+                let json = await res.json()
+                alert(json.detail)
+            }
+        """
+    }
+
+class UserAction(BaseModel):
+    user_id: str
+
+class UserActionWithReason(UserAction):
+    reason: str
+
+def user_action(
+    states: list[enums.UserState], 
+    with_reason: bool, 
+    min_perm: int = 2,
+):
+    async def state_check(bot_id: int):
+        user_state = await app.state.db.fetchval("SELECT state FROM users WHERE user_id = $1", bot_id)
+        return (user_state in states) or len(states) == 0
+    
+    async def _core(request: Request, csrf_token: str, data: UserAction):
+        if request.state.member.perm < min_perm:
+            return ORJSONResponse({
+                "detail": f"This operation has a minimum perm of {min_perm} but you have permission level {request.state.member.perm}"
+            }, status_code=400)
+
+        if csrf_token != request.cookies.get("csrf_token_ua") or csrf_token not in app.state.valid_csrf_user:
+            return ORJSONResponse({
+                "detail": "CSRF Token is invalid. Consider copy pasting reason and reloading your page"
+            }, status_code=400)
+        if not data.user_id.isdigit():
+            return ORJSONResponse({
+                "detail": "User ID is invalid"
+            }, status_code=400)
+        data.user_id = int(data.user_id)
+        
+        if not await state_check(data.user_id):
+            return ORJSONResponse({
+                "detail": f"User is not in acceptable states or doesn't exist: Acceptable states are {states}"
+            }, status_code=400)
+        
+    def decorator(function):
+        if not with_reason:
+            async def wrapper(request: Request, csrf_token: str, data: UserAction):
+                if res := await _core(request, csrf_token, data):
+                    return res
+                res = await function(request, data)
+                return res
+        else:
+            async def wrapper(request: Request, csrf_token: str, data: UserActionWithReason):
+                if res := await _core(request, csrf_token, data):
+                    return res
+                if len(data.reason) < 5:
+                    return ORJSONResponse({
+                        "detail": "Reason must be more than 5 characters"
+                    }, status_code=400)
+                res = await function(request, data)
+                return res
+        return wrapper
+    return decorator
+
+
+@app.post("/user-actions/addstaff")
+@user_action([enums.UserState.normal], with_reason=False, min_perm=5)
+async def addstaff(request: Request, data: UserAction):
+    await add_role(main_server, data.user_id, staff_roles["community_staff"]["id"], "New staff member")
+    await add_role(main_server, data.user_id, staff_roles["bot_reviewer"]["id"], "New staff member")
+
+    # Check if DMable by attempting to send a message
+    async with aiohttp.ClientSession() as sess:
+        async with sess.post(
+            "https://discord.com/api/v10/users/@me/channels", 
+            json={"recipient_id": str(data.user_id)},
+            headers={"Authorization": f"Bot {main_bot_token}"}) as res:
+            if res.status != 200:
+                json = await res.json()
+                return ORJSONResponse({
+                    "detail": f"User is not DMable {json}"
+                }, status_code=400)
+            json = await res.json()
+            channel_id = json["id"]
+
+        embed = Embed(
+            color=0xe74c3c,
+            title="Staff Application Accepted",
+            description=f"You have been accepted into the Fates List Staff Team!",
+        )
+
+        async with sess.post(
+            f"https://discord.com/api/v10/channels/{channel_id}/messages",
+            json={
+                "content": """
+Please join our staff server first of all: https://fateslist.xyz/banappeal/invite
+
+Then head on over to https://lynx.fateslist.xyz to read our staff guide and get started!
+                """, 
+                "embeds": [embed.to_dict()],
+            },
+            headers={"Authorization": f"Bot {main_bot_token}"}
+        ) as resp:
+            if resp.status != 200:
+                json = await resp.json()
+                return ORJSONResponse({
+                    "detail": f"Failed to send DM to user {json}"
+                }, status_code=400)
+
+    return {"detail": "Successfully added staff member"}
+
+@app.post("/user-actions/staff-apps/ack")
+@user_action([], with_reason=False, min_perm=4)
+async def delete_staff_apps_by_id(request: Request, data: UserAction):
+    await app.state.db.execute("DELETE FROM lynx_apps WHERE user_id = $1", data.user_id)
 
 @app.on_event("startup")
 async def startup():
