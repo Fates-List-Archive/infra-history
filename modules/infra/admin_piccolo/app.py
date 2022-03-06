@@ -2119,10 +2119,11 @@ async def user_actions(request: Request, response: Response, id: int | None = No
 ## Add Staff
 
 - Head Admin+ only
-
+<div class="form-group">
 <label for="staff_user_id">User ID</label>
-<input id="staff_user_id" name="staff_user_id" placeholder='user id here' type="number" value="{id or ''}" />
-<button onclick="addStaff()">Add</button>
+<input class="form-control" id="staff_user_id" name="staff_user_id" placeholder='user id here' type="number" value="{id or ''}" />
+<button class="btn btn-primary" onclick="addStaff()">Add</button>
+</div>
 
 :::
         """),
