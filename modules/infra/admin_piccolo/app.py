@@ -214,8 +214,8 @@ doctree_dict = dict(sorted(doctree_dict.items(), key=key_doctree, reverse=True))
 doctree = """
 <li class="nav-item menu-open">
 <a href="#" class="nav-link">
-    <i class="nav-icon fa-solid fa-rectangle-list"></i>
-    <p>Documentation <i class="right fas fa-angle-left"></i></p>
+    <i class="nav-icon fa-solid fa-book"></i>
+    <p>API Documentation <i class="right fas fa-angle-left"></i></p>
 </a>
 <ul class="nav nav-treeview">
 """
@@ -226,7 +226,7 @@ for tree in doctree_dict.keys():
         doctree += f"""
 <li class="nav-item menu-open">
 <a href="#" class="nav-link">
-    <i class="nav-icon fa-solid fa-rectangle-list"></i>
+    <i class="nav-icon fa-solid fa-book"></i>
     <p>{tree.replace("-", " ").title()} <i class="right fas fa-angle-left"></i></p>
 </a>
 <ul class="nav nav-treeview">
@@ -922,7 +922,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/_"):
             return await call_next(request)
 
-        if request.url.path.startswith(("/staff-guide", "/requests", "/links", "/roadmap", "/docs")):
+        if request.url.path.startswith(("/staff-guide", "/requests", "/links", "/roadmap", "/docs")) or request.url.path == "/":
             if request.headers.get("Frostpaw-Staff-Notify"):
                 return await call_next(request)
             else:
@@ -2311,6 +2311,9 @@ def docs_redir():
 def docs(page: str):
     if page.endswith(".md"):
         return RedirectResponse(f"/docs/{page[:-3]}")
+    
+    elif not page:
+        return RedirectResponse("/docs/index")
 
     if not page.replace("-", "").replace("_", "").replace("/", "").isalnum():
         return ORJSONResponse({"detail": "Invalid page"}, status_code=404)

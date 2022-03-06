@@ -1,4 +1,3 @@
-# API v3
 **API URL**: ``https://next.fateslist.xyz`` *or* ``https://api.fateslist.xyz`` (for now, can change in future)
 
 ## Authorization
@@ -40,6 +39,77 @@ A default API Response will be of the below format:
 ```
 
 ## Core
+
+### Post Stats
+#### GET /bots/{id}/stats
+
+
+Post stats to the list
+
+Example:
+```py
+import requests
+
+# On dpy, guild_count is usually the below
+guild_count = len(client.guilds)
+
+# If you are using sharding
+shard_count = len(client.shards)
+shards = client.shards.keys()
+
+# Optional: User count (this is not accurate for larger bots)
+user_count = len(client.users) 
+
+def post_stats(bot_id: int, guild_count: int):
+    res = requests.post(f"{api_url}/bots/{bot_id}/stats", json={"guild_count": guild_count})
+    json = res.json()
+    if res.status != 200:
+        # Handle an error in the api
+        ...
+    return json
+```
+
+
+**API v2 analogue:** (no longer working) [Post Stats](https://legacy.fateslist.xyz/api/docs/redoc#operation/set_stats)
+
+**Path parameters**
+
+- **id** [i64 (type info may be incomplete, see example)]
+
+
+**Example**
+
+```json
+{
+    "id": 0
+}
+```
+
+**Request Body**
+
+```json
+{
+    "guild_count": 3939,
+    "shard_count": 48484,
+    "shards": [
+        149,
+        22020
+    ],
+    "user_count": 39393
+}
+```
+
+**Response Body**
+
+```json
+{
+    "done": false,
+    "reason": null,
+    "context": null
+}
+```
+**Authorization Needed** | [Bot](https://docs.fateslist.xyz/endpoints#authorization)
+
 
 ### Index
 #### GET /index
@@ -986,90 +1056,7 @@ This endpoint creates a vote for a bot which can only be done *once* every 8 hou
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
-
-
-### Post Stats
-#### GET /bots/{id}/stats
-
-
-Post stats to the list
-
-Example:
-```py
-import requests
-
-# On dpy, guild_count is usually the below
-guild_count = len(client.guilds)
-
-# If you are using sharding
-shard_count = len(client.shards)
-shards = client.shards.keys()
-
-# Optional: User count (this is not accurate for larger bots)
-user_count = len(client.users) 
-
-def post_stats(bot_id: int, guild_count: int):
-    res = requests.post(f"{api_url}/bots/{bot_id}/stats", json={"guild_count": guild_count})
-    json = res.json()
-    if res.status != 200:
-        # Handle an error in the api
-        ...
-    return json
-```
-
-
-**API v2 analogue:** (no longer working) [Post Stats](https://legacy.fateslist.xyz/api/docs/redoc#operation/set_stats)
-
-**Path parameters**
-
-- **id** [i64 (type info may be incomplete, see example)]
-
-
-**Example**
-
-```json
-{
-    "id": 0
-}
-```
-
-**Request Body**
-
-```json
-{
-    "guild_count": 3939,
-    "shard_count": 48484,
-    "shards": [
-        149,
-        22020
-    ],
-    "user_count": 39393
-}
-```
-
-**Response Body**
-
-```json
-{
-    "guild_count": 0,
-    "description": "",
-    "banner": "",
-    "nsfw": false,
-    "votes": 0,
-    "state": 0,
-    "user": {
-        "id": "",
-        "username": "",
-        "disc": "",
-        "avatar": "",
-        "bot": false,
-        "status": "Unknown"
-    },
-    "flags": []
-}
-```
-**Authorization Needed** | [Bot](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ### Mini Index
@@ -1298,7 +1285,7 @@ Due to massive changes, this API cannot be mapped onto any v2 API
     }
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ## Auth
@@ -1435,7 +1422,7 @@ token ever gets leaked.
     "context": null
 }
 ```
-**Authorization Needed** | [Bot](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [Bot](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ### New User Token
@@ -1476,7 +1463,7 @@ token ever gets leaked.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ### New Server Token
@@ -1517,7 +1504,7 @@ token ever gets leaked.
     "context": null
 }
 ```
-**Authorization Needed** | [Server](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [Server](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ## Bot Actions
@@ -1682,7 +1669,7 @@ to false.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ### Edit Bot
@@ -1845,7 +1832,7 @@ to false.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ### Transfer Ownership
@@ -1899,7 +1886,7 @@ You **must** be main owner to use this endpoint.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ### Delete Bot
@@ -1943,7 +1930,7 @@ You **must** be main owner to use this endpoint.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ## Appeal
@@ -1994,7 +1981,7 @@ Creates a appeal/request for a bot.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ## Packs
@@ -2056,7 +2043,7 @@ but must exist in the object
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ## Users
@@ -2394,7 +2381,7 @@ also match the user token sent in the ``Authorization`` header
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ### Edit Review
@@ -2458,7 +2445,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "f9e60f06-9a5b-48d5-868a-b45b8a522d56",
+    "id": "a31931c3-ea54-419e-b1fe-42588f1bf66c",
     "reply": false,
     "star_rating": "0",
     "review_text": "",
@@ -2491,7 +2478,7 @@ also match the user token sent in the ``Authorization`` header
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ### Delete Review
@@ -2525,7 +2512,7 @@ set this a TargetType anyways so you might as well set it correctly.
 
 ```json
 {
-    "rid": "b3a26898-f050-4b58-9e7b-327d5e5faafc"
+    "rid": "abf451c1-409b-4c64-9322-c8cd0506e15b"
 }
 ```
 
@@ -2561,7 +2548,7 @@ set this a TargetType anyways so you might as well set it correctly.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ### Vote Review
@@ -2596,7 +2583,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 
 ```json
 {
-    "rid": "0f2b18d8-03f4-4008-b988-1044a281f52f"
+    "rid": "91eb9004-f658-4a5a-85c9-774c5a4428b7"
 }
 ```
 
@@ -2618,7 +2605,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ## Stats
@@ -2749,7 +2736,7 @@ This is the ``target_type``
     "context": null
 }
 ```
-**Authorization Needed** | [Bot](https://docs.fateslist.xyz/api-v3/#authorization), [Server](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [Bot](https://docs.fateslist.xyz/endpoints#authorization), [Server](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ### Delete Resource
@@ -2790,7 +2777,7 @@ This is the ``target_type``
 
 ```json
 {
-    "id": "07758008-9171-4930-b33d-cad2a7a42142",
+    "id": "17b0a274-acb8-4fa3-b5a1-f3fc4b9eb697",
     "target_type": 0
 }
 ```
@@ -2810,7 +2797,7 @@ This is the ``target_type``
     "context": null
 }
 ```
-**Authorization Needed** | [Bot](https://docs.fateslist.xyz/api-v3/#authorization), [Server](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [Bot](https://docs.fateslist.xyz/endpoints#authorization), [Server](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ## Commands
@@ -2875,7 +2862,7 @@ the command depending on its ``name``.**
     "context": null
 }
 ```
-**Authorization Needed** | [Bot](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [Bot](https://docs.fateslist.xyz/endpoints#authorization)
 
 
 ### Delete Bot Command
@@ -2937,6 +2924,6 @@ UUIDs in the case of ids. Bad names/ids will be ignored
     "context": null
 }
 ```
-**Authorization Needed** | [Bot](https://docs.fateslist.xyz/api-v3/#authorization)
+**Authorization Needed** | [Bot](https://docs.fateslist.xyz/endpoints#authorization)
 
 
