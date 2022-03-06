@@ -1,5 +1,6 @@
 from base64 import b64decode
 from os import abort
+import pathlib
 from pickletools import int4
 import random
 import sys
@@ -181,6 +182,91 @@ async def is_staff(staff_json: dict | None, user_id: int, base_perm: int, json: 
         return rc, sm.perm, sm.dict()
     return rc, sm.perm, sm
 
+# Create the doc tree
+doctree_dict = {"documentation": []}
+
+def gen_doctree(path_split):
+    if len(path_split) == 1:
+        # Then we have life easy
+        doctree_dict["documentation"].append(path_split[0])
+    elif len(path_split) == 2:
+        if path_split[0] not in doctree_dict:
+            doctree_dict[path_split[0]] = []
+        doctree_dict[path_split[0]].append(path_split[1])
+    else:
+        raise RuntimeError("Max nesting of 2 reached")
+
+for path in pathlib.Path("modules/infra/admin_piccolo/api-docs").rglob("*.md"):
+    proper_path = str(path).replace("modules/infra/admin_piccolo/api-docs/", "")
+    print(f"DOCS: {proper_path}")
+    path_split = proper_path.split("/")
+    gen_doctree(path_split)
+
+def key_doctree(x):
+    if x[0] == "documentation":
+        return 10000000000000000
+    else:
+        return -1*len(x[0][0])
+
+doctree_dict = dict(sorted(doctree_dict.items(), key=key_doctree, reverse=True))
+
+# Now we just need to loop doctree_dict, luckily, we now know exactly whats needed
+doctree = """
+<li class="nav-item menu-open">
+<a href="#" class="nav-link">
+    <i class="nav-icon fa-solid fa-rectangle-list"></i>
+    <p>Documentation <i class="right fas fa-angle-left"></i></p>
+</a>
+<ul class="nav nav-treeview">
+"""
+
+for tree in doctree_dict.keys():
+
+    if tree != "documentation":
+        doctree += f"""
+<li class="nav-item menu-open">
+<a href="#" class="nav-link">
+    <i class="nav-icon fa-solid fa-rectangle-list"></i>
+    <p>{tree.replace("-", " ").title()} <i class="right fas fa-angle-left"></i></p>
+</a>
+<ul class="nav nav-treeview">
+        """
+
+    for v in doctree_dict[tree]:
+        v = v.replace(".md", "")
+
+        if tree == "documentation":
+            id_tree = "docs"
+        else:
+            id_tree = f"docs-{tree}"
+
+        id = f"{id_tree}-{v}"
+
+        if tree == "documentation":
+            url = v
+        else:
+            url = f"{tree}/{v}"
+
+        pretty_v = v.replace("-", " ").title()
+
+        doctree += f"""
+<li class="nav-item">
+    <a id="{id}-nav" href="https://lynx.fateslist.xyz/docs/{url}" class="nav-link">
+        <i class="far fa-circle nav-icon"></i>
+        <p>
+            {pretty_v}
+        </p>
+    </a>
+</li>
+        """
+    if tree != "documentation":
+        doctree += "</ul>"
+
+doctree += "</ul></li>"
+
+print(doctree)
+
+# The actual form
 lynx_form_beta = """
 <!DOCTYPE html>
 
@@ -190,6 +276,9 @@ lynx_form_beta = """
       href="https://fonts.googleapis.com/css?family=Lexend Deca"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.4.0/build/styles/a11y-light.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.4.0/build/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/RickStrahl/highlightjs-badge@master/highlightjs-badge.min.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://adminlte.io/themes/v3/plugins/jquery/jquery.min.js"></script>
     <script src="https://adminlte.io/themes/v3/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
@@ -306,6 +395,12 @@ lynx_form_beta = """
                 </a>
               </li>
               <li class="nav-item">
+                <a id="staff-guide-nav" href="https://lynx.fateslist.xyz/staff-guide" class="nav-link">
+                <i class="nav-icon fa-solid fa-rectangle-list"></i>
+                  <p>Staff Guide</p>
+                </a>
+              </li>
+              <li class="nav-item">
                 <a id="staff-apps-nav" href="https://lynx.fateslist.xyz/staff-apps" class="nav-link">
                 <i class="nav-icon fa-solid fa-rectangle-list"></i>
                   <p>Staff Applications</p>
@@ -317,20 +412,20 @@ lynx_form_beta = """
                   <p>Links</p>
                 </a>
               </li>
-              <li class="nav-item menu-open">
-                <a href="#" class="nav-link active"
-                  ><i class="nav-icon fa-solid fa-candy-cane"></i>
-                  <p>Admin Panel <i class="right fas fa-angle-left"></i></p
-                ></a>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon fa-solid fa-candy-cane"></i>
+                  <p>Admin Panel <i class="right fas fa-angle-left"></i></p>
+                </a>
                 <ul class="nav nav-treeview">
                   <li class="nav-item">
-                    <a id="bot-actions-nav" href="https://lynx.fateslist.xyz/bot-actions" class="nav-link"
-                      ><i class="far fa-circle nav-icon"></i>
-                      <p>
+                    <a id="bot-actions-nav" href="https://lynx.fateslist.xyz/bot-actions" class="nav-link">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>
                         Bot Actions
                         <span class="right badge badge-info">Beta</span>
-                      </p></a
-                    >
+                      </p>
+                    </a>
                   </li>
                   <li class="nav-item">
                     <a id="user-actions-nav" href="https://lynx.fateslist.xyz/user-actions" class="nav-link"
@@ -342,6 +437,7 @@ lynx_form_beta = """
                     >
                   </li>
                 </ul>
+                %doctree%
               </li>
             </ul>
           </nav>
@@ -351,7 +447,7 @@ lynx_form_beta = """
         <div class="content-header">
           <div class="container-fluid">
             <div class="row mb-2">
-              <div class="col-sm-6"><h1 class="m-0"><span id="title-full">Welcome to Lynx! (<span id="title"></span>)</span></h1></div>
+              <div class="col-sm-6"><h1 class="m-0"><span id="title-full"><span id="title">Welcome To Lynx!</span></span></h1></div>
               <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right" id="currentBreadPath">
                   <li class="breadcrumb-item"><a href="#">Home</a></li>
@@ -362,12 +458,6 @@ lynx_form_beta = """
         </div>
         <div class="content">
           <div class="container-fluid">
-            <blockquote class="quote">
-            <h5 id="warning">Important Info</h5>
-            <p>
-                Make sure to read our<strong><a href="/staff-guide"> staff guide</a></strong> before doing anything on Lynx. <strong>Only applies to staff of course</strong>
-            </p>
-            </blockquote>
             <div id="verify-screen">
             </div>
           </div>
@@ -423,16 +513,17 @@ lynx_form_beta = """
         currentBreadPath = title(currentBreadPath)
         $('#currentBreadPath').append(`<li class="breadcrumb-item active"><a href="${currentURL}">${currentBreadPath}</a></li>`)
 
-        if(currentURL == '/bot-actions') {
-            $('#bot-actions-nav').toggleClass('active')
-        } else if(currentURL== '/') {
-            $('#home-nav').toggleClass('active')
-        } else if(currentURL == '/user-actions') {
-            $('#user-actions-nav').toggleClass('active')
-        } else if(currentURL == '/links') {
-            $('#links-nav').toggleClass('active')
-        } else if(currentURL == '/staff-apps') {
-            $('#staff-apps-nav').toggleClass('active')
+        currentURL = currentURL.replace('/', '') // Replace first
+
+        currentURLID = '#' + currentURL.replaceAll('/', '-') + "-nav"
+        if(currentURL == "/") {
+            currentURLID = "#home-nav"
+        }
+
+        try {
+            document.querySelector(currentURLID).classList.add('active')
+        } catch {
+            console.log(`No active element found: ${currentURLID}`)
         }
     
         //setInterval(getNotifications, 5000)
@@ -471,7 +562,7 @@ lynx_form_beta = """
     })
   </script>
   <style>
-    pre, code {
+    .pre {
         white-space: pre-line;
         word-wrap: break-word;
     }
@@ -586,7 +677,7 @@ lynx_form_beta = """
   </script>
 
 </html>
-"""
+""".replace("%doctree%", doctree)
 
 staff_guide_md = """
 <blockquote class="quote">
@@ -831,7 +922,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/_"):
             return await call_next(request)
 
-        if request.url.path.startswith(("/staff-guide", "/requests", "/links", "/roadmap")):
+        if request.url.path.startswith(("/staff-guide", "/requests", "/links", "/roadmap", "/docs")):
             if request.headers.get("Frostpaw-Staff-Notify"):
                 return await call_next(request)
             else:
@@ -1020,7 +1111,8 @@ async def server_error(request, exc):
 
 app = FastAPI(routes=[
     Mount("/admin", admin), 
-])
+],
+docs_url="/_docs")
 
 @app.get("/staff-verify")
 def staff_verify(request: Request):
@@ -1228,10 +1320,10 @@ def my_perms(request: Request):
         "pre": "/links",
         "data": f"""
         <pre>
-            <strong>Permission Number</strong>: {request.state.member.perm}
-            <strong>Role Name</strong>: {request.state.member.name}
-            <strong>Can Access Lynx (limited)</strong>: {request.state.member.perm >= 2}
-            <strong>Can Access Lynx (full)</strong>: {request.state.member.perm >= 4}
+<strong>Permission Number</strong>: {request.state.member.perm}
+<strong>Role Name</strong>: {request.state.member.name}
+<strong>Can Access Lynx (limited)</strong>: {request.state.member.perm >= 2}
+<strong>Can Access Lynx (full)</strong>: {request.state.member.perm >= 4}
         </pre>
         """
     })
@@ -2210,6 +2302,77 @@ def links(request: Request):
         </blockquote>
     """
     })
+
+@app.get("/docs")
+def docs_redir():
+    return RedirectResponse("https://lynx.fateslist.xyz/docs/index")
+
+@app.get("/docs/{page:path}")
+def docs(page: str):
+    if page.endswith(".md"):
+        return RedirectResponse(f"/docs/{page[:-3]}")
+
+    if not page.replace("-", "").replace("_", "").replace("/", "").isalnum():
+        return ORJSONResponse({"detail": "Invalid page"}, status_code=404)
+    
+    try:
+        with open(f"modules/infra/admin_piccolo/api-docs/{page}.md", "r") as f:
+            md_data = f.read()
+    except FileNotFoundError as exc:
+        return ORJSONResponse({"detail": f"api-docs/{page}.md not found -> {exc}"}, status_code=404)
+
+    md = (
+        MarkdownIt()
+        .use(front_matter_plugin)
+        .use(footnote_plugin)
+        .use(anchors_plugin, max_level=5, permalink=True)
+        .use(fieldlist_plugin)
+        .use(container_plugin, name="warning")
+        .use(container_plugin, name="info")
+        .use(container_plugin, name="aonly")
+        .use(container_plugin, name="guidelines")
+        .use(container_plugin, name="generic", validate = lambda *args: True)
+        .enable('table')
+        .enable('image')
+    )
+
+    return {
+        "title": f"{page.split('/')[-1].replace('-', ' ').title()}",
+        "data": f"""
+{md.render(md_data).replace("<table", "<table class='table'").replace(".md", "")}
+
+        <a href="/docs-src/{page}">View Source</a> 
+        """,
+        "script": """
+            docReady(() => {
+                if(window.location.hash) {
+                    document.querySelector(`${window.location.hash}`).scrollIntoView()
+                }
+
+                hljs.highlightAll();
+
+                window.highlightJsBadge();
+            })
+        """
+    }
+
+@app.get("/docs-src/{page:path}")
+def docs_source(page: str):
+    if not page.replace("-", "").replace("_", "").replace("/", "").isalnum():
+        return ORJSONResponse({"detail": "Invalid page"}, status_code=404)
+    
+    try:
+        with open(f"modules/infra/admin_piccolo/api-docs/{page}.md", "r") as f:
+            md_data = f.read()
+    except FileNotFoundError as exc:
+        return ORJSONResponse({"detail": f"api-docs/{page}.md not found -> {exc}"}, status_code=404)
+
+    return {
+        "title": "Markdown Test",
+        "data": f"""
+<pre>{md_data}</pre>
+        """
+    }
 
 @app.get("/requests")
 async def lynx_request_logs():
