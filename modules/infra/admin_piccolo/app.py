@@ -952,6 +952,7 @@ def staff_verify(request: Request):
 - The code is somewhere in the staff guide so please read the full guide
 - Look up terms you do not understand on Google!
 <strong>Once you complete this, you will automatically recieve your roles in the staff server</strong>
+</pre>
 
 <div style="margin-left: auto; margin-right: auto; text-align: center;">
 <div class="form-group">
@@ -961,8 +962,6 @@ style="width: 100%; height: 200px; font-size: 20px !important; resize: none;"
 ></textarea>
 </div>
 </div>
-</pre>
-<br/>
 <strong>
 By continuing, you agree to:
 <ul>
@@ -1267,7 +1266,7 @@ app.state.valid_csrf_user = {}
 
 @app.get("/bot-actions")
 async def loa(request: Request, response: Response):
-    queue = await app.state.db.fetch("SELECT bot_id, username_cached, description, prefix FROM bots WHERE state = $1 ORDER BY created_at DESC", enums.BotState.pending)
+    queue = await app.state.db.fetch("SELECT bot_id, username_cached, description, prefix, created_at FROM bots WHERE state = $1 ORDER BY created_at ASC", enums.BotState.pending)
 
     queue_select = bot_select("queue", queue)
 
@@ -1312,6 +1311,7 @@ async def loa(request: Request, response: Response):
 - Prefix: {bot['prefix'] or '/'}
 - Description: {bleach.clean(bot['description'])}
 - Owners: {owners_md}
+- Created At: {bot['created_at']}
 
 """
 
