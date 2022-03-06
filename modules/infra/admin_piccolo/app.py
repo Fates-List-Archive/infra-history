@@ -294,7 +294,7 @@ lynx_form_beta = """
               data-accordion="false"
             >
               <li class="nav-item">
-                <a href="https://lynx.fateslist.xyz/" class="nav-link"
+                <a id="home-nav" href="https://lynx.fateslist.xyz/" class="nav-link"
                   ><i class="nav-icon fa-solid fa-house"></i>
                   <p>Home</p></a
                 >
@@ -305,13 +305,13 @@ lynx_form_beta = """
                     >
                   </li>
               </li><li class="nav-item">
-                    <a href="https://lynx.fateslist.xyz/staff-apps" class="nav-link"
+                    <a id="staff-apps-nav" href="https://lynx.fateslist.xyz/staff-apps" class="nav-link"
                       ><i class="fa-solid fa-rectangle-list"></i>
                       <p>Staff Applications</p></a
                     >
                   </li>
                <li class="nav-item">
-                    <a href="https://lynx.fateslist.xyz/links" class="nav-link"
+                    <a id="links-nav" href="https://lynx.fateslist.xyz/links" class="nav-link"
                       ><i class="fa-solid fa-link"></i>
                       <p>Links</p></a
                     >
@@ -323,7 +323,7 @@ lynx_form_beta = """
                 ></a>
                 <ul class="nav nav-treeview">
                   <li class="nav-item">
-                    <a href="https://lynx.fateslist.xyz/bot-actions" class="nav-link"
+                    <a id="bot-actions-nav" href="https://lynx.fateslist.xyz/bot-actions" class="nav-link"
                       ><i class="far fa-circle nav-icon"></i>
                       <p>
                         Bot Actions
@@ -332,7 +332,7 @@ lynx_form_beta = """
                     >
                   </li>
                   <li class="nav-item">
-                    <a href="https://lynx.fateslist.xyz/user-actions" class="nav-link"
+                    <a id="user-actions-nav" href="https://lynx.fateslist.xyz/user-actions" class="nav-link"
                       ><i class="far fa-circle nav-icon"></i>
                       <p>
                         User Actions
@@ -421,6 +421,22 @@ lynx_form_beta = """
         var currentBreadPath = currentURL.replace('-', ' ').replace('.html', '').replace('/', '')
         currentBreadPath = title(currentBreadPath)
         $('#currentBreadPath').append(`<li class="breadcrumb-item active"><a href="${currentURL}">${currentBreadPath}</a></li>`)
+
+if(currentURL == '/bot-actions') {
+                  $('#bot-actions-nav').toggleClass('active')
+                  } else if(currentURL== '/') {
+                    $('#bot-actions-nav').toggleClass('active')
+                    $('#home-nav').toggleClass('active')
+                  } else if(currentURL == '/user-actions') {
+$('#bot-actions-nav').toggleClass('active')
+$('#user-actions-nav').toggleClass('active')
+                  } else if(currentURL == '/links') {
+$('#bot-actions-nav').toggleClass('active')
+$('#links-nav').toggleClass('active')
+                  } else if(currentURL == '/staff-apps') {
+                    $('#bot-actions-nav').toggleClass('active')
+$('#staff-apps-nav').toggleClass('active')
+                  }
     
         //setInterval(getNotifications, 5000)
 
@@ -2353,18 +2369,19 @@ async def user_actions(request: Request, response: Response, id: int | None = No
         "title": "User Actions",
         "data": md.render(f"""
             
-::: action-addstaff
-
-## Add Staff
-
-- Head Admin+ only
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">Add Staff</h3>
+  </div>
+  <div class="panel-body">
+    - Head Admin+ only
 <div class="form-group">
 <label for="staff_user_id">User ID</label>
 <input class="form-control" id="staff_user_id" name="staff_user_id" placeholder='user id here' type="number" value="{id or ''}" />
 <button class="btn btn-primary" onclick="addStaff()">Add</button>
 </div>
-
-:::
+  </div>
+</div>
         """),
         "script": f"""
         var csrfToken = "{csrf_token}"
