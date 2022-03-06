@@ -2353,18 +2353,19 @@ async def user_actions(request: Request, response: Response, id: int | None = No
         "title": "User Actions",
         "data": md.render(f"""
             
-::: action-addstaff
-
-## Add Staff
-
-- Head Admin+ only
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">Add Staff</h3>
+  </div>
+  <div class="panel-body">
+    - Head Admin+ only
 <div class="form-group">
 <label for="staff_user_id">User ID</label>
 <input class="form-control" id="staff_user_id" name="staff_user_id" placeholder='user id here' type="number" value="{id or ''}" />
 <button class="btn btn-primary" onclick="addStaff()">Add</button>
 </div>
-
-:::
+  </div>
+</div>
         """),
         "script": f"""
         var csrfToken = "{csrf_token}"
