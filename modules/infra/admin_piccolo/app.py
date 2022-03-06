@@ -231,6 +231,9 @@ lynx_form_beta = """
           <li class="nav-item d-none d-sm-inline-block">
             <a href="https://lynx.fateslist.xyz/bot-actions" class="nav-link">Bot Actions</a>
           </li>
+          <li class="nav-item d-none d-sm-inline-block">
+            <a href="https://lynx.fateslist.xyz/user-actions" class="nav-link">User Actions</a>
+          </li>
         </ul>
         <ul class="navbar-nav ml-auto">
           <li class="nav-item dropdown">
@@ -320,10 +323,19 @@ lynx_form_beta = """
                 ></a>
                 <ul class="nav nav-treeview">
                   <li class="nav-item">
-                    <a href="https://lynx.fateslist.xyz/bot-actions" class="nav-link active"
+                    <a href="https://lynx.fateslist.xyz/bot-actions" class="nav-link"
                       ><i class="far fa-circle nav-icon"></i>
                       <p>
                         Bot Actions
+                        <span class="right badge badge-info">Beta</span>
+                      </p></a
+                    >
+                  </li>
+                  <li class="nav-item">
+                    <a href="https://lynx.fateslist.xyz/user-actions" class="nav-link"
+                      ><i class="far fa-circle nav-icon"></i>
+                      <p>
+                        User Actions
                         <span class="right badge badge-info">Beta</span>
                       </p></a
                     >
@@ -338,7 +350,7 @@ lynx_form_beta = """
         <div class="content-header">
           <div class="container-fluid">
             <div class="row mb-2">
-              <div class="col-sm-6"><h1 class="m-0">Welcome to Lynx! (<span id="title"></span>)</h1></div>
+              <div class="col-sm-6"><h1 class="m-0"><span id="title-full">Welcome to Lynx! (<span id="title"></span>)</span></h1></div>
               <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right" id="currentBreadPath">
                   <li class="breadcrumb-item"><a href="#">Home</a></li>
@@ -349,15 +361,12 @@ lynx_form_beta = """
         </div>
         <div class="content">
           <div class="container-fluid">
-            <div class="row">
-              <blockquote class="quote">
-                <h5 id="warning">Important Info</h5>
-                <p>
-                  Please make sure to claim a bot before you start testing it!
-                  Also, make sure to read our<strong><a href="/staff-guide"> staff guide</a></strong>
-                </p>
-              </blockquote>
-            </div>
+            <blockquote class="quote">
+            <h5 id="warning">Important Info</h5>
+            <p>
+                Make sure to read our<strong><a href="/staff-guide"> staff guide</a></strong> before doing anything on Lynx
+            </p>
+            </blockquote>
             <div id="verify-screen">
             </div>
           </div>
@@ -435,8 +444,16 @@ lynx_form_beta = """
                 document.querySelector("#verify-screen").innerHTML += `<a href='${body.pre}'>Back to previous page</a>`
             }
         } else {
-            document.querySelector("#title").innerHTML = "Animus magic is broken today!"
-            document.querySelector("#verify-screen").innerHTML = `<h1>${res.status}</h1><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a>`
+            let status = res.status
+
+            if(status == 404) {
+                status = `<h1>404</h1><h3>Page not found</h3>`
+            } else {
+                status = `<h1>${status}</h1>`
+            }
+
+            document.querySelector("#title-full").innerHTML = "Animus magic is broken today!"
+            document.querySelectorAll(".content")[0].innerHTML = `${status}<h4><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a></h4>`
         }
     })
   </script>
@@ -559,47 +576,64 @@ lynx_form_beta = """
 """
 
 staff_guide_md = """
-## Contributing
+<blockquote class="quote">
+
+### Contributing
 
 If you believe you have found a bug or wish to suggest an improvement to these docs, please make a PR [here](https://github.com/Fates-List/apidocs)
 
-When making the PR, clone the Fates-List repository, add dragon to your PATH and then run the `./build` in your forked/modified repository to build
+**Tip**: When making the PR, clone the Fates-List repository, add `flamepaw` to your PATH and then run the `./build` in your forked/modified repository to build
 the changes. **If you do not have a linux machine or if you do not understand the above, just say so in the PR and allow edits from others so we can build the new site docs for you**
 
-## How to apply
+</blockquote>
+
+<blockquote class="quote">
+
+### Applying for staff...
 
 Join our support server, enter the [`#ashfur-sys`](https://discord.com/channels/789934742128558080/848605596936437791) channel and click `Apply` Button
 
-## Important Info
+</blockquote>
 
-**It is very importat to keep going back to this document every few days if there are ever any changes or otherwise as a refresher**
+<blockquote class="quote">
 
-Flamepaw is our staff and testing server. [Invite](https://fateslist.xyz/banappeal/invite)
+### Staying up to date!
 
-## Moderation Rules
+- It is very importat to keep going back to this document every few days if there are ever any changes or otherwise as a refresher
+- Don't hesitate to ask questions, we are here to help!
+
+</blockquote>
+
+<blockquote class="quote">
+
+### Structure
+
+- Flamepaw is our staff and testing server. [Invite](https://fateslist.xyz/banappeal/invite)
+- On main server, Minotaur and Wick can be used. Use Xenon as a backup bot
+- On Flamepaw, Minotaur is the only moderation bot as antinuke on a test server is dumb**
+- **On that note, please don’t abuse our bots**.
 
 ::: warning
-
-Please don’t abuse our bots please.
 
 People **higher in clearance *override* statements made by people lower** (Head Admin word overrides Admin’s word) 
 but **please feel free to privately report bad staff to an owner or via FL Kremlin/FL Secret Kremlin (if you have access to those)**
 
-*Never bash or complain about things in the Testing Channels. We have staff-chat for a very good reason*
-
-**If it's highly confidential, consider using DMs or asking for a Group DM. Staff chat is visible to bots with the Administrator permission**
-
 :::
 
-::: info
+</blockquote>
 
-On main server, Minotaur and Wick can be used. Use Xenon as a backup bot
+<blockquote class="quote">
 
-On Flamepaw, Minotaur is the only moderation bot as antinuke on a test server is dumb**
+### Moderation Rules
 
-:::
+- Never bash or complain about things in the Testing Channels. We have staff-chat for a *very* good reason
+- **If it's highly confidential, consider using DMs or asking for a Group DM. Staff chat is visible to bots with the Administrator permission**
 
-## Reviewing Bots 
+</blockquote>
+
+<blockquote class="quote">
+
+### Reviewing Bots 
 
 Our bot list rules and requirements can be found [here](https://fateslist.xyz/frostpaw/tos). Please read through them before reviewing 
 bots.
@@ -612,8 +646,6 @@ Where possible, test at least 70-100% of all bot commands randomly (*it would be
 and we want to deal with our queue as well...*). 
 
 **Remember, case-by-case basis means use your own judgement and ask other staff members if unsure**
-
-::: guidelines
 
 Some things that should be checked for. Note that *all of the below is changeable on a case by case basis*:
 
@@ -628,24 +660,26 @@ post the media link in the reason for denial. The second half of the staff verif
 - **Is the bots owner correct (validate using other bot lists or Head Admins+ if needed), report violations to a Admin+ ASAP**
 - **Quality of bot descriptions and long description**
 
-:::
-
 **Remember. Approve and deny bots without bias. Just because you like/dislike the owner does NOT mean you approve/deny their bots!**
 
 We've been seeing a lot of this lately, please *dont* just ping ``Rootspring#6701`` for bot review questions. Instead, ping any Admin+ and then come to me. 
 
-::: aonly
+If a bot is in need of verification, it *may* also be tested on its support server. This also goes for regular bots as well. Be sure to still test the bot though!
+
+</blockquote>
+
+<blockquote class="quote">
+
+### Admin things
 
 Admins+ may approve known large bots without fully testing them if they are KNOWN to be high quality and have been widely used 
 by them. This is in place to reduce our queue size allowing smaller bots to be tested more quickly and with better feedback
 
-:::
+</blockquote>
 
-If a bot is in need of verification, it may also be tested on its support server. This also goes for regular bots as well. Be sure to still test the bot though!
+<blockquote class="quote">
 
-## Bots in other languages
-
-::: guidelines
+### Bots in other languages
 
 Do not deny bots for using other languages. These are officially supported. Instead, do one of the following:
 
@@ -653,51 +687,82 @@ Do not deny bots for using other languages. These are officially supported. Inst
 Translate may miss context**
 - Ask another staff reviewer for help. The fifth part of the staff verification code is +Poketwo. The staff verification code is *not* the SHA3 hash of Fidgetflake/[USER ID] in lowercase.
 - Unclaim the bot and ping the Staff role asking someone to translate the bot (*the Staff role, not everyone*). The third half of the staff verification code is Lightleap::USERID
+- Ask the bot owner for help
+
+</blockquote>
+
+<blockquote class="quote">
+
+### Prefix Changes
+
+- Do not deny bots for not supporting custom prefixes as this is merely a suggestion. Instead *mute* the bot on the support server after approval and adding to the 
+main server.
+- Same goes with any other suggestions in the rules
+
+**Tip:** In most cases, the bot will anyways support slash commands anyways and won't *have* prefix commands
+
+</blockquote>
+
+<blockquote class="quote">
+
+### Partnerships and Staff Applications
+
+- All partnerships and staff applications are to be decided by FL Kremlin or Overseers. 
+- The fourth part of the verification code is +Mew. 
+- If you are not in FL Kremlin, DM any partnership requests to a Head Admin+.
+- Redirect users wishing to become staff to [`#ashfur-sys`](https://discord.com/channels/789934742128558080/848605596936437791) channel
+
+</blockquote>
+
+<blockquote class="quote">
+
+### Getting Help
+
+- Feel DM any staff member if you need help with something. We are here to help you.
+- Don't be rude and always strive to be respectful.
+- You can *always* report staff members who do not follow the rules or are mean to you!
+
+</blockquote>
+
+<blockquote class="quote">
+
+### Ban Appeals
+
+- We use [Flamepaw](https://fateslist.xyz/banappeal/invite) to handle Ban Appeals. 
+- This approach was chosen to ensure that ban appeals are personalised for users. The first half of the staff verification code is Baypaw/Flamepaw.
+- Not everyone that gets banned may want to appeal (some just want the ban reason) and not everyone that gets banned falls into the same category as someone else. 
+- As staff, you are expected to deal with ban appeals and turn to a higher up when required.
+
+::: warning
+
+**Do not ban or unban someone before asking for permission from Head Admin+.**
+
+**Warn/mute/unmute/kick *instead***
 
 :::
 
-## Prefix Changes
+</blockquote>
 
-Do not deny bots for not supporting custom prefixes. This is a suggestion. Instead mute the bot on the support server after approval and adding to the
-main server.
+<blockquote class="quote">
 
-**Same goes with any other suggestions in the rules**
-
-## Partnerships
-
-All partnerships are to be decided by FL Kremlin or Overseers. The fourth part of the verification code is +Mew. If you are not in FL Kremlin, DM any partnership requests to a Head Admin+.
-
-**The same goes with staff applications**
-
-## Getting Help
-
-Feel DM any staff member if you need help with something. We are here to help you. Don't be rude and always strive to be respectful.
-
-## Ban Appeals
-
-We use our [Ban Appeals Server](https://fateslist.xyz/banappeal/invite) to handle Ban Appeals. 
-
-This approach was chosen to ensure that ban appeals are personalised for users. The first half of the staff verification code is Baypaw/Flamepaw .Not everyone that gets banned may want to appeal (some just want the ban reason) and not everyone that gets banned falls into the same category as someone else. 
-
-As staff, you are expected to deal with ban appeals and turn to a higher up when required.
-
-**Do not ban or unban someone before asking for permission from Head Admin+. Warn or kick instead**
-
-## Review Process Quick Start
+### Quick Start
 
 1. Run ``/claim`` to claim the bot. **Be sure to unclaim it with ``/unclaim`` if you are not reviewing it anymore**
-
 2. Test the bot as per [Reviewing Bots](#reviewing-bots)
-
 3. Use ``/approve`` and ``/deny`` accordingly
 
-## Lynx
+</blockquote>
 
-Lynx is our admin panel giving you complete control of the database. Access will be monitored and access logs are *public*. You will be removed for abuse. The verification code is not the SHA3-224 of Shadowsight/BristleXRoot/[USER ID]
+<blockquote class="quote">
 
-Lynx can/is slightly buggy at times. Report these bugs to Rootspring#6701 please.
+### Lynx Admin
 
-::: guidelines
+- Lynx Admin is our admin panel giving you complete control of the database. Access will be monitored and access logs are *public*. You will be removed for abuse. 
+- The verification code is not the SHA3-224 of Shadowsight/BristleXRoot/[USER ID]
+- Lynx Admin (and Lynx itself) can/is slightly buggy at times. Report these bugs to Rootspring#6701 please.
+- The URL for Lynx admin is [https://lynx.fateslist.xyz/admin](https://lynx.fateslist.xyz/admin)
+
+**Lynx Admin is based on [Piccolo Admin](https://github.com/piccolo-orm/piccolo_admin)**
 
 Some ground rules with Lynx:
 
@@ -705,31 +770,35 @@ Some ground rules with Lynx:
 - When in doubt, ask. Do not change enums/delete rows you think are erroneous, it probably is intentionally like that
 - **Do not, absolutely *do not* share login credentials or access to Lynx with others *without the explicit permission of Rootspring#6701*. This also includes storing access credentials on notes etc.**
 
-:::
+</blockquote>
 
-**To verify that you have read the rules and still wish to be staff, go to https://lynx.fateslist.xyz/**
+<blockquote class="quote">
 
-## FL Kremlin
+### FL Kremlin
 
-Lastly, FL Kremlin. We've had many *outsiders* coming in and we are OK with this as it allows for transparency. This is why *no highly sensitive information* should be shared on FL Kremlin Group Chat
+- Oh god. FL Kremlin. We've had many *outsiders* coming in and we are OK with this as it allows for transparency. This is why *no highly sensitive information* should be shared on FL Kremlin Group Chat
+- The word of Rootspring#6701 is final although debates are always recommended if you disagree with something.
+- Don't complain about `@everyone` pings. They will happen!
 
-The word of Rootspring#6701 is final although debates are always recommended if you disagree with something.
+</blockquote>
 
-Don't complain about ``@everyone`` pings. They will happen!
+<blockquote class="quote">
 
-::: guidelines
+### And Lastly...
 
 - Please make sure to claim a bot before you start testing it!
 - Also, make sure to read <a href="/staff-guide">our staff guide</a> fully!
 
-:::
+**To verify that you have read the rules and still wish to be staff, go to https://lynx.fateslist.xyz/**
+
+</blockquote>
 """
 
 md = (
     MarkdownIt()
     .use(front_matter_plugin)
     .use(footnote_plugin)
-    .use(anchors_plugin, max_level=3, permalink=True)
+    .use(anchors_plugin, max_level=5, permalink=True)
     .use(fieldlist_plugin)
     .use(container_plugin, name="warning")
     .use(container_plugin, name="info")
@@ -1319,7 +1388,7 @@ async def loa(request: Request, response: Response):
         MarkdownIt()
         .use(front_matter_plugin)
         .use(footnote_plugin)
-        .use(anchors_plugin, max_level=3, permalink=True)
+        .use(anchors_plugin, max_level=5, permalink=True)
         .use(fieldlist_plugin)
         .use(container_plugin, name="warning")
         .use(container_plugin, name="info")
@@ -1932,16 +2001,20 @@ def links(request: Request):
     return ORJSONResponse({
         "title": "Some Useful Links",
         "data": f"""
-        <a href="/my-perms">My Permissions</a><br/>
-        <a href="/reset">Lynx Credentials Reset</a><br/>
-        <a href="/loa">Leave Of Absense</a><br/>
-        <a href="/staff-apps">Staff Applications</a><br/>
-        <a href="/links">Some Useful Links</a><br/>
-        <a href="/staff-verify">Staff Verification</a> (in case you need it)<br/>
-        <a href="/staff-guide">Staff Guide</a><br/>
-        <a href="/admin">Admin Console</a><br/>
-        <a href="/bot-actions">Bot Actions</a><br/>
-        <a href="/requests">Requests</a><br/>
+        <blockquote class="quote">
+            <h5>Some Nice Links</h5>
+            <a href="/my-perms">My Permissions</a><br/>
+            <a href="/reset">Lynx Credentials Reset</a><br/>
+            <a href="/loa">Leave Of Absense</a><br/>
+            <a href="/staff-apps">Staff Applications</a><br/>
+            <a href="/links">Some Useful Links</a><br/>
+            <a href="/staff-verify">Staff Verification</a> (in case you need it)<br/>
+            <a href="/staff-guide">Staff Guide</a><br/>
+            <a href="/admin">Admin Console</a><br/>
+            <a href="/bot-actions">Bot Actions</a><br/>
+            <a href="/user-actions">User Actions</a><br/>
+            <a href="/requests">Requests</a><br/>
+        </blockquote>
 	    <blockquote class="quote">
             <h5 id="credits">Credits</h5>
              <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
@@ -2014,24 +2087,54 @@ async def verify_code(request: Request):
 async def notifications(request: Request):
     return await app.state.db.fetch("SELECT acked_users, message, type FROM lynx_notifications")
 
-@app.get("/addstaff")
-async def addstaff(request: Request, response: Response, id: int | None = None):
+@app.get("/user-actions")
+async def user_actions(request: Request, response: Response, id: int | None = None):
     # Easiest way to block cross origin is to just use a hidden input
     csrf_token = get_token(132)
     app.state.valid_csrf_user |= {csrf_token: time.time()}
 
     response.set_cookie("csrf_token_ua", csrf_token, max_age=60*10, domain="lynx.fateslist.xyz", path="/user-actions", secure=True, httponly=True, samesite="Strict")
 
+    md = (
+        MarkdownIt()
+        .use(front_matter_plugin)
+        .use(footnote_plugin)
+        .use(anchors_plugin, max_level=5, permalink=True)
+        .use(fieldlist_plugin)
+        .use(container_plugin, name="warning")
+        .use(container_plugin, name="info")
+        .use(container_plugin, name="aonly")
+        .use(container_plugin, name="guidelines")
+        .use(container_plugin, name="generic", validate = lambda *args: True)
+        .enable('table')
+        .enable('image')
+    )
+
     return {
-        "title": "Add a staff member",
-        "data": f"""
-            <label for="staff_user_id">User ID</label>
-            <input id="staff_user_id" name="staff_user_id" placeholder='user id here' type="number" value="{id or ''}" />
-            <button onclick="addStaff()">Add</button>
-        """,
+        "title": "User Actions",
+        "data": md.render(f"""
+            
+::: action-addstaff
+
+## Add Staff
+
+- Head Admin+ only
+
+<label for="staff_user_id">User ID</label>
+<input id="staff_user_id" name="staff_user_id" placeholder='user id here' type="number" value="{id or ''}" />
+<button onclick="addStaff()">Add</button>
+
+:::
+        """),
         "script": f"""
         var csrfToken = "{csrf_token}"
         """ + """
+            docReady(() => {
+                if(window.location.hash) {
+                    document.querySelector(`${window.location.hash}`).scrollIntoView()
+                }
+            })
+
             async function addStaff() {
                 let userId = document.querySelector("#staff_user_id").value
                 let res = await fetch(`/user-actions/addstaff?csrf_token=${csrfToken}`, {
