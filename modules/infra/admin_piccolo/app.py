@@ -294,28 +294,29 @@ lynx_form_beta = """
               data-accordion="false"
             >
               <li class="nav-item">
-                <a id="home-nav" href="https://lynx.fateslist.xyz/" class="nav-link"
-                  ><i class="nav-icon fa-solid fa-house"></i>
-                  <p>Home</p></a
-                >
-                <li class="nav-item">
-                    <a href="https://lynx.fateslist.xyz/admin" class="nav-link"
-                      ><i class="fa-solid fa-server"></i>
-                      <p>Piccolo Admin</p></a
-                    >
-                  </li>
-              </li><li class="nav-item">
-                    <a id="staff-apps-nav" href="https://lynx.fateslist.xyz/staff-apps" class="nav-link"
-                      ><i class="fa-solid fa-rectangle-list"></i>
-                      <p>Staff Applications</p></a
-                    >
-                  </li>
-               <li class="nav-item">
-                    <a id="links-nav" href="https://lynx.fateslist.xyz/links" class="nav-link"
-                      ><i class="fa-solid fa-link"></i>
-                      <p>Links</p></a
-                    >
-                  </li>
+                <a id="home-nav" href="https://lynx.fateslist.xyz/" class="nav-link">
+                <i class="nav-icon fa-solid fa-house"></i>
+                  <p>Home</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="https://lynx.fateslist.xyz/admin" class="nav-link">
+                <i class="nav-icon fa-solid fa-server"></i>
+                  <p>Piccolo Admin</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a id="staff-apps-nav" href="https://lynx.fateslist.xyz/staff-apps" class="nav-link">
+                <i class="nav-icon fa-solid fa-rectangle-list"></i>
+                  <p>Staff Applications</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a id="links-nav" href="https://lynx.fateslist.xyz/links" class="nav-link">
+                <i class="nav-icon fa-solid fa-link"></i>
+                  <p>Links</p>
+                </a>
+              </li>
               <li class="nav-item menu-open">
                 <a href="#" class="nav-link active"
                   ><i class="nav-icon fa-solid fa-candy-cane"></i>
@@ -364,7 +365,7 @@ lynx_form_beta = """
             <blockquote class="quote">
             <h5 id="warning">Important Info</h5>
             <p>
-                Make sure to read our<strong><a href="/staff-guide"> staff guide</a></strong> before doing anything on Lynx. &&Only applies to staff of course**
+                Make sure to read our<strong><a href="/staff-guide"> staff guide</a></strong> before doing anything on Lynx. <strong>Only applies to staff of course</strong>
             </p>
             </blockquote>
             <div id="verify-screen">
@@ -425,7 +426,6 @@ lynx_form_beta = """
         if(currentURL == '/bot-actions') {
             $('#bot-actions-nav').toggleClass('active')
         } else if(currentURL== '/') {
-            $('#bot-actions-nav').toggleClass('active')
             $('#home-nav').toggleClass('active')
         } else if(currentURL == '/user-actions') {
             $('#user-actions-nav').toggleClass('active')
