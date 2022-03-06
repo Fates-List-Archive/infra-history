@@ -7,7 +7,7 @@ import asyncpg
 import asyncio
 
 from pydantic import BaseModel
-from typing import Union
+from typing import Any, Union
 import orjson
 from http import HTTPStatus
 import hashlib
@@ -364,7 +364,7 @@ lynx_form_beta = """
             <blockquote class="quote">
             <h5 id="warning">Important Info</h5>
             <p>
-                Make sure to read our<strong><a href="/staff-guide"> staff guide</a></strong> before doing anything on Lynx
+                Make sure to read our<strong><a href="/staff-guide"> staff guide</a></strong> before doing anything on Lynx. &&Only applies to staff of course**
             </p>
             </blockquote>
             <div id="verify-screen">
@@ -818,7 +818,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/_"):
             return await call_next(request)
 
-        if request.url.path.startswith(("/staff-guide", "/requests", "/links")):
+        if request.url.path.startswith(("/staff-guide", "/requests", "/links", "/roadmap")):
             if request.headers.get("Frostpaw-Staff-Notify"):
                 return await call_next(request)
             else:
@@ -1355,6 +1355,16 @@ async def loa(request: Request, response: Response):
 
     uncertify_select = bot_select("uncertify", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.certified), reason=True)
 
+    reset_bot_votes_select = bot_select("reset-votes", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1 OR state = $2", enums.BotState.approved, enums.BotState.certified), reason=True)
+
+    flag_list = list(enums.BotFlag)
+    flags_select = "<label>Select Flag</label><select id='flag' name='flag'>"
+    for flag in flag_list:
+        flags_select += f"<option value={flag.value}>{flag.name} ({flag.value}) -> {flag.__doc__}</option>"
+    flags_select += "</select>"
+
+    flags_bot_select = bot_select("set-flag", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots"), reason=True)
+
     # Easiest way to block cross origin is to just use a hidden input
     csrf_token = get_token(132)
     app.state.valid_csrf |= {csrf_token: time.time()}
@@ -1548,6 +1558,37 @@ Please check site pages before approving/denying. You can save lots of time by d
 <button onclick="requeue()">Requeue</button>
 
 :::
+
+::: action-reset-votes
+
+### Reset Bot Votes
+
+- Moderator+ only
+- Definition: votes => 0
+
+{reset_bot_votes_select}
+<button onclick="resetVotes()">Reset</button>
+
+:::
+
+::: action-setflag
+
+### Set/Unset Bot Flag
+
+- Moderator+ only
+- Definition: flag => flags.intersection(flag)
+
+{flags_bot_select}
+
+{flags_select}
+
+<div class="form-check">
+    <input class="form-check-input" type="checkbox" id="unset" name="unset" />
+    <label class="form-check-label" for="unset">Unset Flag</label>
+</div>
+
+<button onclick="setFlag()">Set Flag</button>
+:::
 """), 
     "script": f"""
         var csrfToken = "{csrf_token}"
@@ -1710,6 +1751,44 @@ Please check site pages before approving/denying. You can save lots of time by d
             alert(json.detail)
         }
 
+        async function resetVotes() {
+            let botId = getBotId("#reset-votes")
+            let reason = document.querySelector("#reset-votes-reason").value
+            let res = await fetch(`/bot-actions/reset-votes?csrf_token=${csrfToken}`, {
+                method: "POST",
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({"bot_id": botId, "reason": reason}),
+            })
+            let json = await res.json()
+            alert(json.detail)
+        }
+
+        async function setFlag() {
+            let botId = getBotId("#set-flag")
+            let reason = document.querySelector("#set-flag-reason").value
+            let flag = parseInt(document.querySelector("#flag").value)
+
+            let url = "/bot-actions/set-flag"
+
+            if(document.querySelector("#unset").checked) {
+                url = "/bot-actions/unset-flag"
+            }
+
+            let res = await fetch(`${url}?csrf_token=${csrfToken}`, {
+                method: "POST",
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({"bot_id": botId, "reason": reason, "context": flag}),
+            })
+            let json = await res.json()
+            alert(json.detail)
+        }
+
         docReady(() => {
             if(window.location.hash) {
                 document.querySelector(`${window.location.hash}`).scrollIntoView()
@@ -1721,9 +1800,9 @@ class Action(BaseModel):
     bot_id: str
     owners: list[dict] | None = None # This is filled in by action decorator
     main_owner: int | None = None # This is filled in by action decorator
+    context: Any | None = None
 
 class ActionWithReason(Action):
-    bot_id: str
     reason: str
 
 def action(
@@ -1734,7 +1813,7 @@ def action(
 ):
     async def state_check(bot_id: int):
         bot_state = await app.state.db.fetchval("SELECT state FROM bots WHERE bot_id = $1", bot_id)
-        return bot_state in states
+        return (bot_state in states) or len(states) == 0
     
     async def _core(request: Request, csrf_token: str, data: Action):
         if request.state.member.perm < min_perm:
@@ -1996,6 +2075,101 @@ async def requeue(request: Request, data: ActionWithReason):
 
     return {"detail": "Successfully requeued bot"}
 
+@app.post("/bot-actions/reset-votes")
+@action([], with_reason=True, min_perm=3)
+async def reset_votes(request: Request, data: ActionWithReason):
+    await app.state.db.execute("UPDATE bots SET votes = 0 WHERE bot_id = $1", data.bot_id)
+
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0xe74c3c,
+        title="Bot Votes Reset",
+        description=f"<@{request.state.user_id}> has force resetted <@{data.bot_id}> votes due to abuse!\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully reset bot votes"}
+
+@app.post("/bot-actions/set-flag")
+@action([], with_reason=True, min_perm=3)
+async def set_flags(request: Request, data: ActionWithReason):
+    if not isinstance(data.context, int):
+        return ORJSONResponse({"detail": "Flag must be an integer"}, status_code=400)
+    try:
+        flag = enums.BotFlag(data.context)
+    except:
+        return ORJSONResponse({"detail": "Flag must be of enum Flag"}, status_code=400)
+    
+    existing_flags = await app.state.db.fetchval("SELECT flags FROM bots WHERE bot_id = $1", data.bot_id)
+    existing_flags = existing_flags or []
+    existing_flags = set(existing_flags)
+    existing_flags.add(int(flag))
+
+    try:
+        existing_flags.remove(int(enums.BotFlag.unlocked))
+    except:
+        pass
+
+    existing_flags = list(existing_flags)
+    existing_flags.sort()
+    await app.state.db.fetchval("UPDATE bots SET flags = $1 WHERE bot_id = $2", existing_flags, data.bot_id)
+
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0xe74c3c,
+        title="Bot Flag Updated",
+        description=f"<@{request.state.user_id}> has modified the flags of <@{data.bot_id}> with addition of {flag.name} ({flag.value}) -> {flag.__doc__} !\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully set flag"}
+
+@app.post("/bot-actions/unset-flag")
+@action([], with_reason=True, min_perm=3)
+async def unset_flags(request: Request, data: ActionWithReason):
+    if not isinstance(data.context, int):
+        return ORJSONResponse({"detail": "Flag must be an integer"}, status_code=400)
+    try:
+        flag = enums.BotFlag(data.context)
+    except:
+        return ORJSONResponse({"detail": "Flag must be of enum Flag"}, status_code=400)
+    
+    existing_flags = await app.state.db.fetchval("SELECT flags FROM bots WHERE bot_id = $1", data.bot_id)
+    existing_flags = existing_flags or []
+    existing_flags = set(existing_flags)
+    try:
+        existing_flags.remove(int(flag))
+    except:
+        return ORJSONResponse({"detail": "Flag not on this bot"}, status_code=400)
+
+    try:
+        existing_flags.remove(int(enums.BotFlag.unlocked))
+    except:
+        pass
+
+    existing_flags = list(existing_flags)
+    existing_flags.sort()
+    await app.state.db.fetchval("UPDATE bots SET flags = $1 WHERE bot_id = $2", existing_flags, data.bot_id)
+
+    embed = Embed(
+        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        color=0xe74c3c,
+        title="Bot Flag Updated",
+        description=f"<@{request.state.user_id}> has modified the flags of <@{data.bot_id}> with removal of {flag.name} ({flag.value}) -> {flag.__doc__} !\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+
+    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully unset flag"}
+
 @app.get("/links")
 def links(request: Request):
     return ORJSONResponse({
@@ -2010,6 +2184,7 @@ def links(request: Request):
             <a href="/links">Some Useful Links</a><br/>
             <a href="/staff-verify">Staff Verification</a> (in case you need it)<br/>
             <a href="/staff-guide">Staff Guide</a><br/>
+            <a href="/roadmap">Our Roadmap</a><br/>
             <a href="/admin">Admin Console</a><br/>
             <a href="/bot-actions">Bot Actions</a><br/>
             <a href="/user-actions">User Actions</a><br/>
@@ -2086,6 +2261,70 @@ async def verify_code(request: Request):
 @app.get("/_notifications")
 async def notifications(request: Request):
     return await app.state.db.fetch("SELECT acked_users, message, type FROM lynx_notifications")
+
+@app.get("/roadmap")
+async def roadmap(request: Request):
+    md = (
+        MarkdownIt()
+        .use(front_matter_plugin)
+        .use(footnote_plugin)
+        .use(anchors_plugin, max_level=5, permalink=True)
+        .use(fieldlist_plugin)
+        .use(container_plugin, name="warning")
+        .use(container_plugin, name="info")
+        .use(container_plugin, name="aonly")
+        .use(container_plugin, name="guidelines")
+        .use(container_plugin, name="generic", validate = lambda *args: True)
+        .enable('table')
+        .enable('image')
+    )
+
+    return {
+        "title": "Roadmap",
+        "pre": "/links",
+        "data": md.render("""
+## Votes (Item 1, tied to item 2)
+
+Votes should have ways to stop complete automation. Possibly with addition of coins though
+
+<blockquote class="quote">
+
+<h5>Suggestion from staff</h5>
+Nishant1500
+</blockquote>
+
+## Coins (Item 2)
+
+Basic Information
+
+Currency will be usable to:
+
+1. Buy priority spots on the list (this will be hard coded in the code for now)
+2. Priority approval of bots*
+
+### How to earn it
+
+- Server boosts
+- awarded by staff for server activity
+- adding or editing your bot (editing your bot too much for just getting currency may lead to a ban from currency system, adding will give more currency than edits)
+- Keeping a good bot page
+- Events
+- sellix shop (purchasing coins)
+
+*feel free to request large amount of fates currency for priority reviewing a bot or for bot developers requesting a specific reviewer etc*
+
+## Some Ideas
+
+- Each vote would give small number of coins to owner
+- Votes will cost coins
+- Coins will replenish/give you enough for one vote every eight hours
+- Bronze User will be removed
+- Being active in chat = More coins
+- Many actions regarding coins (votes) will have cooldown to avoid people spamming
+- Sellix webhook (NOT YET IMPLEMENTED)
+
+        """)
+    }
 
 @app.get("/user-actions")
 async def user_actions(request: Request, response: Response, id: int | None = None):
