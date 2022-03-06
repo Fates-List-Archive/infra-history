@@ -1584,10 +1584,10 @@ Please check site pages before approving/denying. You can save lots of time by d
 
 <div class="form-check">
     <input class="form-check-input" type="checkbox" id="unset" name="unset" />
-    <label class="form-check-label" for="unset">Unset Flag</label>
+    <label class="form-check-label" for="unset">Unset Flag (unchecked = Set)</label>
 </div>
 
-<button onclick="setFlag()">Set Flag</button>
+<button onclick="setFlag()">Update</button>
 :::
 """), 
     "script": f"""
