@@ -422,21 +422,18 @@ lynx_form_beta = """
         currentBreadPath = title(currentBreadPath)
         $('#currentBreadPath').append(`<li class="breadcrumb-item active"><a href="${currentURL}">${currentBreadPath}</a></li>`)
 
-if(currentURL == '/bot-actions') {
-                  $('#bot-actions-nav').toggleClass('active')
-                  } else if(currentURL== '/') {
-                    $('#bot-actions-nav').toggleClass('active')
-                    $('#home-nav').toggleClass('active')
-                  } else if(currentURL == '/user-actions') {
-$('#bot-actions-nav').toggleClass('active')
-$('#user-actions-nav').toggleClass('active')
-                  } else if(currentURL == '/links') {
-$('#bot-actions-nav').toggleClass('active')
-$('#links-nav').toggleClass('active')
-                  } else if(currentURL == '/staff-apps') {
-                    $('#bot-actions-nav').toggleClass('active')
-$('#staff-apps-nav').toggleClass('active')
-                  }
+        if(currentURL == '/bot-actions') {
+            $('#bot-actions-nav').toggleClass('active')
+        } else if(currentURL== '/') {
+            $('#bot-actions-nav').toggleClass('active')
+            $('#home-nav').toggleClass('active')
+        } else if(currentURL == '/user-actions') {
+            $('#user-actions-nav').toggleClass('active')
+        } else if(currentURL == '/links') {
+            $('#links-nav').toggleClass('active')
+        } else if(currentURL == '/staff-apps') {
+            $('#staff-apps-nav').toggleClass('active')
+        }
     
         //setInterval(getNotifications, 5000)
 
