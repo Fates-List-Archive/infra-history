@@ -954,11 +954,12 @@ def staff_verify(request: Request):
 <strong>Once you complete this, you will automatically recieve your roles in the staff server</strong>
 
 <div style="margin-left: auto; margin-right: auto; text-align: center;">
-<textarea 
-id="staff-verify-code"
+<div class="form-group">
+<textarea class="form-control" id="staff-verify-code"
 placeholder="Enter staff verification code here"
 style="width: 100%; height: 200px; font-size: 20px !important; resize: none;"
 ></textarea>
+</div>
 </div>
 </pre>
 <br/>
