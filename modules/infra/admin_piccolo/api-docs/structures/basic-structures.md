@@ -1,6 +1,6 @@
 ### Terminology
 
-**Snowflake:** A snowflake is a discord snowflake (user ID) in string format (like "563808552288780322")
+- **Snowflake:** A snowflake is a discord snowflake (user ID) in string format (like "563808552288780322")
 
 ### Structures
 

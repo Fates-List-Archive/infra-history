@@ -224,7 +224,7 @@ for tree in doctree_dict.keys():
 
     if tree != "documentation":
         doctree += f"""
-<li id="docs-sub-nav" class="nav-item">
+<li id="docs-{tree}-nav" class="nav-item">
 <a href="#" class="nav-link">
     <i class="nav-icon fa-solid fa-book"></i>
     <p>{tree.replace("-", " ").title()} <i class="right fas fa-angle-left"></i></p>
@@ -509,9 +509,20 @@ lynx_form_beta = """
     docReady(async function() {
         var currentURL = window.location.pathname
         console.log('Chnaging Breadcrumb Paths')
-        var currentBreadPath = currentURL.replace('-', ' ').replace('.html', '').replace('/', '')
-        currentBreadPath = title(currentBreadPath)
-        $('#currentBreadPath').append(`<li class="breadcrumb-item active"><a href="${currentURL}">${currentBreadPath}</a></li>`)
+
+        var pathSplit = currentURL.split('/')
+
+        var breadURL = ''
+
+        pathSplit.forEach(el => {
+            if(!el) {
+                return
+            }
+            console.log(el)
+            breadURL += `/${el}`
+            var currentBreadPath = title(el.replace('-', ' '))
+            $('#currentBreadPath').append(`<li class="breadcrumb-item active"><a href="${breadURL}">${currentBreadPath}</a></li>`)
+        })
 
         currentURL = currentURL.replace('/', '') // Replace first
 
@@ -519,16 +530,21 @@ lynx_form_beta = """
         if(currentURL == "") {
             currentURLID = "#home-nav"
         }
-        if(currentURL == 'bot-actions') {
-           $('#admin-panel-nav').toggle('menu-open')
-           $('#admin-panel-nav-link').toggle('active')
-        } else if(currentURL== 'user-actions') {
-           $('#admin-panel-nav').toggle('menu-open')
-           $('#admin-panel-nav-link').toggle('active')
-        }
 
-        if(currentID.includes('docs')) {
-           $('docs-main-nav').toggleClass('menu-open')
+        if(currentURL == 'bot-actions') {
+           document.querySelector("#admin-panel-nav").classList.add("menu-open")
+        } else if(currentURL== 'user-actions') {
+           document.querySelector("#admin-panel-nav").classList.add("menu-open")
+        } 
+
+        if(currentURLID.includes('docs')) {
+           $('#docs-main-nav').toggleClass('menu-open')
+
+           // Find the subnavs
+           var tree = pathSplit[2]
+           var navID = `#docs-${tree}-nav`
+           $(navID).toggleClass('menu-open')
+           console.log(navID)
         }
 
         try {
