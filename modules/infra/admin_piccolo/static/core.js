@@ -113,11 +113,19 @@ async function isStaff() {
         $('#staff-apps-nav').remove()
         $('.admin-only').remove()
     }
+
+    return isStaff
 }
 
 docReady(async function() {
     setInterval(getNotifications, 5000)
     setTimeout(extraCode, 1000)
+
+    // Fetch doctree (update v on doctree change if it doesnt update)
+    let tree = await fetch("/_static/doctree.json?v=1")
+    let treeData = await tree.json()
+
+    $(treeData.doctree).insertBefore("#doctree")
 
     let res = await fetch(window.location.href + '?json=true', {
         method: "GET",
@@ -127,6 +135,8 @@ docReady(async function() {
             "Accept": "application/json"
         },
     })
+
+    isStaff = await isStaff()
 
     if(res.ok) {
         let body = await res.json()
@@ -165,6 +175,8 @@ docReady(async function() {
     }
 
     // Check if admin and hide admin panel stuff if so
-    await isStaff()
+    if(isStaff < 2) {
+        $('.admin-only').remove()
+    }
 })
 

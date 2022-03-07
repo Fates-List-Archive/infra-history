@@ -183,301 +183,96 @@ async def is_staff(staff_json: dict | None, user_id: int, base_perm: int, json: 
     return rc, sm.perm, sm
 
 # Create the doc tree
-doctree_dict = {"documentation": []}
+def doctree_gen():
+    doctree_dict = {"documentation": []}
 
-def gen_doctree(path_split):
-    if len(path_split) == 1:
-        # Then we have life easy
-        doctree_dict["documentation"].append(path_split[0])
-    elif len(path_split) == 2:
-        if path_split[0] not in doctree_dict:
-            doctree_dict[path_split[0]] = []
-        doctree_dict[path_split[0]].append(path_split[1])
-    else:
-        raise RuntimeError("Max nesting of 2 reached")
-
-for path in pathlib.Path("modules/infra/admin_piccolo/api-docs").rglob("*.md"):
-    proper_path = str(path).replace("modules/infra/admin_piccolo/api-docs/", "")
-    print(f"DOCS: {proper_path}")
-    path_split = proper_path.split("/")
-    gen_doctree(path_split)
-
-def key_doctree(x):
-    if x[0] == "documentation":
-        return 10000000000000000
-    else:
-        return -1*len(x[0][0])
-
-doctree_dict = dict(sorted(doctree_dict.items(), key=key_doctree, reverse=True))
-
-# Now we just need to loop doctree_dict, luckily, we now know exactly whats needed
-doctree = """
-<li id="docs-main-nav" class="nav-item">
-<a href="#" class="nav-link">
-    <i class="nav-icon fa-solid fa-book"></i>
-    <p>API Documentation <i class="right fas fa-angle-left"></i></p>
-</a>
-<ul class="nav nav-treeview">
-"""
-
-for tree in doctree_dict.keys():
-
-    if tree != "documentation":
-        doctree += f"""
-<li id="docs-{tree}-nav" class="nav-item">
-<a href="#" class="nav-link">
-    <i class="nav-icon fa-solid fa-book"></i>
-    <p>{tree.replace("-", " ").title()} <i class="right fas fa-angle-left"></i></p>
-</a>
-<ul class="nav nav-treeview">
-        """
-
-    for v in doctree_dict[tree]:
-        v = v.replace(".md", "")
-
-        if tree == "documentation":
-            id_tree = "docs"
+    def _gen_doctree(path_split):
+        if len(path_split) == 1:
+            # Then we have life easy
+            doctree_dict["documentation"].append(path_split[0])
+        elif len(path_split) == 2:
+            if path_split[0] not in doctree_dict:
+                doctree_dict[path_split[0]] = []
+            doctree_dict[path_split[0]].append(path_split[1])
         else:
-            id_tree = f"docs-{tree}"
+            raise RuntimeError("Max nesting of 2 reached")
 
-        id = f"{id_tree}-{v}"
+    for path in pathlib.Path("modules/infra/admin_piccolo/api-docs").rglob("*.md"):
+        proper_path = str(path).replace("modules/infra/admin_piccolo/api-docs/", "")
+        print(f"DOCS: {proper_path}")
+        path_split = proper_path.split("/")
+        _gen_doctree(path_split)
 
-        if tree == "documentation":
-            url = v
+    def key_doctree(x):
+        if x[0] == "documentation":
+            return 10000000000000000
         else:
-            url = f"{tree}/{v}"
+            return -1*len(x[0][0])
 
-        pretty_v = v.replace("-", " ").title()
+    doctree_dict = dict(sorted(doctree_dict.items(), key=key_doctree, reverse=True))
 
-        doctree += f"""
-<li class="nav-item">
-    <a id="{id}-nav" href="https://lynx.fateslist.xyz/docs/{url}" class="nav-link">
-        <i class="far fa-circle nav-icon"></i>
-        <p>
-            {pretty_v}
-        </p>
+    # Now we just need to loop doctree_dict, luckily, we now know exactly whats needed
+    doctree = """
+    <li id="docs-main-nav" class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="nav-icon fa-solid fa-book"></i>
+        <p>API Documentation <i class="right fas fa-angle-left"></i></p>
     </a>
-</li>
-        """
-    if tree != "documentation":
-        doctree += "</ul>"
+    <ul class="nav nav-treeview">
+    """
 
-doctree += "</ul></li>"
+    for tree in doctree_dict.keys():
 
-print(doctree)
+        if tree != "documentation":
+            doctree += f"""
+    <li id="docs-{tree}-nav" class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="nav-icon fa-solid fa-book"></i>
+        <p>{tree.replace("-", " ").title()} <i class="right fas fa-angle-left"></i></p>
+    </a>
+    <ul class="nav nav-treeview">
+            """
 
-# The actual form
-lynx_form_beta = """
-<!DOCTYPE html>
+        for v in doctree_dict[tree]:
+            v = v.replace(".md", "")
 
-<html>
-  <head>
-    <link
-      href="https://fonts.googleapis.com/css?family=Lexend Deca"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.4.0/build/styles/a11y-light.min.css">
-    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.4.0/build/highlight.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/RickStrahl/highlightjs-badge@master/highlightjs-badge.min.js"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://adminlte.io/themes/v3/plugins/jquery/jquery.min.js"></script>
-    <script src="https://adminlte.io/themes/v3/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="https://adminlte.io/themes/v3/dist/js/adminlte.min.js?v=3.2.0"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
-      integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
-      crossorigin="anonymous"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.css"
-    />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback"
-    />
-    <link rel="stylesheet" href="/_static/core.css" />
-  </head>
-  <body class="sidebar-mini sidebar-closed sidebar-collapse">
-    <div class="wrapper">
-      <nav class="main-header navbar navbar-expand navbar-white navbar-light">
-        <ul class="navbar-nav">
-          <li class="nav-item">
-            <a class="nav-link" data-widget="pushmenu" href="#" role="button"
-              ><i class="fas fa-bars"></i
-            ></a>
-          </li>
-          <li class="nav-item d-none d-sm-inline-block">
-            <a href="https://lynx.fateslist.xyz" class="nav-link">Home</a>
-          </li>
-          <li class="nav-item d-none d-sm-inline-block admin-only">
-            <a href="https://lynx.fateslist.xyz/admin" class="nav-link">Admin</a>
-          </li>
-          <li class="nav-item d-none d-sm-inline-block admin-only">
-            <a href="https://lynx.fateslist.xyz/bot-actions" class="nav-link">Bot Actions</a>
-          </li>
-          <li class="nav-item d-none d-sm-inline-block admin-only">
-            <a href="https://lynx.fateslist.xyz/user-actions" class="nav-link">User Actions</a>
-          </li>
-        </ul>
-        <ul class="navbar-nav ml-auto">
-          <li class="nav-item dropdown">
-            <a class="nav-link" data-toggle="dropdown" href="#"
-              ><i class="far fa-bell"></i
-              ><span class="badge badge-warning navbar-badge">0</span></a
-            >
-            <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-              <span class="dropdown-header">No Announcements</span>
-              <div class="dropdown-divider"></div>
-				  
-	<a href="#" class="dropdown-item">
-	<i class="fas fa-envelope mr-2"></i> 1 new messages
-	<span class="float-right text-muted text-sm">Test</span>
-	</a>
-	
-	<div class="dropdown-divider"></div>
-	<a href="#" class="dropdown-item dropdown-footer">See All Notifications</a>
-            </div>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" data-widget="fullscreen" href="#" role="button"
-              ><i class="fas fa-expand-arrows-alt"></i
-            ></a>
-          </li>
-          <!-- Extra Code To Add Secret Side Bar
-          
-          <li class="nav-item">
-            <a
-              class="nav-link"
-              data-widget="control-sidebar"
-              data-slide="true"
-              href="#"
-              role="button"
-              ><i class="fas fa-th-large"></i
-            ></a>
-          </li>
-          -->
-        </ul>
-      </nav>
-      <aside class="main-sidebar sidebar-dark-primary elevation-4">
-        <a href="/" class="brand-link"
-          ><img
-            src="https://api.fateslist.xyz/static/botlisticon.webp"
-            alt="Fates Logo"
-            class="brand-image img-circle elevation-3"
-            style="opacity:.8"
-          /><span class="brand-text font-weight-light">Fates List</span></a
-        >
-        <div class="sidebar">
-          <div class="form-inline">
-          </div>
-          <nav class="mt-2">
-            <ul
-              class="nav nav-pills nav-sidebar flex-column"
-              data-widget="treeview"
-              role="menu"
-              data-accordion="false"
-            >
-              <li class="nav-item">
-                <a id="home-nav" href="https://lynx.fateslist.xyz/" class="nav-link">
-                <i class="nav-icon fa-solid fa-house"></i>
-                  <p>Home</p>
-                </a>
-              </li>
-              <li class="nav-item" id="lynx-admin-nav">
-                <a href="https://lynx.fateslist.xyz/admin" class="nav-link">
-                <i class="nav-icon fa-solid fa-server"></i>
-                  <p>Piccolo Admin</p>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a id="staff-guide-nav" href="https://lynx.fateslist.xyz/staff-guide" class="nav-link">
-                <i class="nav-icon fa-solid fa-rectangle-list"></i>
-                  <p>Staff Guide</p>
-                </a>
-              </li>
-              <li class="nav-item admin-only">
-                <a id="staff-apps-nav" href="https://lynx.fateslist.xyz/staff-apps" class="nav-link">
-                <i class="nav-icon fa-solid fa-rectangle-list"></i>
-                  <p>Staff Applications</p>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a id="links-nav" href="https://lynx.fateslist.xyz/links" class="nav-link">
-                <i class="nav-icon fa-solid fa-link"></i>
-                  <p>Links</p>
-                </a>
-              </li>
-              <li id="admin-panel-nav" class="nav-item">
-                <a id="admin-panel-nav-link" href="#" class="nav-link">
-                  <i class="nav-icon fa-solid fa-candy-cane"></i>
-                  <p>Admin Panel <i class="right fas fa-angle-left"></i></p>
-                </a>
-                <ul class="nav nav-treeview">
-                  <li class="nav-item">
-                    <a id="bot-actions-nav" href="https://lynx.fateslist.xyz/bot-actions" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>
-                        Bot Actions
-                        <span class="right badge badge-info">Beta</span>
-                      </p>
-                    </a>
-                  </li>
-                  <li class="nav-item">
-                    <a id="user-actions-nav" href="https://lynx.fateslist.xyz/user-actions" class="nav-link"
-                      ><i class="far fa-circle nav-icon"></i>
-                      <p>
-                        User Actions
-                        <span class="right badge badge-info">Beta</span>
-                      </p></a
-                    >
-                  </li>
-                </ul>
-                %doctree%
-              </li>
-            </ul>
-          </nav>
-        </div>
-      </aside>
-      <div class="content-wrapper" style="min-height:490px">
-        <div class="content-header">
-          <div class="container-fluid">
-            <div class="row mb-2">
-              <div class="col-sm-6"><h1 class="m-0"><span id="title-full"><span id="title">Welcome To Lynx!</span></span></h1></div>
-              <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right" id="currentBreadPath">
-                  <li class="breadcrumb-item"><a href="#">Home</a></li>
-                </ol>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="content">
-          <div class="container-fluid">
-            <div id="verify-screen">
-            </div>
-          </div>
-        </div>
-      </div>
-      <footer class="main-footer">
-        <div class="float-right d-none d-sm-inline">Lynx Panel</div>
-        <strong
-          >Copyright © 2022
-          <a href="https://fateslist.xyz">Fateslist.xyz</a>.</strong
-        >
-        All rights reserved.
-      </footer>
-      <div id="sidebar-overlay"></div>
-    </div>
-  </body>
-  <script src="/_static/core.js?v=224"></script>
-</html>
-""".replace("%doctree%", doctree).replace("\n", "")
+            if tree == "documentation":
+                id_tree = "docs"
+            else:
+                id_tree = f"docs-{tree}"
+
+            id = f"{id_tree}-{v}"
+
+            if tree == "documentation":
+                url = v
+            else:
+                url = f"{tree}/{v}"
+
+            pretty_v = v.replace("-", " ").title()
+
+            doctree += f"""
+    <li class="nav-item">
+        <a id="{id}-nav" href="https://lynx.fateslist.xyz/docs/{url}" class="nav-link">
+            <i class="far fa-circle nav-icon"></i>
+            <p>
+                {pretty_v}
+            </p>
+        </a>
+    </li>
+            """
+        if tree != "documentation":
+            doctree += "</ul>"
+
+    doctree += "</ul></li>"
+
+    print(doctree)
+
+    return doctree
+
+global lynx_form_beta
+
+with open("modules/infra/admin_piccolo/lynx-ui.html") as f:
+    lynx_form_beta = f.read()
 
 staff_guide_md = """
 <blockquote class="quote">
@@ -717,8 +512,14 @@ staff_guide = md.render(staff_guide_md)
 
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        lynx_form_html = lynx_form_beta.replace("%username%", "Not logged in")
-
+        try:
+            if app.state.lynx_form_beta:
+                lynx_form_html = app.state.lynx_form_beta
+            else:
+                lynx_form_html = lynx_form_beta
+        except:
+            lynx_form_html = lynx_form_beta
+            
         print("Calling custom lynx")
         if request.cookies.get("sunbeam-session:warriorcats"):
             request.scope["sunbeam_user"] = orjson.loads(b64decode(request.cookies.get("sunbeam-session:warriorcats")))
@@ -2016,6 +1817,24 @@ async def verify_code(request: Request):
         await add_role(staff_server, request.scope["sunbeam_user"]["user"]["id"], request.state.member.staff_id, "Gets corresponding staff role")
         
         return ORJSONResponse({"detail": "Successfully verified staff member", "pass": password})
+
+@app.get("/_new_html")
+def new_html(request: Request):
+    if request.headers.get("CF-Connecting-IP"):
+        print("Ignoring malicious new html request")
+        return
+    with open("modules/infra/admin_piccolo/lynx-ui.html") as f:
+        app.state.lynx_form_beta = f.read()
+    
+    return
+
+@app.get("/_new_doctree")
+def new_doctree(request: Request):
+    if request.headers.get("CF-Connecting-IP"):
+        print("Ignoring malicious doctree request")
+        return
+    with open("modules/infra/admin_piccolo/static/doctree.json", "wb") as doctree_file:
+        doctree_file.write(orjson.dumps({"doctree": doctree_gen().replace("\n", "")}))
 
 @app.get("/_notifications")
 async def notifications(request: Request):
