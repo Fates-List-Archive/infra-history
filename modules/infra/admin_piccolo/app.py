@@ -212,7 +212,7 @@ doctree_dict = dict(sorted(doctree_dict.items(), key=key_doctree, reverse=True))
 
 # Now we just need to loop doctree_dict, luckily, we now know exactly whats needed
 doctree = """
-<li class="nav-item menu-open">
+<li id="docs-main-nav" class="nav-item">
 <a href="#" class="nav-link">
     <i class="nav-icon fa-solid fa-book"></i>
     <p>API Documentation <i class="right fas fa-angle-left"></i></p>
@@ -224,7 +224,7 @@ for tree in doctree_dict.keys():
 
     if tree != "documentation":
         doctree += f"""
-<li class="nav-item menu-open">
+<li id="docs-sub-nav" class="nav-item">
 <a href="#" class="nav-link">
     <i class="nav-icon fa-solid fa-book"></i>
     <p>{tree.replace("-", " ").title()} <i class="right fas fa-angle-left"></i></p>
@@ -412,8 +412,8 @@ lynx_form_beta = """
                   <p>Links</p>
                 </a>
               </li>
-              <li class="nav-item">
-                <a href="#" class="nav-link">
+              <li id="admin-panel-nav" class="nav-item">
+                <a id="admin-panel-nav-link" href="#" class="nav-link">
                   <i class="nav-icon fa-solid fa-candy-cane"></i>
                   <p>Admin Panel <i class="right fas fa-angle-left"></i></p>
                 </a>
@@ -516,8 +516,19 @@ lynx_form_beta = """
         currentURL = currentURL.replace('/', '') // Replace first
 
         currentURLID = '#' + currentURL.replaceAll('/', '-') + "-nav"
-        if(currentURL == "/") {
+        if(currentURL == "") {
             currentURLID = "#home-nav"
+        }
+        if(currentURL == 'bot-actions') {
+           $('#admin-panel-nav').toggle('menu-open')
+           $('#admin-panel-nav-link').toggle('active')
+        } else if(currentURL== 'user-actions') {
+           $('#admin-panel-nav').toggle('menu-open')
+           $('#admin-panel-nav-link').toggle('active')
+        }
+
+        if(currentID.includes('docs')) {
+           $('docs-main-nav').toggleClass('menu-open')
         }
 
         try {
