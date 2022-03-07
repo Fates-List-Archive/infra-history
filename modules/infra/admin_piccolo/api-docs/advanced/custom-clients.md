@@ -2,8 +2,40 @@ Custom clients are supported however you are responsible for keeping them up-to-
 
 ## Frostpaw Auth
 
-!!! note
-    This feature requires whitelisting in order to use
+::: warning
+
+This feature requires whitelisting in order to use
+
+**Whitelist form**
+
+If you wish to request for a whitelist, fill out the following form:
+
+<div class="form-group">
+    <label for='whitelist-reason'>Reason</label>
+    <textarea 
+        class="form-control"
+        name='whitelist-reason' 
+        id='whitelist-reason'
+        placeholder="Why do you feel like you should be whitelisted"
+    ></textarea>
+    <label for='privacy-policy'>Privacy Policy</label>
+    <textarea 
+        class="form-control"
+        name='privacy-policy' 
+        id='privacy-policy'
+        placeholder="What do you (plan to) do with user information. Be specific"
+    ></textarea>
+    <label for='whitelist'>Client Information</label>
+    <textarea 
+        class="form-control"
+        name='client-info' 
+        id='client-info'
+        placeholder="What user agent will your client use. What platform will it be for. Who will be responsible for damages caused and who will be maintaining the client."
+    ></textarea>
+    <button onclick="genClientWhitelist()">Request</button>
+</div>
+
+:::
 
 In order to authorize to the API through OAuth (without using a inputted user token, you need to use Frostpaw Authentication)
 
@@ -51,7 +83,7 @@ Nothing special, just set ``Frostpaw-Invite`` header when sending these
 
 ## Documentation
 
-All endpoints for v3 are documented on the [v3](../../api-v3) page,
+All endpoints for v3 are documented on the [endpoints](../endpoints) page,
 
 ## Headers
 

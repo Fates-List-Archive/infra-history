@@ -1,4 +1,4 @@
-::: note
+::: warning
 
 There are many types of webhooks in Fates List. Please choose the one you use carefully. Also note that all Fates List webhooks (excl. Discord Integration) will have a Authorization header with your API Token or Webhook Secret so you can validate the request. You will also see a X-Request-Sig header that is a HMAC SHA256 of the request body signed with your API Token or Webhook Secret for extra security.
 

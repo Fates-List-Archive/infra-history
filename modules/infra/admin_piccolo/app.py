@@ -18,7 +18,8 @@ import time
 
 sys.path.append(".")
 sys.path.append("modules/infra/admin_piccolo")
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.encoders import jsonable_encoder
 from typing import Callable, Awaitable, Tuple, Dict, List
 from starlette.responses import Response, StreamingResponse, RedirectResponse, HTMLResponse, PlainTextResponse
 from starlette.requests import Request
@@ -31,7 +32,7 @@ from piccolo_api.fastapi.endpoints import FastAPIWrapper
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Mount
 from starlette.types import Scope, Message
-from tables import Bot, Reviews, ReviewVotes, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, LeaveOfAbsence, UserBotLogs, BotVotes, Notifications
+from tables import Bot, Reviews, ReviewVotes, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, LeaveOfAbsence, UserBotLogs, BotVotes, Notifications, LynxRatings
 import orjson
 import aioredis
 from modules.core import redis_ipc_new
@@ -48,6 +49,8 @@ from mdit_py_plugins.anchors import anchors_plugin
 from mdit_py_plugins.field_list import fieldlist_plugin
 from mdit_py_plugins.container import container_plugin
 from fastapi.staticfiles import StaticFiles
+
+debug = False
 
 async def fetch_user(user_id: int):
     async with aiohttp.ClientSession() as sess:
@@ -130,7 +133,7 @@ async def unban_user(server, member, reason):
             return await resp.json()
 
 admin = create_admin(
-    [Notifications, LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews, ReviewVotes, UserBotLogs, BotVotes], 
+    [Notifications, LynxRatings, LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews, ReviewVotes, UserBotLogs, BotVotes], 
     allowed_hosts = ["lynx.fateslist.xyz"], 
     production = True,
     site_name="Lynx Admin"
@@ -265,7 +268,8 @@ def doctree_gen():
 
     doctree += "</ul></li>"
 
-    print(doctree)
+    if debug:
+        print(doctree)
 
     return doctree
 
@@ -512,6 +516,9 @@ staff_guide = md.render(staff_guide_md)
 
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
+        if request.url.path.startswith("/_static"):
+            return await call_next(request)
+
         try:
             if app.state.lynx_form_beta:
                 lynx_form_html = app.state.lynx_form_beta
@@ -584,7 +591,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         # Perm check
         if request.url.path.startswith("/admin/api"):
             if request.url.path == "/admin/api/tables/" and perm < 4:
-                return ORJSONResponse(["reviews", "review_votes", "bot_packs", "vanity", "leave_of_absence", "user_vote_table"])
+                return ORJSONResponse(["reviews", "review_votes", "bot_packs", "vanity", "leave_of_absence", "user_vote_table", "lynx_rating"])
             elif request.url.path == "/admin/api/tables/users/ids/" and request.method == "GET":
                 pass
             elif request.url.path in ("/admin/api/forms/", "/admin/api/user/", "/admin/api/openapi.json") or request.url.path.startswith("/admin/api/docs"):
@@ -612,7 +619,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                     if user_id != request.scope["sunbeam_user"]["user"]["id"]:
                         return ORJSONResponse({"error": "You do not have permission to update this leave of absence"}, status_code=403)
 
-                elif not request.url.path.startswith(("/admin/api/tables/reviews", "/admin/api/tables/review_votes", "/admin/api/tables/bot_packs", "/admin/api/tables/user_vote_table", "/admin/api/tables/leave_of_absence")):
+                elif not request.url.path.startswith(("/admin/api/tables/reviews", "/admin/api/tables/review_votes", "/admin/api/tables/bot_packs", "/admin/api/tables/user_vote_table", "/admin/api/tables/leave_of_absence", "/admin/api/tables/lynx_rating")):
                     return ORJSONResponse({"error": "You do not have permission to access this page"}, status_code=403)
 
         key = "rl:%s" % request.scope["sunbeam_user"]["user"]["id"]
@@ -720,7 +727,6 @@ def staff_verify(request: Request):
 <div class="form-group">
 <textarea class="form-control" id="staff-verify-code"
 placeholder="Enter staff verification code here"
-style="width: 100%; height: 200px; font-size: 20px !important; resize: none;"
 ></textarea>
 </div>
 </div>
@@ -896,6 +902,11 @@ def staff_guide_route(request: Request):
 
 @app.get("/my-perms")
 def my_perms(request: Request):
+    try:
+        member = request.state.member
+    except AttributeError:
+        request.state.member = StaffMember(name="Unknown", id=0, perm=1, staff_id=0)
+
     return ORJSONResponse({
         "title": "My Permissions",
         "pre": "/links",
@@ -932,31 +943,10 @@ def reset(request: Request):
             async function reset() {
                 document.querySelector("#verify-btn").innerText = "Resetting...";
 
-                let res = await fetch("/reset-creds", {
-                    method: "POST",
-                    credentials: 'same-origin',
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                })
-
-                if(res.ok) {
-                    let json = await res.json()
-                    document.querySelector("#verify-screen").innerHTML = `<h4>Done</h4>`
-                } else {
-                    let json = await res.json()
-                    alert("Error: " + json.detail)
-                    document.querySelector("#verify-btn").innerText = "Reset";
-                }
+                ws.send(JSON.stringify({request: "reset"}))
             }
         """
     })
-
-@app.get("/_perms")
-async def perms(request: Request):
-    if request.scope.get("sunbeam_user"):
-        return request.state.member.dict()
-    return ORJSONResponse({"detail": "Not logged in"}, status_code=400)
 
 @app.post("/reset-creds")
 async def reset_creds(request: Request):
@@ -1015,7 +1005,6 @@ def bot_select(id: str, bot_list: list[str], reason: bool = False):
     id="{id}-reason" 
     name="{id}-reason"
     placeholder="Enter reason and feedback for improvement here"
-    style="width: 100%; height: 200px; font-size: 20px !important; resize: none;"
 ></textarea>
 <br/>
         """
@@ -1675,7 +1664,7 @@ def links(request: Request):
             <a href="/links">Some Useful Links</a><br/>
             <a class="admin-only" href="/staff-verify">Staff Verification</a><span class="admin-only"> (in case you need it)</span><br class="admin-only"/>
             <a href="/staff-guide">Staff Guide</a><br/>
-            <a href="/roadmap">Our Roadmap</a><br/>
+            <a href="/docs/roadmap">Our Roadmap</a><br/>
             <a class="admin-only" href="/admin">Admin Console</a><br class="admin-only"/>
             <a class="admin-only" href="/bot-actions">Bot Actions</a><br class="admin-only"/>
             <a class="admin-only" href="/user-actions">User Actions</a><br class="admin-only"/>
@@ -1725,19 +1714,36 @@ def docs(page: str):
         .enable('image')
     )
 
-    return {
-        "title": f"{page.split('/')[-1].replace('-', ' ').title()}",
-        "data": f"""
-{md.render(md_data).replace("<table", "<table class='table'").replace(".md", "")}
+    # Inject rating code
+    md_data = f"""
+### Feedback
 
-        <a href="/docs-src/{page}">View Source</a> 
-        """,
-        "script": """
-            docReady(() => {
-                hljs.highlightAll();
-                window.highlightJsBadge();
-            })
-        """
+Just want to provide feedback? [Rate this page](#rate-this-page)
+
+{md_data}
+
+### Rate this page!
+
+- Your feedback allows Fates List to improve our docs. 
+- We would also *love* it you could make a Pull Request at [https://github.com/Fates-List/infra](https://github.com/Fates-List/infra)
+- Starring the repo is also a great way to show your support!
+
+<label for='doc-feedback'>Your Feedback</label>
+<textarea 
+id='doc-feedback'
+name='doc-feedback'
+placeholder='I feel like you could...'
+></textarea>
+
+<button onclick='rateDoc()'>Rate</button>
+
+### [View Source](https://lynx.fateslist.xyz/docs-src/{page})
+    """
+
+    return {
+        "title": page.split('/')[-1].replace('-', ' ').title(),
+        "data": md.render(md_data).replace("<table", "<table class='table'").replace(".md", ""),
+        "ext_script": "/_static/docs.js?v=6",
     }
 
 @app.get("/docs-src/{page:path}")
@@ -1752,9 +1758,9 @@ def docs_source(page: str):
         return ORJSONResponse({"detail": f"api-docs/{page}.md not found -> {exc}"}, status_code=404)
 
     return {
-        "title": "Markdown Test",
+        "title": page.split('/')[-1].replace('-', ' ').title() + " (Source)",
         "data": f"""
-<pre>{md_data}</pre>
+<pre>{md_data.replace('<', '&lt').replace('>', '&gt')}</pre>
         """
     }
 
@@ -1828,83 +1834,136 @@ def new_html(request: Request):
     
     return
 
-@app.get("/_new_doctree")
-def new_doctree(request: Request):
-    if request.headers.get("CF-Connecting-IP"):
-        print("Ignoring malicious doctree request")
-        return
-    with open("modules/infra/admin_piccolo/static/doctree.json", "wb") as doctree_file:
-        doctree_file.write(orjson.dumps({"doctree": doctree_gen().replace("\n", "")}))
+# Lynx base websocket
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
 
-@app.get("/_notifications")
-async def notifications(request: Request):
-    notifs = await app.state.db.fetch("SELECT id, acked_users, message, type, staff_only FROM lynx_notifications")
-    _send_notifs = []
-    for notif in notifs:
-        if notif["staff_only"]:
-            if request.scope.get("sunbeam_user") and request.state.member.perm > 2:
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: dict | list, websocket: WebSocket):
+        await websocket.send_json(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
+    async def send_notifs(self, ws: WebSocket):
+        notifs = await app.state.db.fetch("SELECT id, acked_users, message, type, staff_only FROM lynx_notifications")
+        _send_notifs = []
+        for notif in notifs:
+            if notif["staff_only"]:
+                if ws.state.member.perm >= 2:
+                    _send_notifs.append(notif)
+                    
+            else:
                 _send_notifs.append(notif)
-        else:
-            _send_notifs.append(notif)
-    return _send_notifs
+        await self.send_personal_message({"resp": "notifs", "data": jsonable_encoder(_send_notifs)}, ws)
 
-@app.get("/roadmap")
-async def roadmap(request: Request):
-    md = (
-        MarkdownIt()
-        .use(front_matter_plugin)
-        .use(footnote_plugin)
-        .use(anchors_plugin, max_level=5, permalink=True)
-        .use(fieldlist_plugin)
-        .use(container_plugin, name="warning")
-        .use(container_plugin, name="info")
-        .use(container_plugin, name="aonly")
-        .use(container_plugin, name="guidelines")
-        .use(container_plugin, name="generic", validate = lambda *args: True)
-        .enable('table')
-        .enable('image')
+    async def send_doctree(self, ws: WebSocket):
+        await self.send_personal_message({"resp": "doctree", "data": doctree_gen().replace("\n", "")}, ws)
+
+manager = ConnectionManager()
+
+
+@app.websocket("/_ws")
+async def ws(ws: WebSocket):
+    if ws.headers.get("Origin") != "https://lynx.fateslist.xyz":
+        print(f"Ignoring malicious websocket request with origin {ws.headers.get('Origin')}")
+        return
+
+    ws.state.user = None
+    ws.state.member = StaffMember(name="Unknown", id=0, perm=1, staff_id=0)
+
+    await manager.connect(ws)
+
+    await manager.send_personal_message({"detail": "connected"}, ws)
+
+    try:
+        while True:
+            data = await ws.receive_json()
+
+            if data.get("request") == "notifs":
+                asyncio.create_task(manager.send_notifs(ws))
+            elif data.get("request") == "doctree":
+                asyncio.create_task(manager.send_doctree(ws))
+            elif data.get("request") == "perms": 
+                await manager.send_personal_message({"resp": "perms", "data": ws.state.member.dict()}, ws)
+            elif data.get("request") == "reset":
+                # Remove from db
+                if ws.state.user:
+                    await app.state.db.execute(
+                        "UPDATE users SET api_token = $1, staff_verify_code = NULL WHERE user_id = $2",
+                        get_token(132),
+                        int(ws.state.user["id"])
+                    )
+                    await manager.send_personal_message({"resp": "reset", "data": None}, ws)
+            elif data.get("request") == "upgrade":
+                sunbeam_user = data.get("data", {})
+                if sunbeam_user.get("user"):
+                    if not sunbeam_user["user"].get("id", "").isdigit() or not sunbeam_user.get("token"):
+                        await ws.close(code=1009, message="Invalid ws init")
+                        return
+                    check = await app.state.db.fetchval(
+                        "SELECT user_id FROM users WHERE user_id = $1 AND api_token = $2", 
+                        int(sunbeam_user["user"]["id"]), 
+                        sunbeam_user["token"]
+                    )
+                    if not check:
+                        await ws.close(code=1008, message="Invalid token")
+                        return
+                    ws.state.user = sunbeam_user["user"]
+
+                    _, _, member = await is_staff(None, int(sunbeam_user["user"]["id"]), 2, redis=app.state.redis)
+
+                    ws.state.member = member
+                
+                # Send new perms on upgrade
+                await manager.send_personal_message({"resp": "perms", "data": ws.state.member.dict()}, ws)
+
+    except WebSocketDisconnect:
+        manager.disconnect(ws)
+        await manager.broadcast(orjson.dumps({"detail": "Client left the chat"}).decode())
+
+class Rating(BaseModel):
+    feedback: str
+    page: str
+
+@app.get("/_user")
+async def user_ws_get(request: Request):
+    if not request.headers.get("Frostpaw-Websocket-Conn"):
+        return {}
+    return request.scope.get("sunbeam_user", {})
+
+@app.post("/_eternatus")
+async def eternatus_rating(request: Request, rating: Rating):
+    if len(rating.feedback) < 5:
+        return ORJSONResponse({"detail": "Feedback must be greater than 10 characters long!"}, status_code=400)
+    
+    if request.scope.get("sunbeam_user"):
+        user_id = int(request.scope["sunbeam_user"]["user"]["id"])
+        username = request.scope["sunbeam_user"]["user"]["username"]
+    else:
+        user_id = None
+        username = "Anonymous"
+
+    if not rating.page.startswith("/"):
+        return ORJSONResponse({"detail": "Unexpected page!"}, status_code=400)
+    
+    await app.state.db.execute(
+        "INSERT INTO lynx_ratings (feedback, page, username_cached, user_id) VALUES ($1, $2, $3, $4)",
+        rating.feedback,
+        rating.page,
+        username,
+        user_id
     )
-
-    return {
-        "title": "Roadmap",
-        "pre": "/links",
-        "data": md.render("""
-## Votes (Item 1, tied to item 2)
-
-Votes should have ways to stop complete automation. Possibly with addition of coins though
-
-## Coins (Item 2)
-
-Basic Information
-
-Currency will be usable to:
-
-1. Buy priority spots on the list (this will be hard coded in the code for now)
-2. Priority approval of bots*
-
-### How to earn it
-
-- Server boosts
-- awarded by staff for server activity
-- adding or editing your bot (editing your bot too much for just getting currency may lead to a ban from currency system, adding will give more currency than edits)
-- Keeping a good bot page
-- Events
-- sellix shop (purchasing coins)
-
-*feel free to request large amount of fates currency for priority reviewing a bot or for bot developers requesting a specific reviewer etc*
-
-## Some Ideas
-
-- Each vote would give small number of coins to owner
-- Votes will cost coins
-- Coins will replenish/give you enough for one vote every eight hours
-- Bronze User will be removed
-- Being active in chat = More coins
-- Many actions regarding coins (votes) will have cooldown to avoid people spamming
-- Sellix webhook (NOT YET IMPLEMENTED)
-
-        """)
-    }
+    
+    return {"detail": "Successfully rated"}
 
 @app.get("/user-actions")
 async def user_actions(request: Request, response: Response, id: int | None = None):

@@ -8,24 +8,176 @@ if(!localStorage.ackedMsg) {
 }
 
 var ackedMsg = JSON.parse(localStorage.ackedMsg);
-async function getNotifications() {
-    let resp = await fetch("https://lynx.fateslist.xyz/_notifications");
-    if(resp.ok) {
-        let data = await resp.json();
-        data.forEach(function(notif) {
-            if(notif.acked_users.includes(data.user_id)) {
-                return;
-            } else if(ackedMsg.includes(notif.id)) {
-                console.log(`Ignoring acked message: ${notif.id}`)
-                return;
+var pushedMessages = [];
+
+var wsUp = false
+var ws = null
+var startingWs = false;
+
+var addedDocTree = false
+var havePerm = false
+var staffPerm = 1
+var alreadyUp = false
+
+async function authWs() {
+    // Fetch base user information from server
+    let res = await fetch("/_user", {
+        method: "GET",
+        credentials: 'same-origin',
+        headers: {
+            "Frostpaw-Staff-Notify": "0.1.0",
+            "Frostpaw-Websocket-Conn": "connecting",
+            "Accept": "application/json"
+        },
+    })
+
+    wsData = {}
+
+    if(!res.ok) {
+        if(res.status == 502) {
+            console.log("Failed to connect to server during ws auth connection")
+            return
+        }
+        console.log("Using no-auth ws due to failed call to /_user")
+    } else {
+        try {
+            wsData = await res.json()
+        } catch {
+            console.log("Request was 200 yet was not valid JSON. Aborting WS. Likely user token mismatch")
+            return
+        }
+    }    
+
+    ws.send(JSON.stringify({request: "upgrade", data: wsData}))
+}
+
+async function wsStart() {
+    if(startingWs) {
+        console.log("NOTE: Not starting WS when already starting or critically aborted")
+        return
+    }
+
+    document.querySelector("#verify-screen").innerHTML = `<div id="loader"><strong>WS is starting. Certain actions may be unavailable</strong></div>${document.querySelector("#verify-screen").innerHTML}`
+
+    startingWs = true
+    
+    ws = new WebSocket("wss://lynx.fateslist.xyz/_ws")
+    ws.onopen = function (event) {
+        console.log("WS connection opened. Started promise to send initial auth")
+        if(ws.readyState === ws.CONNECTING) {
+            console.log("Still connecting not sending")
+            return
+        }
+
+        authWs()
+
+        $("#loader").html("<strong>Now sending auth to websocket</strong>")
+
+        wsUp = true
+        if(!addedDocTree) {
+            $("#loader").html("Fetching doctree from websocket")
+            ws.send(JSON.stringify({request: "doctree"}))
+        } 
+        getNotifications() // Get initial notifications
+    }
+
+    ws.onclose = function (event) {
+        console.log(event, "WS: Closed due to an error")
+        wsUp = false
+        startingWs = false
+        return
+    }
+
+    ws.onerror = function (event) {
+        console.log(event, "WS: Closed due to an error")
+        wsUp = false
+        startingWs = false
+        return
+    }
+
+    ws.onmessage = function (event) {
+        console.log(event.data);
+        var data = JSON.parse(event.data)
+        if(data.resp == "doctree") {
+            console.log("WS: Got doctree")
+            addedDocTree = true
+            $(data.data).insertBefore("#doctree")
+            extraCode()
+        } else if(data.resp == "notifs") {
+            console.log("WS: Got notifications")
+            data.data.forEach(function(notif) {
+                // Before ignoring acked message, check if its pushed
+                if(!pushedMessages.includes(notif.id)) {
+                    // Push the message
+                    console.log(`${notif.id} is not pushed`)
+                    notifCount = parseInt(document.querySelector("#notif-msg-count").innerText)
+                    console.log(`Notification count is ${notifCount}`)
+                    document.querySelector("#notif-msg-count").innerText = notifCount + 1
+    
+                    $(`<a href="#" class="dropdown-item"><i class="fas fa-envelope mr-2"></i><span class="float-right text-muted text-sm">${notif.message}</span></a>`).insertBefore("#messages")
+    
+                    pushedMessages.push(notif.id)
+                }
+    
+                if(notif.acked_users.includes(data.user_id)) {
+                    return;
+                } else if(ackedMsg.includes(notif.id)) {
+                    console.log(`Ignoring acked message: ${notif.id}`)
+                    return;
+                }
+    
+                if(notif.type == 'alert') {
+                    alert(notif.message);
+                    ackedMsg.push(notif.id)
+                    localStorage.ackedMsg = JSON.stringify(ackedMsg);
+                }
+            })
+        } else if(data.resp == "perms") {
+            if(!havePerm) {
+                $("#loader").remove()
             }
 
-            if(notif.type == 'alert') {
-                alert(notif.message);
-                ackedMsg.push(notif.id)
-                localStorage.ackedMsg = JSON.stringify(ackedMsg);
+            havePerm = true
+            console.log("WS: Got permissions")
+            staffPerm = data.data.perm
+
+            // Remove admin panel
+            if(staffPerm < 2) {
+                delNotAdmin()
+                setInterval(delNotAdmin, 500)
             }
-        })
+        } else if(data.resp == "reset") {
+            console.log("WS: Credentials reset")
+            
+            // Kill websocket
+            ws.close(4999, "Credentials reset")
+            document.querySelector("#verify-screen").innerHTML = "Credential reset successful!"
+        }
+    }      
+}
+
+function delNotAdmin() {
+    $('#admin-panel-nav').remove()
+    $('#lynx-admin-nav').remove()
+    $('#staff-apps-nav').remove()
+    $('.admin-only').remove()
+}
+
+async function getNotifications() {
+    if(!wsUp) {
+        console.log("Waiting for ws to come up to start recieveing notification")
+        wsStart()
+        return
+    }
+
+    if(ws.readyState === ws.OPEN) {
+        ws.send(JSON.stringify({request: "notifs"}))
+    } else {
+        console.log("WS is not open, restarting ws")
+        wsUp = false
+        startingWs = false
+        wsStart()
+        return
     }
 }
 
@@ -40,6 +192,8 @@ function docReady(fn) {
 }    
 
 async function extraCode() {
+    $(".temp-item").remove()
+
     var currentURL = window.location.pathname
     console.log('Chnaging Breadcrumb Paths')
 
@@ -54,7 +208,7 @@ async function extraCode() {
         console.log(el)
         breadURL += `/${el}`
         var currentBreadPath = title(el.replace('-', ' '))
-        $('#currentBreadPath').append(`<li class="breadcrumb-item active"><a href="${breadURL}">${currentBreadPath}</a></li>`)
+        $('#currentBreadPath').append(`<li class="breadcrumb-item breadcrumb-temp active"><a href="${breadURL}">${currentBreadPath}</a></li>`)
     })
 
     currentURL = currentURL.replace('/', '') // Replace first
@@ -65,9 +219,9 @@ async function extraCode() {
     }
 
     if(currentURL == 'bot-actions') {
-    document.querySelector("#admin-panel-nav").classList.add("menu-open")
+        document.querySelector("#admin-panel-nav").classList.add("menu-open")
     } else if(currentURL== 'user-actions') {
-    document.querySelector("#admin-panel-nav").classList.add("menu-open")
+        document.querySelector("#admin-panel-nav").classList.add("menu-open")
     } 
 
     if(currentURLID.includes('docs')) {
@@ -87,8 +241,17 @@ async function extraCode() {
     }
 }
 
-async function isStaff() {
-    let res = await fetch("/_perms", {
+docReady(function() {
+    if(!alreadyUp) {
+        getNotifications()
+        setInterval(getNotifications, 5000)
+        loadContent(window.location.pathname)
+        alreadyUp = true
+    }
+})
+
+async function loadContent(loc) {
+    let res = await fetch(loc + '?json=true', {
         method: "GET",
         credentials: 'same-origin',
         headers: {
@@ -97,46 +260,13 @@ async function isStaff() {
         },
     })
 
-    let isStaff = 1;
-
-    if(res.ok) {
-        let body = await res.json()
-        isStaff = body.perm
+    if(res.url.startsWith("https://fateslist.xyz/frostpaw/herb")) {
+        window.location.href = res.url
     }
 
-    if(isStaff < 2) {
-        console.log("User is not staff, hiding admin panel")
-
-        // Remove admin panel
-        $('#admin-panel-nav').remove()
-        $('#lynx-admin-nav').remove()
-        $('#staff-apps-nav').remove()
-        $('.admin-only').remove()
+    if(res.url.startsWith("https://lynx.fateslist.xyz/admin")) {
+        window.location.href = res.url
     }
-
-    return isStaff
-}
-
-docReady(async function() {
-    setInterval(getNotifications, 5000)
-    setTimeout(extraCode, 1000)
-
-    // Fetch doctree (update v on doctree change if it doesnt update)
-    let tree = await fetch("/_static/doctree.json?v=1")
-    let treeData = await tree.json()
-
-    $(treeData.doctree).insertBefore("#doctree")
-
-    let res = await fetch(window.location.href + '?json=true', {
-        method: "GET",
-        credentials: 'same-origin',
-        headers: {
-            "Frostpaw-Staff-Notify": "0.1.0",
-            "Accept": "application/json"
-        },
-    })
-
-    isStaff = await isStaff()
 
     if(res.ok) {
         let body = await res.json()
@@ -174,9 +304,29 @@ docReady(async function() {
         document.querySelectorAll(".content")[0].innerHTML = `${status}<h4><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a></h4>`
     }
 
-    // Check if admin and hide admin panel stuff if so
-    if(isStaff < 2) {
-        $('.admin-only').remove()
-    }
-})
+    linkMod()
+}
 
+async function linkMod() {
+    links = document.querySelectorAll("a")
+    links.forEach(link => {
+        console.log(link.href, link.hasPatched, link.hasPatched == undefined)
+        if(link.href.startsWith("https://lynx.fateslist.xyz/") && link.hasPatched == undefined) {
+            link.hasPatched = true
+            console.log("Add patch")
+            link.addEventListener('click', event => {
+                if ( event.preventDefault ) event.preventDefault();
+                // Now add some special code
+                window.history.pushState(window.location.pathname, 'Loading...', link.href);
+                handler = async () => {
+                    $(".active").toggleClass("active")
+                    $(".breadcrumb-temp").remove()
+                    await loadContent(link.href)
+                    await extraCode()
+                }
+
+                handler()
+            })
+        }
+    })
+}

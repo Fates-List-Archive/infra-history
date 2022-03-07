@@ -77,7 +77,7 @@ sys.path.append(".")
 sys.path.append("../../../")
 sys.path.append("/home/meow/FatesList")
 
-URL = "wss://api.fateslist.xyz/api/dragon/ws/"
+URL = "wss://api.fateslist.xyz/api/flamepaw/ws/"
 
 
 class Bot:
@@ -257,7 +257,7 @@ class FatesWS {
 	}
 
 	start() {
-		this.websocket = new WebSocket("wss://fateslist.xyz/api/dragon/ws")
+		this.websocket = new WebSocket("wss://fateslist.xyz/api/flamepaw/ws")
 		this.websocket.onmessage = (event) => {
 			let data = event.data.split("\x1f")
 			data.forEach(dat => {

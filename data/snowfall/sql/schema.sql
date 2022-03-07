@@ -345,3 +345,11 @@ CREATE TABLE lynx_notifications (
     staff_only boolean default false,
     type text not null -- alert etc
 );
+
+CREATE TABLE lynx_ratings (
+    id uuid not null default uuid_generate_v4(),
+    feedback text not null,
+    page text not null,
+    username_cached text not null,
+    user_id bigint
+);

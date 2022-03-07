@@ -1,10 +1,7 @@
-In addition to the CSS reference here, Fates List also uses djibe material as a framework ([https://djibe.github.io/material/](https://djibe.github.io/material/)) As such you can use anything from djibe material in your CSS or your long description without needing to load the library.
+<blockquote class="quote">
 
-Do not load in custom css frameworks as this will break your bots long description.
+### Frameworks
 
-#### Some Useful Classes
+For a long time, Fates List used to use djibe material, this is no longer the case. Fates List now uses Svelte. Please bring in any custom CSS (and/or frameworks) needed directly using either `Custom CSS` or your bots `Long Description` field
 
-.btn - Basic button. Use this with another button class like .btn-outline-light
-
-.btn-outline-light - This is what Fates List uses for all of its buttons. Use this to fit in with the Fates List theme.
-
+</blockquote>
