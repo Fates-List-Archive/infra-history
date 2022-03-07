@@ -6,6 +6,8 @@ from piccolo.columns.column_types import (UUID, Array, BigInt, Boolean, Float,
                                           Timestamptz, Varchar, Interval, Serial)
 from piccolo.columns.readable import Readable
 from piccolo.table import Table
+import uuid
+from enum import Enum
 
 from modules.models import enums
 
@@ -143,3 +145,12 @@ class ReviewVotes(Table, tablename="review_votes"):
     id = ForeignKey(references="Reviews")
     user_id = ForeignKey(references=User)
     upvote = Boolean(help_text="Whether the user upvoted or downvoted")
+
+class _NotificationType(Enum):
+    alert = "alert"
+
+class Notifications(Table, tablename="lynx_notifications"):
+    id = UUID(primary_key=True, default=uuid.uuid4)
+    type = Text(choices=_NotificationType)
+    message = Text(null=False)
+    staff_only = Boolean(default=False, null = False)

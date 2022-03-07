@@ -31,7 +31,7 @@ from piccolo_api.fastapi.endpoints import FastAPIWrapper
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Mount
 from starlette.types import Scope, Message
-from tables import Bot, Reviews, ReviewVotes, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, LeaveOfAbsence, UserBotLogs, BotVotes
+from tables import Bot, Reviews, ReviewVotes, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, LeaveOfAbsence, UserBotLogs, BotVotes, Notifications
 import orjson
 import aioredis
 from modules.core import redis_ipc_new
@@ -130,7 +130,7 @@ async def unban_user(server, member, reason):
             return await resp.json()
 
 admin = create_admin(
-    [LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews, ReviewVotes, UserBotLogs, BotVotes], 
+    [Notifications, LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews, ReviewVotes, UserBotLogs, BotVotes], 
     allowed_hosts = ["lynx.fateslist.xyz"], 
     production = True,
     site_name="Lynx Admin"
@@ -301,6 +301,7 @@ lynx_form_beta = """
       rel="stylesheet"
       href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback"
     />
+    <link rel="stylesheet" href="/_static/core.css" />
   </head>
   <body class="sidebar-mini sidebar-closed sidebar-collapse">
     <div class="wrapper">
@@ -314,13 +315,13 @@ lynx_form_beta = """
           <li class="nav-item d-none d-sm-inline-block">
             <a href="https://lynx.fateslist.xyz" class="nav-link">Home</a>
           </li>
-          <li class="nav-item d-none d-sm-inline-block">
+          <li class="nav-item d-none d-sm-inline-block admin-only">
             <a href="https://lynx.fateslist.xyz/admin" class="nav-link">Admin</a>
           </li>
-          <li class="nav-item d-none d-sm-inline-block">
+          <li class="nav-item d-none d-sm-inline-block admin-only">
             <a href="https://lynx.fateslist.xyz/bot-actions" class="nav-link">Bot Actions</a>
           </li>
-          <li class="nav-item d-none d-sm-inline-block">
+          <li class="nav-item d-none d-sm-inline-block admin-only">
             <a href="https://lynx.fateslist.xyz/user-actions" class="nav-link">User Actions</a>
           </li>
         </ul>
@@ -388,7 +389,7 @@ lynx_form_beta = """
                   <p>Home</p>
                 </a>
               </li>
-              <li class="nav-item">
+              <li class="nav-item" id="lynx-admin-nav">
                 <a href="https://lynx.fateslist.xyz/admin" class="nav-link">
                 <i class="nav-icon fa-solid fa-server"></i>
                   <p>Piccolo Admin</p>
@@ -400,7 +401,7 @@ lynx_form_beta = """
                   <p>Staff Guide</p>
                 </a>
               </li>
-              <li class="nav-item">
+              <li class="nav-item admin-only">
                 <a id="staff-apps-nav" href="https://lynx.fateslist.xyz/staff-apps" class="nav-link">
                 <i class="nav-icon fa-solid fa-rectangle-list"></i>
                   <p>Staff Applications</p>
@@ -474,237 +475,9 @@ lynx_form_beta = """
       <div id="sidebar-overlay"></div>
     </div>
   </body>
-  <script>
-    // https://stackoverflow.com/a/46959528
-    function title(str) {
-        return str.replaceAll("_", " ").replace(/(^|\s)\S/g, function(t) { return t.toUpperCase() });
-    }
-
-    function docReady(fn) {
-        // see if DOM is already available
-        if (document.readyState === "complete" || document.readyState === "interactive") {
-            // call on next available tick
-            setTimeout(fn, 1);
-        } else {
-            document.addEventListener("DOMContentLoaded", fn);
-        }
-    }    
-
-
-    async function getNotifications() {
-        let resp = await fetch("https://lynx.fateslist.xyz/_notifications");
-        if(resp.ok) {
-            let data = await resp.json();
-            data.forEach(function(notif) {
-                if(notif.acked_users.includes(data.user_id)) {
-                    return;
-                }
-                if(notif.type == 'alert') {
-                    document.querySelector("#verify-screen").innerHTML = `<h1>Notification</h1>${notif.message}<button onclick="() => window.location.reload()">Dismiss</button>`
-                }
-            })
-        }
-    }
-
-    docReady(async function() {
-        var currentURL = window.location.pathname
-        console.log('Chnaging Breadcrumb Paths')
-
-        var pathSplit = currentURL.split('/')
-
-        var breadURL = ''
-
-        pathSplit.forEach(el => {
-            if(!el) {
-                return
-            }
-            console.log(el)
-            breadURL += `/${el}`
-            var currentBreadPath = title(el.replace('-', ' '))
-            $('#currentBreadPath').append(`<li class="breadcrumb-item active"><a href="${breadURL}">${currentBreadPath}</a></li>`)
-        })
-
-        currentURL = currentURL.replace('/', '') // Replace first
-
-        currentURLID = '#' + currentURL.replaceAll('/', '-') + "-nav"
-        if(currentURL == "") {
-            currentURLID = "#home-nav"
-        }
-
-        if(currentURL == 'bot-actions') {
-           document.querySelector("#admin-panel-nav").classList.add("menu-open")
-        } else if(currentURL== 'user-actions') {
-           document.querySelector("#admin-panel-nav").classList.add("menu-open")
-        } 
-
-        if(currentURLID.includes('docs')) {
-           $('#docs-main-nav').toggleClass('menu-open')
-
-           // Find the subnavs
-           var tree = pathSplit[2]
-           var navID = `#docs-${tree}-nav`
-           $(navID).toggleClass('menu-open')
-           console.log(navID)
-        }
-
-        try {
-            document.querySelector(currentURLID).classList.add('active')
-        } catch {
-            console.log(`No active element found: ${currentURLID}`)
-        }
-    
-        //setInterval(getNotifications, 5000)
-
-        let res = await fetch(window.location.href, {
-            method: "GET",
-            credentials: 'same-origin',
-            headers: {
-                "Frostpaw-Staff-Notify": "0.1.0"
-            },
-        })
-        if(res.ok) {
-            let body = await res.json()
-            document.querySelector("#verify-screen").innerHTML = body.data
-            document.querySelector("#title").innerHTML = body.title
-            if(body.script) {
-                let script = document.createElement("script")
-                script.innerHTML = body.script
-                document.body.appendChild(script)
-            }
-            if(body.pre) {
-                document.querySelector("#verify-screen").innerHTML += `<a href='${body.pre}'>Back to previous page</a>`
-            }
-        } else {
-            let status = res.status
-
-            if(status == 404) {
-                status = `<h1>404</h1><h3>Page not found</h3>`
-            } else {
-                status = `<h1>${status}</h1>`
-            }
-
-            document.querySelector("#title-full").innerHTML = "Animus magic is broken today!"
-            document.querySelectorAll(".content")[0].innerHTML = `${status}<h4><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a></h4>`
-        }
-    })
-  </script>
-  <style>
-    .pre {
-        white-space: pre-line;
-        word-wrap: break-word;
-    }
-
-    button {
-        display: block;
-        width: 100px;
-        background-color: red;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        margin-top: 10px;
-        padding: 10px;
-    }
-
-    #verify-btn {
-        display: initial;
-    }
-
-    label {
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-
-    select {
-        width: 100%;
-        padding: 10px;
-    }
-
-    input {
-        width: 100%;
-        padding: 10px;
-    }
-
-    .header-anchor {
-        display: none;
-    }
-    h2:hover > .header-anchor {
-        display: initial;
-    }
-    h3:hover > .header-anchor {
-        display: initial;
-    }
-
-    .info, .warning, .aonly, .guidelines, .generic {
-        border: 3px solid;
-        margin-bottom: 3px;
-        padding: 3px;
-    }
-
-    .info:before {
-        content: "Info";
-        font-size: 26px;
-        font-weight: bold;
-        color: blue;
-    }
-
-    .guidelines:before {
-        content: "Guidelines";
-        font-size: 26px;
-        font-weight: bold;
-        color: green;
-    }
-
-
-    .warning:before {
-        content: "Warning";
-        font-size: 26px;
-        font-weight: bold;
-        color: red;
-    }
-
-    .generic {
-        margin-top: 20px;
-        margin-bottom: 20px;
-    }
-
-    .aonly:before {
-        content: "Admin Only!";
-        font-size: 26px;
-        font-weight: bold;
-        color: yellow;
-    }
-
-    .info {
-        border-color: blue;
-        background-color: rgba(0, 0, 255, 0.1);
-    }
-
-    .warning {
-        border-color: red;
-        background-color: rgba(255, 0, 0, 0.1);
-    }
-
-    .generic {
-        border-color: red;
-        background-color: rgba(255, 20, 10, 0.1);
-    }
-
-    .aonly {
-        border-color: yellow;
-        background-color: rgba(255, 255, 0, 0.1);
-    }
-
-    .guidelines {
-        border-color: green;
-        background-color: rgba(255, 0, 0, 0.1);
-    }
-  </style>
-
-<script>
-  </script>
-
+  <script src="/_static/core.js?v=224"></script>
 </html>
-""".replace("%doctree%", doctree)
+""".replace("%doctree%", doctree).replace("\n", "")
 
 staff_guide_md = """
 <blockquote class="quote">
@@ -946,47 +719,43 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         lynx_form_html = lynx_form_beta.replace("%username%", "Not logged in")
 
-        if request.url.path.startswith("/_"):
-            return await call_next(request)
-
-        if request.url.path.startswith(("/staff-guide", "/requests", "/links", "/roadmap", "/docs")) or request.url.path == "/":
-            if request.headers.get("Frostpaw-Staff-Notify"):
-                return await call_next(request)
-            else:
-                return HTMLResponse(lynx_form_html)
         print("Calling custom lynx")
         if request.cookies.get("sunbeam-session:warriorcats"):
             request.scope["sunbeam_user"] = orjson.loads(b64decode(request.cookies.get("sunbeam-session:warriorcats")))
-        else:
-            return RedirectResponse(f"https://fateslist.xyz/frostpaw/herb?redirect={request.url}")
+            check = await app.state.db.fetchval(
+                "SELECT user_id FROM users WHERE user_id = $1 AND api_token = $2", 
+                int(request.scope["sunbeam_user"]["user"]["id"]), 
+                request.scope["sunbeam_user"]["token"]
+            )
 
-        check = await app.state.db.fetchval(
-            "SELECT user_id FROM users WHERE user_id = $1 AND api_token = $2", 
-            int(request.scope["sunbeam_user"]["user"]["id"]), 
-            request.scope["sunbeam_user"]["token"]
-        )
+            if not check:
+                if request.headers.get("Frostpaw-Staff-Notify"):
+                    return ORJSONResponse({
+                        "title": "Re-login required!",
+                        "data": f"""
+                        Since your user token has recently changed, you will have to logout and login again!
+                        <br/>
+                        <a href="https://fateslist.xyz/frostpaw/herb?redirect=https://lynx.fateslist.xyz">Re-login</a>
+                        """
+                    })
+                return HTMLResponse(lynx_form_html)
 
-        if not check:
-            if request.headers.get("Frostpaw-Staff-Notify"):
-                return ORJSONResponse({
-                    "title": "Re-login required!",
-                    "data": f"""
-                    Since your user token has recently changed, you will have to logout and login again!
-                    <br/>
-                    <a href="https://fateslist.xyz/frostpaw/herb?redirect=https://lynx.fateslist.xyz">Re-login</a>
-                    """
-                })
-            return HTMLResponse(lynx_form_html)
+            _, perm, member = await is_staff(None, int(request.scope["sunbeam_user"]["user"]["id"]), 2, redis=app.state.redis)
 
-        _, perm, member = await is_staff(None, int(request.scope["sunbeam_user"]["user"]["id"]), 2, redis=app.state.redis)
+            request.state.member = member
 
-        request.state.member = member
 
-        if request.url.path.startswith("/my-perms"):
+        if request.url.path.startswith("/_"):
+            return await call_next(request)
+
+        if request.url.path.startswith(("/staff-guide", "/requests", "/links", "/roadmap", "/docs", "/my-perms")) or request.url.path == "/":
             if request.headers.get("Frostpaw-Staff-Notify"):
                 return await call_next(request)
             else:
                 return HTMLResponse(lynx_form_html)
+
+        if not request.scope.get("sunbeam_user"):
+            return RedirectResponse(f"https://fateslist.xyz/frostpaw/herb?redirect={request.url}")
 
         # Before erroring, ensure they are perm of at least 2 and have no staff_verify_code set
         if member.perm >= 2:
@@ -1123,21 +892,12 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
 
 admin = CustomHeaderMiddleware(admin)
 
-class NoCacher(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        #if request.url.path.startswith(("/admin", "/meta")) or request.headers.get("Frostpaw-Staff-Notify"):
-        #    response.headers["Cache-Control"] = "no-store"
-        response.headers["Cache-Control"] = "no-store"
-        return response
-
-admin = NoCacher(admin)
-
 async def server_error(request, exc):
     return HTMLResponse(content="Error", status_code=exc.status_code)
 
 app = FastAPI(routes=[
     Mount("/admin", admin), 
+    Mount("/_static", StaticFiles(directory="modules/infra/admin_piccolo/static")),
 ],
 docs_url="/_docs")
 
@@ -1331,13 +1091,6 @@ def staff_guide_route(request: Request):
     return ORJSONResponse({
         "title": "Staff Guide",
         "data": staff_guide,
-        "script": """
-            docReady(() => {
-                if(window.location.hash) {
-                    document.querySelector(`${window.location.hash}`).scrollIntoView()
-                }
-            })
-        """
     })
 
 @app.get("/my-perms")
@@ -1397,6 +1150,12 @@ def reset(request: Request):
             }
         """
     })
+
+@app.get("/_perms")
+async def perms(request: Request):
+    if request.scope.get("sunbeam_user"):
+        return request.state.member.dict()
+    return ORJSONResponse({"detail": "Not logged in"}, status_code=400)
 
 @app.post("/reset-creds")
 async def reset_creds(request: Request):
@@ -1722,211 +1481,10 @@ Please check site pages before approving/denying. You can save lots of time by d
 <button onclick="setFlag()">Update</button>
 :::
 """), 
+    "ext_script": "/_static/bot-actions.js",
     "script": f"""
         var csrfToken = "{csrf_token}"
-    """ + 
-    """
-        function getBotId(id) {
-            return document.querySelector(id+"-alt").value || document.querySelector(id).value
-        }
-
-        async function claim() {
-            let botId = getBotId("#queue")
-            let res = await fetch(`/bot-actions/claim?csrf_token=${csrfToken}`, {
-                method: "POST",
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({"bot_id": botId}),
-            })
-            let json = await res.json()
-            alert(json.detail)
-        }
-
-        async function unclaim() {
-            let botId = getBotId("#under_review_claim")
-            let reason = document.querySelector("#under_review_claim-reason").value
-            let res = await fetch(`/bot-actions/unclaim?csrf_token=${csrfToken}`, {
-                method: "POST",
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({"bot_id": botId, "reason": reason}),
-            })
-            let json = await res.json()
-            alert(json.detail)
-        }
-
-        async function approve() {
-            let botId = getBotId("#under_review_approved")
-            let reason = document.querySelector("#under_review_approved-reason").value
-            let res = await fetch(`/bot-actions/approve?csrf_token=${csrfToken}`, {
-                method: "POST",
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({"bot_id": botId, "reason": reason}),
-            })
-            let json = await res.json()
-            alert(json.detail)
-            if(res.ok) {
-                // Now put the invite to the bot
-                window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${botId}&scope=bot&application.command&guild_id=${json.guild_id}`
-            }
-        }
-
-        async function deny() {
-            let botId = getBotId("#under_review_denied")
-            let reason = document.querySelector("#under_review_denied-reason").value
-            let res = await fetch(`/bot-actions/deny?csrf_token=${csrfToken}`, {
-                method: "POST",
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({"bot_id": botId, "reason": reason}),
-            })
-            let json = await res.json()
-            alert(json.detail)
-        }
-
-        async function ban() {
-            let botId = getBotId("#ban")
-            let reason = document.querySelector("#ban-reason").value
-            let res = await fetch(`/bot-actions/ban?csrf_token=${csrfToken}`, {
-                method: "POST",
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({"bot_id": botId, "reason": reason}),
-            })
-            let json = await res.json()
-            alert(json.detail)
-        }
-
-        async function unban() {
-            let botId = getBotId("#unban")
-            let reason = document.querySelector("#unban-reason").value
-            let res = await fetch(`/bot-actions/unban?csrf_token=${csrfToken}`, {
-                method: "POST",
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({"bot_id": botId, "reason": reason}),
-            })
-            let json = await res.json()
-            alert(json.detail)
-        }
-
-        async function certify() {
-            let botId = getBotId("#certify")
-            let reason = document.querySelector("#certify-reason").value
-            let res = await fetch(`/bot-actions/certify?csrf_token=${csrfToken}`, {
-                method: "POST",
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({"bot_id": botId, "reason": reason}),
-            })
-            let json = await res.json()
-            alert(json.detail)
-        }
-
-        async function uncertify() {
-            let botId = getBotId("#uncertify")
-            let reason = document.querySelector("#uncertify-reason").value
-            let res = await fetch(`/bot-actions/uncertify?csrf_token=${csrfToken}`, {
-                method: "POST",
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({"bot_id": botId, "reason": reason}),
-            })
-            let json = await res.json()
-            alert(json.detail)
-        }
-
-        async function unverify() {
-            let botId = getBotId("#unverify")
-            let reason = document.querySelector("#unverify-reason").value
-            let res = await fetch(`/bot-actions/unverify?csrf_token=${csrfToken}`, {
-                method: "POST",
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({"bot_id": botId, "reason": reason}),
-            })
-            let json = await res.json()
-            alert(json.detail)
-        }
-
-        async function requeue() {
-            let botId = getBotId("#requeue")
-            let reason = document.querySelector("#requeue-reason").value
-            let res = await fetch(`/bot-actions/requeue?csrf_token=${csrfToken}`, {
-                method: "POST",
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({"bot_id": botId, "reason": reason}),
-            })
-            let json = await res.json()
-            alert(json.detail)
-        }
-
-        async function resetVotes() {
-            let botId = getBotId("#reset-votes")
-            let reason = document.querySelector("#reset-votes-reason").value
-            let res = await fetch(`/bot-actions/reset-votes?csrf_token=${csrfToken}`, {
-                method: "POST",
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({"bot_id": botId, "reason": reason}),
-            })
-            let json = await res.json()
-            alert(json.detail)
-        }
-
-        async function setFlag() {
-            let botId = getBotId("#set-flag")
-            let reason = document.querySelector("#set-flag-reason").value
-            let flag = parseInt(document.querySelector("#flag").value)
-
-            let url = "/bot-actions/set-flag"
-
-            if(document.querySelector("#unset").checked) {
-                url = "/bot-actions/unset-flag"
-            }
-
-            let res = await fetch(`${url}?csrf_token=${csrfToken}`, {
-                method: "POST",
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({"bot_id": botId, "reason": reason, "context": flag}),
-            })
-            let json = await res.json()
-            alert(json.detail)
-        }
-
-        docReady(() => {
-            if(window.location.hash) {
-                document.querySelector(`${window.location.hash}`).scrollIntoView()
-            }
-        })
-"""}
+    """}
 
 class Action(BaseModel):
     bot_id: str
@@ -2310,16 +1868,16 @@ def links(request: Request):
         <blockquote class="quote">
             <h5>Some Nice Links</h5>
             <a href="/my-perms">My Permissions</a><br/>
-            <a href="/reset">Lynx Credentials Reset</a><br/>
-            <a href="/loa">Leave Of Absense</a><br/>
-            <a href="/staff-apps">Staff Applications</a><br/>
+            <a class="admin-only" href="/reset">Lynx Credentials Reset</a><br class="admin-only"/>
+            <a class="admin-only" href="/loa">Leave Of Absense</a><br class="admin-only"/>
+            <a class="admin-only" href="/staff-apps">Staff Applications</a><br class="admin-only"/>
             <a href="/links">Some Useful Links</a><br/>
-            <a href="/staff-verify">Staff Verification</a> (in case you need it)<br/>
+            <a class="admin-only" href="/staff-verify">Staff Verification</a><span class="admin-only"> (in case you need it)</span><br class="admin-only"/>
             <a href="/staff-guide">Staff Guide</a><br/>
             <a href="/roadmap">Our Roadmap</a><br/>
-            <a href="/admin">Admin Console</a><br/>
-            <a href="/bot-actions">Bot Actions</a><br/>
-            <a href="/user-actions">User Actions</a><br/>
+            <a class="admin-only" href="/admin">Admin Console</a><br class="admin-only"/>
+            <a class="admin-only" href="/bot-actions">Bot Actions</a><br class="admin-only"/>
+            <a class="admin-only" href="/user-actions">User Actions</a><br class="admin-only"/>
             <a href="/requests">Requests</a><br/>
         </blockquote>
 	    <blockquote class="quote">
@@ -2375,12 +1933,7 @@ def docs(page: str):
         """,
         "script": """
             docReady(() => {
-                if(window.location.hash) {
-                    document.querySelector(`${window.location.hash}`).scrollIntoView()
-                }
-
                 hljs.highlightAll();
-
                 window.highlightJsBadge();
             })
         """
@@ -2466,7 +2019,15 @@ async def verify_code(request: Request):
 
 @app.get("/_notifications")
 async def notifications(request: Request):
-    return await app.state.db.fetch("SELECT acked_users, message, type FROM lynx_notifications")
+    notifs = await app.state.db.fetch("SELECT id, acked_users, message, type, staff_only FROM lynx_notifications")
+    _send_notifs = []
+    for notif in notifs:
+        if notif["staff_only"]:
+            if request.scope.get("sunbeam_user") and request.state.member.perm > 2:
+                _send_notifs.append(notif)
+        else:
+            _send_notifs.append(notif)
+    return _send_notifs
 
 @app.get("/roadmap")
 async def roadmap(request: Request):
@@ -2492,12 +2053,6 @@ async def roadmap(request: Request):
 ## Votes (Item 1, tied to item 2)
 
 Votes should have ways to stop complete automation. Possibly with addition of coins though
-
-<blockquote class="quote">
-
-<h5>Suggestion from staff</h5>
-Nishant1500
-</blockquote>
 
 ## Coins (Item 2)
 
@@ -2576,12 +2131,6 @@ async def user_actions(request: Request, response: Response, id: int | None = No
         "script": f"""
         var csrfToken = "{csrf_token}"
         """ + """
-            docReady(() => {
-                if(window.location.hash) {
-                    document.querySelector(`${window.location.hash}`).scrollIntoView()
-                }
-            })
-
             async function addStaff() {
                 let userId = document.querySelector("#staff_user_id").value
                 let res = await fetch(`/user-actions/addstaff?csrf_token=${csrfToken}`, {
@@ -2719,4 +2268,3 @@ async def close():
     await app.state.engine.close_connection_pool()
 
 app.add_middleware(CustomHeaderMiddleware)
-app.add_middleware(NoCacher)

@@ -339,7 +339,9 @@ CREATE TABLE lynx_logs (
 );
 
 CREATE TABLE lynx_notifications (
+    id uuid not null default uuid_generate_v4(),
     acked_users bigint[] not null default '{}',
     message text not null,
+    staff_only boolean default false,
     type text not null -- alert etc
 );
