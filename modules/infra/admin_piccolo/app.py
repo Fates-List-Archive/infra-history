@@ -776,34 +776,6 @@ async function verify() {
 """ 
     })
 
-@app.get("/")
-def index(request: Request):
-    return ORJSONResponse({
-        "title": "Index",
-        "data": """
-<h3>Homepage!</h3>
-By continuing, you agree to:
-<ul>
-<li>Abide by Discord ToS</li>
-<li>Abide by Fates List ToS</li>
-<li>Agree to try and be at least partially active on the list</li>
-<li>Be able to join group chats (group DMs) if required by Fates List Admin+</li>
-</ul>
-If you disagree with any of the above, you should stop now and consider taking a 
-Leave Of Absence or leaving the staff team though we hope it won't come to this...
-<br/><br/>
-
-Please <em>read</em> the staff guide carefully. Do NOT just Ctrl-F. If you ask questions
-already in the staff guide, you will just be told to reread the staff guide!
-
-<br/>
-
-In case, you haven't went through staff verification and you somehow didn't get redirected to it, click <a href="/staff-verify">here</a> 
-<br/><br/>
-<a href="/links">Some Useful Links!</a>
-"""
-    })
-
 @app.get("/staff-apps")
 async def staff_apps(request: Request, response: Response):
     # Get staff application list
@@ -892,13 +864,6 @@ def code_check_route(request: Request):
     if not code_check(query.get("code", ""), query.get("user_id", 0)):
         return PlainTextResponse(status_code=HTTPStatus.FORBIDDEN)
     return PlainTextResponse(status_code=HTTPStatus.NO_CONTENT)
-
-@app.get("/staff-guide")
-def staff_guide_route(request: Request):
-    return ORJSONResponse({
-        "title": "Staff Guide",
-        "data": staff_guide,
-    })
 
 @app.get("/my-perms")
 def my_perms(request: Request):
@@ -1650,120 +1615,6 @@ async def unset_flags(request: Request, data: ActionWithReason):
 
     return {"detail": "Successfully unset flag"}
 
-@app.get("/links")
-def links(request: Request):
-    return ORJSONResponse({
-        "title": "Some Useful Links",
-        "data": f"""
-        <blockquote class="quote">
-            <h5>Some Nice Links</h5>
-            <a href="/my-perms">My Permissions</a><br/>
-            <a class="admin-only" href="/reset">Lynx Credentials Reset</a><br class="admin-only"/>
-            <a class="admin-only" href="/loa">Leave Of Absense</a><br class="admin-only"/>
-            <a class="admin-only" href="/staff-apps">Staff Applications</a><br class="admin-only"/>
-            <a href="/links">Some Useful Links</a><br/>
-            <a class="admin-only" href="/staff-verify">Staff Verification</a><span class="admin-only"> (in case you need it)</span><br class="admin-only"/>
-            <a href="/staff-guide">Staff Guide</a><br/>
-            <a href="/docs/roadmap">Our Roadmap</a><br/>
-            <a class="admin-only" href="/admin">Admin Console</a><br class="admin-only"/>
-            <a class="admin-only" href="/bot-actions">Bot Actions</a><br class="admin-only"/>
-            <a class="admin-only" href="/user-actions">User Actions</a><br class="admin-only"/>
-            <a href="/requests">Requests</a><br/>
-        </blockquote>
-	    <blockquote class="quote">
-            <h5 id="credits">Credits</h5>
-             <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
-            </p>
-        </blockquote>
-    """
-    })
-
-@app.get("/docs")
-def docs_redir():
-    return RedirectResponse("https://lynx.fateslist.xyz/docs/index")
-
-@app.get("/docs/{page:path}")
-def docs(page: str):
-    if page.endswith(".md"):
-        return RedirectResponse(f"/docs/{page[:-3]}")
-    
-    elif not page:
-        return RedirectResponse("/docs/index")
-
-    if not page.replace("-", "").replace("_", "").replace("/", "").isalnum():
-        return ORJSONResponse({"detail": "Invalid page"}, status_code=404)
-    
-    try:
-        with open(f"modules/infra/admin_piccolo/api-docs/{page}.md", "r") as f:
-            md_data = f.read()
-    except FileNotFoundError as exc:
-        return ORJSONResponse({"detail": f"api-docs/{page}.md not found -> {exc}"}, status_code=404)
-
-    md = (
-        MarkdownIt()
-        .use(front_matter_plugin)
-        .use(footnote_plugin)
-        .use(anchors_plugin, max_level=5, permalink=True)
-        .use(fieldlist_plugin)
-        .use(container_plugin, name="warning")
-        .use(container_plugin, name="info")
-        .use(container_plugin, name="aonly")
-        .use(container_plugin, name="guidelines")
-        .use(container_plugin, name="generic", validate = lambda *args: True)
-        .enable('table')
-        .enable('image')
-    )
-
-    # Inject rating code
-    md_data = f"""
-### Feedback
-
-Just want to provide feedback? [Rate this page](#rate-this-page)
-
-{md_data}
-
-### Rate this page!
-
-- Your feedback allows Fates List to improve our docs. 
-- We would also *love* it you could make a Pull Request at [https://github.com/Fates-List/infra](https://github.com/Fates-List/infra)
-- Starring the repo is also a great way to show your support!
-
-<label for='doc-feedback'>Your Feedback</label>
-<textarea 
-id='doc-feedback'
-name='doc-feedback'
-placeholder='I feel like you could...'
-></textarea>
-
-<button onclick='rateDoc()'>Rate</button>
-
-### [View Source](https://lynx.fateslist.xyz/docs-src/{page})
-    """
-
-    return {
-        "title": page.split('/')[-1].replace('-', ' ').title(),
-        "data": md.render(md_data).replace("<table", "<table class='table'").replace(".md", ""),
-        "ext_script": "/_static/docs.js?v=6",
-    }
-
-@app.get("/docs-src/{page:path}")
-def docs_source(page: str):
-    if not page.replace("-", "").replace("_", "").replace("/", "").isalnum():
-        return ORJSONResponse({"detail": "Invalid page"}, status_code=404)
-    
-    try:
-        with open(f"modules/infra/admin_piccolo/api-docs/{page}.md", "r") as f:
-            md_data = f.read()
-    except FileNotFoundError as exc:
-        return ORJSONResponse({"detail": f"api-docs/{page}.md not found -> {exc}"}, status_code=404)
-
-    return {
-        "title": page.split('/')[-1].replace('-', ' ').title() + " (Source)",
-        "data": f"""
-<pre>{md_data.replace('<', '&lt').replace('>', '&gt')}</pre>
-        """
-    }
-
 @app.get("/requests")
 async def lynx_request_logs():
     requests = await app.state.db.fetch("SELECT user_id, method, url, status_code, request_time from lynx_logs")
@@ -1868,6 +1719,129 @@ class ConnectionManager:
     async def send_doctree(self, ws: WebSocket):
         await self.send_personal_message({"resp": "doctree", "data": doctree_gen().replace("\n", "")}, ws)
 
+    async def send_docs(self, ws: WebSocket, page: str, source: bool):
+        if page.endswith(".md"):
+            page = f"/docs/{page[:-3]}"
+        
+        elif not page:
+            page = "/index"
+
+        if not page.replace("-", "").replace("_", "").replace("/", "").isalnum():
+            return await self.send_personal_message({"resp": "docs", "detail": "Invalid page"}, ws)
+        
+        try:
+            with open(f"modules/infra/admin_piccolo/api-docs/{page}.md", "r") as f:
+                md_data = f.read()
+        except FileNotFoundError as exc:
+            return await self.send_personal_message({"resp": "docs", "detail": f"api-docs/{page}.md not found -> {exc}"}, ws)
+
+        # Inject rating code
+        md_data = f"""
+### Feedback
+
+Just want to provide feedback? [Rate this page](#rate-this-page)
+
+{md_data}
+
+### Rate this page!
+
+- Your feedback allows Fates List to improve our docs. 
+- We would also *love* it you could make a Pull Request at [https://github.com/Fates-List/infra](https://github.com/Fates-List/infra)
+- Starring the repo is also a great way to show your support!
+
+<label for='doc-feedback'>Your Feedback</label>
+<textarea 
+id='doc-feedback'
+name='doc-feedback'
+placeholder='I feel like you could...'
+></textarea>
+
+<button onclick='rateDoc()'>Rate</button>
+
+### [View Source](https://lynx.fateslist.xyz/docs-src/{page})
+        """
+
+        # If looking for source
+        if source:
+            print("Sending source")
+            return await self.send_personal_message({
+                "resp": "docs",
+                "title": page.split('/')[-1].replace('-', ' ').title() + " (Source)",
+                "data": f"""
+        <pre>{md_data.replace('<', '&lt').replace('>', '&gt')}</pre>
+                """
+            }, ws)
+
+        md = (
+            MarkdownIt()
+            .use(front_matter_plugin)
+            .use(footnote_plugin)
+            .use(anchors_plugin, max_level=5, permalink=True)
+            .use(fieldlist_plugin)
+            .use(container_plugin, name="warning")
+            .use(container_plugin, name="info")
+            .use(container_plugin, name="aonly")
+            .use(container_plugin, name="guidelines")
+            .use(container_plugin, name="generic", validate = lambda *args: True)
+            .enable('table')
+            .enable('image')
+        )
+
+        return await self.send_personal_message({
+            "resp": "docs",
+            "title": page.split('/')[-1].replace('-', ' ').title(),
+            "data": md.render(md_data).replace("<table", "<table class='table'").replace(".md", ""),
+            "ext_script": "/_static/docs.js?v=6",
+        }, ws)
+
+    async def send_links(self, ws: WebSocket):
+        if ws.state.member.perm > 2:
+            return await self.send_personal_message({
+                "resp": "links",
+                "title": "Some Useful Links",
+                "data": f"""
+                <blockquote class="quote">
+                    <h5>Some Nice Links</h5>
+                    <a href="/my-perms">My Permissions</a><br/>
+                    <a href="/reset">Lynx Credentials Reset</a><br/>
+                    <a href="/loa">Leave Of Absense</a><br/>
+                    <a href="/staff-apps">Staff Applications</a><br/>
+                    <a href="/links">Some Useful Links</a><br/>
+                    <a href="/staff-verify">Staff Verification</a> (in case you need it)<br/>
+                    <a href="/staff-guide">Staff Guide</a><br/>
+                    <a href="/docs/roadmap">Our Roadmap</a><br/>
+                    <a href="/admin">Admin Console</a><br/>
+                    <a href="/bot-actions">Bot Actions</a><br/>
+                    <a href="/user-actions">User Actions</a><br/>
+                    <a href="/requests">Requests</a><br/>
+                </blockquote>
+                <blockquote class="quote">
+                    <h5 id="credits">Credits</h5>
+                    <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
+                    </p>
+                </blockquote>
+            """}, ws)
+        else:
+            return await self.send_personal_message({
+                "resp": "links",
+                "title": "Some Useful Links",
+                "data": f"""
+                <blockquote class="quote">
+                    <h5>Some Nice Links</h5>
+                    <strong>Some links hidden as you are not logged in or are not staff</strong>
+                    <a href="/my-perms">My Permissions</a><br/>
+                    <a href="/links">Some Useful Links</a><br/>
+                    <a href="/staff-guide">Staff Guide</a><br/>
+                    <a href="/docs/roadmap">Our Roadmap</a><br/>
+                    <a href="/requests">Requests</a><br/>
+                </blockquote>
+                <blockquote class="quote">
+                    <h5 id="credits">Credits</h5>
+                    <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
+                    </p>
+                </blockquote>
+            """}, ws)
+
 manager = ConnectionManager()
 
 
@@ -1925,6 +1899,39 @@ async def ws(ws: WebSocket):
                 
                 # Send new perms on upgrade
                 await manager.send_personal_message({"resp": "perms", "data": ws.state.member.dict()}, ws)
+            elif data.get("request") == "docs":
+                # Get the doc path
+                print(data)
+                path = data.get("path", "/").split("#")[0]
+                source = data.get("source", False)
+                asyncio.create_task(manager.send_docs(ws, path, source))
+            elif data.get("request") == "links":
+                asyncio.create_task(manager.send_links(ws))
+            elif data.get("request") == "staff_guide":
+                await manager.send_personal_message({"resp": "staff_guide", "title": "Staff Guide", "data": staff_guide}, ws)
+            elif data.get("request") == "index":
+                await manager.send_personal_message({"resp": "staff_guide", "title": "Welcome To Lynx", "data": """
+<h3>Homepage!</h3>
+By continuing, you agree to:
+<ul>
+<li>Abide by Discord ToS</li>
+<li>Abide by Fates List ToS</li>
+<li>Agree to try and be at least partially active on the list</li>
+<li>Be able to join group chats (group DMs) if required by Fates List Admin+</li>
+</ul>
+If you disagree with any of the above, you should stop now and consider taking a 
+Leave Of Absence or leaving the staff team though we hope it won't come to this...
+<br/><br/>
+
+Please <em>read</em> the staff guide carefully. Do NOT just Ctrl-F. If you ask questions
+already in the staff guide, you will just be told to reread the staff guide!
+
+<br/>
+
+In case, you haven't went through staff verification and you somehow didn't get redirected to it, click <a href="/staff-verify">here</a> 
+<br/><br/>
+<a href="/links">Some Useful Links!</a>
+                """}, ws)
 
     except WebSocketDisconnect:
         manager.disconnect(ws)

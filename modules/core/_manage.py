@@ -225,6 +225,57 @@ def site_compilestatic():
             with Popen(cmd, env=os.environ) as proc:
                 proc.wait()
 
+def db_getuser():
+    """Gdpr get user data"""
+    async def get(user_id):
+        import asyncpg
+        from fastapi.encoders import jsonable_encoder
+
+        db = await asyncpg.create_pool()
+        user = await db.fetchrow("select * from users where user_id = $1", user_id)
+        owners = await db.fetch("SELECT * FROM bot_owner WHERE owner = $1", user_id)
+        bot_voters = await db.fetch("SELECT * FROM bot_voters WHERE user_id = $1", user_id)
+        user_vote_table = await db.fetch("SELECT * FROM user_vote_table WHERE user_id = $1", user_id)
+        reviews = await db.fetch("SELECT * FROM reviews WHERE user_id = $1", user_id)
+        review_votes = await db.fetch("SELECT * FROM review_votes WHERE user_id = $1", user_id)
+        user_bot_logs = await db.fetch("SELECT * FROM user_bot_logs WHERE user_id = $1", user_id)
+        user_reminders = await db.fetch("SELECT * FROM user_reminders WHERE user_id = $1", user_id)
+        user_payments = await db.fetch("SELECT * FROM user_payments WHERE user_id = $1", user_id)
+        servers = await db.fetch("SELECT * FROM servers WHERE owner_id = $1", user_id)
+        lynx_apps = await db.fetch("SELECT * FROM lynx_apps WHERE user_id = $1", user_id)
+        lynx_logs = await db.fetch("SELECT * FROM lynx_logs WHERE user_id = $1", user_id)
+        lynx_notifications = await db.fetch("SELECT * FROM lynx_notifications, unnest(acked_users) AS user_id WHERE user_id = $1", user_id)
+        lynx_ratings = await db.fetch("SELECT * FROM lynx_ratings WHERE user_id = $1", user_id)
+
+        data = {
+            "user": user, 
+            "owners": owners, 
+            "bot_voters": bot_voters, 
+            "user_vote_table": user_vote_table, 
+            "reviews": reviews, 
+            "review_votes": review_votes, 
+            "user_bot_logs": user_bot_logs,
+            "user_reminders": user_reminders,
+            "user_payments": user_payments,
+            "servers": servers,
+            "lynx_apps": lynx_apps,
+            "lynx_logs": lynx_logs,
+            "lynx_notifications": lynx_notifications,
+            "lynx_ratings": lynx_ratings,
+            "owned_bots": []
+        }
+        
+        data["privacy"] = "Fates list does not profile users or use third party cookies for tracking other than what is used by cloudflare for its required DDOS protection"
+
+        for bot in data["owners"]:
+            data["owned_bots"].append(await db.fetch("SELECT * FROM bots WHERE bot_id = $1", bot["bot_id"]))
+
+        print(jsonable_encoder(data))
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(get(int(os.environ.get("USER_ID"))))
+
 def db_backup():
     """Backs up the Fates List database"""
     from loguru import logger

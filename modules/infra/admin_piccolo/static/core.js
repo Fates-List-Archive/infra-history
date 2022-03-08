@@ -19,6 +19,10 @@ var havePerm = false
 var staffPerm = 1
 var alreadyUp = false
 
+var perms = {name: "Please wait for websocket to finish loading", perm: 0}
+
+var user = {username: "Please wait for websocket to finish loading"}
+
 async function authWs() {
     // Fetch base user information from server
     let res = await fetch("/_user", {
@@ -47,6 +51,8 @@ async function authWs() {
             return
         }
     }    
+
+    user = wsData
 
     ws.send(JSON.stringify({request: "upgrade", data: wsData}))
 }
@@ -139,6 +145,7 @@ async function wsStart() {
 
             havePerm = true
             console.log("WS: Got permissions")
+            perms = data.data
             staffPerm = data.data.perm
 
             // Remove admin panel
@@ -152,8 +159,58 @@ async function wsStart() {
             // Kill websocket
             ws.close(4999, "Credentials reset")
             document.querySelector("#verify-screen").innerHTML = "Credential reset successful!"
+        } else if(data.resp == "docs") {
+            console.log("WS: Got docs")   
+            setData(data)
+        } else if(data.resp == "links") {
+            console.log("WS: Got links")   
+            setData(data)
+        } else if(data.resp == "staff_guide") {
+            console.log("WS: Got staff guide")   
+            setData(data)
+        } else if(data.resp == "index") {
+            console.log("WS: Got index")   
+            setData(data)
         }
     }      
+}
+
+function setData(data, noExtraCode) {
+    if(data.detail) {
+        alert(data.detail)
+        return
+    }
+    document.querySelector("#verify-screen").innerHTML = data.data
+    document.querySelector("#title").innerHTML = data.title    
+
+    if(data.script) {
+        let script = document.createElement("script")
+        script.innerHTML = data.script
+        document.body.appendChild(script)
+    }
+
+    if(data.ext_script) {
+        let script = document.createElement("script")
+        script.src = data.ext_script
+        document.body.appendChild(script)
+    }
+
+    if(data.pre) {
+        document.querySelector("#verify-screen").innerHTML += `<a href='${data.pre}'>Back to previous page</a>`
+    }
+
+    if(window.location.hash) {
+        document.querySelector(`${window.location.hash}`).scrollIntoView()
+    }    
+
+    if(!noExtraCode) {
+        linkMod()
+    } else if(noExtraCode && !contentLoadedOnce) {
+        linkMod()
+    }
+
+    contentLoadedOnce = true
+    contentCurrPage = window.location.pathname
 }
 
 function delNotAdmin() {
@@ -225,7 +282,9 @@ async function extraCode() {
     } 
 
     if(currentURLID.includes('docs')) {
-        $('#docs-main-nav').toggleClass('menu-open')
+        if(!alreadyUp) {
+            $('#docs-main-nav').toggleClass('menu-open')
+        }
 
         // Find the subnavs
         var tree = pathSplit[2]
@@ -241,6 +300,9 @@ async function extraCode() {
     }
 }
 
+contentLoadedOnce = false
+contentCurrPage = window.location.pathname
+
 docReady(function() {
     if(!alreadyUp) {
         getNotifications()
@@ -250,7 +312,110 @@ docReady(function() {
     }
 })
 
+waitInterval = -1
+
+function waitForWsAndLoad(data, f) {
+    if(!wsUp) {
+        // Websocket isn't up yet
+        waitInterval = setInterval(function() {
+            if(wsUp) {
+                console.log("WS is up, loading content")
+                loadContent(data.loc)
+                clearInterval(waitInterval)
+            }
+        }, 500)
+        return
+    } else {
+        // Websocket is up, load content
+        console.log("WS is up, loading content")
+        try {
+            clearInterval(waitInterval)
+        } catch(err) {
+            console.log(err)
+        }
+        console.log("WS: Requested for data")
+
+        // Are we even in a new page
+        if(contentCurrPage == data.loc && contentLoadedOnce) {
+            console.log("Ignoring bad request", contentCurrPage, data.loc)
+            return
+        }
+
+        f(data)
+        return
+    }
+}
+
+myPermsInterval = -1
+
 async function loadContent(loc) {
+    clearInterval(myPermsInterval)
+
+    loc = loc.replace('https://lynx.fateslist.xyz', '')
+
+    if(loc.includes("/docs-src")) {
+        // Create request for docs
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for docs")
+            ws.send(JSON.stringify({request: "docs", path: data.loc.replace("/docs-src/", ""), source: true}))
+        })
+        return
+    } else if(loc.includes("/docs")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for docs-src")
+            ws.send(JSON.stringify({request: "docs", path: data.loc.replace("/docs/", ""), source: false}))
+        })
+        return
+    } else if(loc.startsWith("/links")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for links")
+            ws.send(JSON.stringify({request: "links"}))
+        })
+        return
+    } else if(loc.startsWith("/staff-guide")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for staff-guide")
+            ws.send(JSON.stringify({request: "staff_guide"}))
+        })
+        return
+    } else if(loc == "/" || loc == "") {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for index")
+            ws.send(JSON.stringify({request: "index"}))
+        })
+        return
+    } else if(loc.startsWith("/my-perms")) {
+        myPermsInterval = setInterval(() => {
+            if(user.token) {
+                user.username = user.user.username
+                user.id = user.user.id
+            }
+
+            setData({
+                title: "My Perms",
+                data: `
+    Permission Name: ${perms.name}<br/>
+    Permission Number: ${perms.perm}<br/>
+    Is Staff: ${perms.perm >= 2}<br/>
+    Is Admin: ${perms.perm >= 4}<br/>
+    Permission JSON: ${JSON.stringify(perms)}
+
+    <h4>User</h4>
+    Username: ${user.username}<br/>
+    User ID: ${user.id}
+                `
+            }, true)
+            return
+        }, 500)
+        return
+    }
+
+    console.log(loc)
+
+    if(loc.startsWith("/admin")) {
+        window.location.href = res.url
+    }
+
     let res = await fetch(loc + '?json=true', {
         method: "GET",
         credentials: 'same-origin',
@@ -264,33 +429,9 @@ async function loadContent(loc) {
         window.location.href = res.url
     }
 
-    if(res.url.startsWith("https://lynx.fateslist.xyz/admin")) {
-        window.location.href = res.url
-    }
-
     if(res.ok) {
         let body = await res.json()
-        document.querySelector("#verify-screen").innerHTML = body.data
-        document.querySelector("#title").innerHTML = body.title
-        if(body.script) {
-            let script = document.createElement("script")
-            script.innerHTML = body.script
-            document.body.appendChild(script)
-        }
-
-        if(body.ext_script) {
-            let script = document.createElement("script")
-            script.src = body.ext_script
-            document.body.appendChild(script)
-        }
-
-        if(body.pre) {
-            document.querySelector("#verify-screen").innerHTML += `<a href='${body.pre}'>Back to previous page</a>`
-        }
-
-        if(window.location.hash) {
-            document.querySelector(`${window.location.hash}`).scrollIntoView()
-        }
+        setData(body)
     } else {
         let status = res.status
 
@@ -310,8 +451,15 @@ async function loadContent(loc) {
 async function linkMod() {
     links = document.querySelectorAll("a")
     links.forEach(link => {
-        console.log(link.href, link.hasPatched, link.hasPatched == undefined)
+        console.log(link, link.href, link.hasPatched, link.hasPatched == undefined)
         if(link.href.startsWith("https://lynx.fateslist.xyz/") && link.hasPatched == undefined) {
+            if(link.href == "https://lynx.fateslist.xyz/#") {
+                return // Don't patch # elements
+            } 
+            if(link.href == window.location.href || link.href.endsWith("#")) {
+                return // Don't patch if same url
+            }
+
             link.hasPatched = true
             console.log("Add patch")
             link.addEventListener('click', event => {
