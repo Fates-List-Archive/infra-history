@@ -172,10 +172,27 @@ async function wsStart() {
             console.log("WS: Got index")   
             setData(data)
         }
+        else if(data.resp == "loa") {
+            console.log("WS: Got loa")   
+            setData(data, () => {
+                ws.send(JSON.stringify({request: "loa"}))
+            })
+        }
     }      
 }
 
-function setData(data, noExtraCode) {
+async function upgradeAndSend(f) {
+    await authWs()
+    f()
+}
+
+function setData(data, noExtraCode=false, upgFunc=null) {
+    if(data.wait_for_upg) {
+        console.log("WS: Waiting for upgrade")
+        upgradeAndSend(upgFunc)
+        return
+    }
+
     if(data.detail) {
         alert(data.detail)
         return
@@ -407,6 +424,12 @@ async function loadContent(loc) {
             }, true)
             return
         }, 500)
+        return
+    } else if(loc.startsWith("/loa")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for loa")
+            ws.send(JSON.stringify({request: "loa"}))
+        })
         return
     }
 

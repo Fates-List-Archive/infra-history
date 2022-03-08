@@ -865,26 +865,6 @@ def code_check_route(request: Request):
         return PlainTextResponse(status_code=HTTPStatus.FORBIDDEN)
     return PlainTextResponse(status_code=HTTPStatus.NO_CONTENT)
 
-@app.get("/my-perms")
-def my_perms(request: Request):
-    try:
-        member = request.state.member
-    except AttributeError:
-        request.state.member = StaffMember(name="Unknown", id=0, perm=1, staff_id=0)
-
-    return ORJSONResponse({
-        "title": "My Permissions",
-        "pre": "/links",
-        "data": f"""
-        <pre>
-<strong>Permission Number</strong>: {request.state.member.perm}
-<strong>Role Name</strong>: {request.state.member.name}
-<strong>Can Access Lynx (limited)</strong>: {request.state.member.perm >= 2}
-<strong>Can Access Lynx (full)</strong>: {request.state.member.perm >= 4}
-        </pre>
-        """
-    })
-
 @app.get("/reset")
 def reset(request: Request):
     return ORJSONResponse({
@@ -922,24 +902,6 @@ async def reset_creds(request: Request):
         int(request.scope["sunbeam_user"]["user"]["id"])
     )
     return ORJSONResponse({"detail": "Done"})
-
-@app.get("/loa")
-def loa(request: Request):
-    return ORJSONResponse({
-        "title": "Leave Of Absense",
-        "pre": "/links",
-        "data": f"""
-        <pre>
-        Just a tip for those new to lynx
-
-        1. Login to lynx
-        2, Click Leave Of Absense
-        3. Click 'Add Row'
-        4. Fill out the nessesary fields
-        5. Click 'Save'
-        </pre>
-        """
-    })
 
 def bot_select(id: str, bot_list: list[str], reason: bool = False):
     select = f"""
@@ -1723,7 +1685,7 @@ class ConnectionManager:
         if page.endswith(".md"):
             page = f"/docs/{page[:-3]}"
         
-        elif not page:
+        elif not page or page == "/docs":
             page = "/index"
 
         if not page.replace("-", "").replace("_", "").replace("/", "").isalnum():
@@ -1792,6 +1754,26 @@ placeholder='I feel like you could...'
             "title": page.split('/')[-1].replace('-', ' ').title(),
             "data": md.render(md_data).replace("<table", "<table class='table'").replace(".md", ""),
             "ext_script": "/_static/docs.js?v=6",
+        }, ws)
+    
+    async def send_loa(self, ws: WebSocket):
+        if ws.state.member.perm < 2:
+            return await self.send_personal_message({"resp": "loa", "detail": "You do not have permission to view this page", "wait_for_upg": True}, ws)
+        return await self.send_personal_message({
+            "resp": "loa",
+            "title": "Leave Of Absense",
+            "pre": "/links",
+            "data": f"""
+Just a tip for those new to lynx (for now)
+<ol>
+    <li>Login to Lynx Admin</li>
+    <li>Click Leave Of Absense</li>
+    <li>Click 'Add Row'</li>
+    <li>Fill out the nessesary fields</li>
+    <li>Click 'Save'</li>
+</ol>
+<strong>A way to actually create LOA's from this page is coming soon :)</strong>
+            """
         }, ws)
 
     async def send_links(self, ws: WebSocket):
@@ -1932,6 +1914,8 @@ In case, you haven't went through staff verification and you somehow didn't get 
 <br/><br/>
 <a href="/links">Some Useful Links!</a>
                 """}, ws)
+            elif data.get("request") == "loa":
+                asyncio.create_task(manager.send_loa(ws))
 
     except WebSocketDisconnect:
         manager.disconnect(ws)
