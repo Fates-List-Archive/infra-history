@@ -1699,9 +1699,14 @@ class ConnectionManager:
 
         # Inject rating code
         md_data = f"""
+
+<div id='feedback-div'>
+
 ### Feedback
 
 Just want to provide feedback? [Rate this page](#rate-this-page)
+
+</div>
 
 {md_data}
 
@@ -1753,7 +1758,7 @@ placeholder='I feel like you could...'
             "resp": "docs",
             "title": page.split('/')[-1].replace('-', ' ').title(),
             "data": md.render(md_data).replace("<table", "<table class='table'").replace(".md", ""),
-            "ext_script": "/_static/docs.js?v=6",
+            "ext_script": "/_static/docs.js?v=49433d63744",
         }, ws)
     
     async def send_loa(self, ws: WebSocket):

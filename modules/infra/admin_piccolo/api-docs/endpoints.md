@@ -41,7 +41,7 @@ A default API Response will be of the below format:
 ## Core
 
 ### Post Stats
-#### GET /bots/{id}/stats
+#### POST /bots/{id}/stats
 
 
 Post stats to the list
@@ -2445,7 +2445,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "a31931c3-ea54-419e-b1fe-42588f1bf66c",
+    "id": "122e7f53-4fee-4744-b1ac-baee0b9b180a",
     "reply": false,
     "star_rating": "0",
     "review_text": "",
@@ -2512,7 +2512,7 @@ set this a TargetType anyways so you might as well set it correctly.
 
 ```json
 {
-    "rid": "abf451c1-409b-4c64-9322-c8cd0506e15b"
+    "rid": "4e5f3d7b-3461-4b29-b766-82fd0b44cda3"
 }
 ```
 
@@ -2583,7 +2583,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 
 ```json
 {
-    "rid": "91eb9004-f658-4a5a-85c9-774c5a4428b7"
+    "rid": "3809397b-f9e5-471d-a18d-aaae78b292b7"
 }
 ```
 
@@ -2777,7 +2777,7 @@ This is the ``target_type``
 
 ```json
 {
-    "id": "17b0a274-acb8-4fa3-b5a1-f3fc4b9eb697",
+    "id": "e61796f0-d9e8-4854-a7e4-e587e4e9339f",
     "target_type": 0
 }
 ```
@@ -2846,10 +2846,7 @@ the command depending on its ``name``.**
 
 ```json
 {
-    "id": null,
-    "resource_title": "",
-    "resource_link": "",
-    "resource_description": ""
+    "commands": []
 }
 ```
 

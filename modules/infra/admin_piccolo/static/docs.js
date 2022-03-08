@@ -1,6 +1,28 @@
 docReady(() => {
     hljs.highlightAll();
     window.highlightJsBadge();
+
+    $("<div id='toc'></div>").insertAfter("#feedback-div")
+
+    document.querySelectorAll(".header-anchor").forEach(el => {
+        // Add el to table of contents
+        data = el.previousSibling.data
+        if(
+            data.startsWith("GET")
+            || data.startsWith("POST")
+            || data.startsWith("PUT")
+            || data.startsWith("PATCH")
+            || data.startsWith("DELETE")
+            || data.startsWith("HEAD")
+            || data.startsWith("OPTIONS")
+            || data.startsWith("PPROF")
+            || data.startsWith("WS")
+        ) {
+            return
+        }
+
+        $(`<a href='${el.href}'>${el.previousSibling.data}</a></br/>`).appendTo("#toc");
+    })
 })
 
 async function rateDoc() {
