@@ -114,3 +114,7 @@ h3:hover > .header-anchor {
     border-color: green;
     background-color: rgba(255, 0, 0, 0.1);
 }
+
+.admin-only {
+    display: none;
+}

@@ -2445,7 +2445,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "122e7f53-4fee-4744-b1ac-baee0b9b180a",
+    "id": "0440f138-b3b8-477a-bab6-5ad4c44df306",
     "reply": false,
     "star_rating": "0",
     "review_text": "",
@@ -2512,7 +2512,7 @@ set this a TargetType anyways so you might as well set it correctly.
 
 ```json
 {
-    "rid": "4e5f3d7b-3461-4b29-b766-82fd0b44cda3"
+    "rid": "cadd32f2-b7fe-40c6-b5cd-16d22d351e24"
 }
 ```
 
@@ -2583,7 +2583,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 
 ```json
 {
-    "rid": "3809397b-f9e5-471d-a18d-aaae78b292b7"
+    "rid": "cd16a048-54f8-45ef-bc5f-d38db0d8f9a0"
 }
 ```
 
@@ -2777,7 +2777,7 @@ This is the ``target_type``
 
 ```json
 {
-    "id": "e61796f0-d9e8-4854-a7e4-e587e4e9339f",
+    "id": "8e077c89-b7bf-44da-82b1-c43b0959abda",
     "target_type": 0
 }
 ```
@@ -2846,7 +2846,22 @@ the command depending on its ``name``.**
 
 ```json
 {
-    "commands": []
+    "commands": [
+        {
+            "cmd_type": 0,
+            "groups": [],
+            "name": "",
+            "vote_locked": false,
+            "description": "",
+            "args": [],
+            "examples": [],
+            "premium_only": false,
+            "notes": [],
+            "doc_link": "",
+            "id": null,
+            "nsfw": false
+        }
+    ]
 }
 ```
 

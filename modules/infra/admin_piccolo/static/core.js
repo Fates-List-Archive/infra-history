@@ -21,41 +21,9 @@ var alreadyUp = false
 
 var perms = {name: "Please wait for websocket to finish loading", perm: 0}
 
-var user = {username: "Please wait for websocket to finish loading"}
+var user = {id: "0", username: "Please wait for websocket to finish loading"}
 
-async function authWs() {
-    // Fetch base user information from server
-    let res = await fetch("/_user", {
-        method: "GET",
-        credentials: 'same-origin',
-        headers: {
-            "Frostpaw-Staff-Notify": "0.1.0",
-            "Frostpaw-Websocket-Conn": "connecting",
-            "Accept": "application/json"
-        },
-    })
-
-    wsData = {}
-
-    if(!res.ok) {
-        if(res.status == 502) {
-            console.log("Failed to connect to server during ws auth connection")
-            return
-        }
-        console.log("Using no-auth ws due to failed call to /_user")
-    } else {
-        try {
-            wsData = await res.json()
-        } catch {
-            console.log("Request was 200 yet was not valid JSON. Aborting WS. Likely user token mismatch")
-            return
-        }
-    }    
-
-    user = wsData
-
-    ws.send(JSON.stringify({request: "upgrade", data: wsData}))
-}
+const wsContentResp = new Set(['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify"])
 
 async function wsStart() {
     if(startingWs) {
@@ -74,8 +42,6 @@ async function wsStart() {
             console.log("Still connecting not sending")
             return
         }
-
-        authWs()
 
         $("#loader").html("<strong>Now sending auth to websocket</strong>")
 
@@ -104,7 +70,9 @@ async function wsStart() {
     ws.onmessage = function (event) {
         console.log(event.data);
         var data = JSON.parse(event.data)
-        if(data.resp == "doctree") {
+        if(data.resp == "user_info") {
+            user = data.user
+        } if(data.resp == "doctree") {
             console.log("WS: Got doctree")
             addedDocTree = true
             $(data.data).insertBefore("#doctree")
@@ -138,6 +106,10 @@ async function wsStart() {
                     localStorage.ackedMsg = JSON.stringify(ackedMsg);
                 }
             })
+        } else if(data.resp == "staff_verify_forced") {
+            console.log("WS: Got request to enforce staff verify")
+            loadContent("/staff-verify")
+            return
         } else if(data.resp == "perms") {
             if(!havePerm) {
                 $("#loader").remove()
@@ -149,50 +121,30 @@ async function wsStart() {
             staffPerm = data.data.perm
 
             // Remove admin panel
-            if(staffPerm < 2) {
-                delNotAdmin()
-                setInterval(delNotAdmin, 500)
+            if(staffPerm >= 2) {
+                $('.admin-only').css("display", "block")
             }
+            setInterval(() => {
+                if(staffPerm < 2) {
+                    $(".admin-only").css("display", "none")
+                }
+            })
         } else if(data.resp == "reset") {
             console.log("WS: Credentials reset")
             
             // Kill websocket
             ws.close(4999, "Credentials reset")
             document.querySelector("#verify-screen").innerHTML = "Credential reset successful!"
-        } else if(data.resp == "docs") {
-            console.log("WS: Got docs")   
+        } else if(wsContentResp.has(data.resp)) {
+            console.log(`WS: Got ${data.resp}`)   
             setData(data)
-        } else if(data.resp == "links") {
-            console.log("WS: Got links")   
-            setData(data)
-        } else if(data.resp == "staff_guide") {
-            console.log("WS: Got staff guide")   
-            setData(data)
-        } else if(data.resp == "index") {
-            console.log("WS: Got index")   
-            setData(data)
-        }
-        else if(data.resp == "loa") {
-            console.log("WS: Got loa")   
-            setData(data, () => {
-                ws.send(JSON.stringify({request: "loa"}))
-            })
+        } else if(data.resp == "user_action" || data.resp == "bot_action") {
+            alert(data.detail)
         }
     }      
 }
 
-async function upgradeAndSend(f) {
-    await authWs()
-    f()
-}
-
-function setData(data, noExtraCode=false, upgFunc=null) {
-    if(data.wait_for_upg) {
-        console.log("WS: Waiting for upgrade")
-        upgradeAndSend(upgFunc)
-        return
-    }
-
+function setData(data, noExtraCode=false) {
     if(data.detail) {
         alert(data.detail)
         return
@@ -228,13 +180,6 @@ function setData(data, noExtraCode=false, upgFunc=null) {
 
     contentLoadedOnce = true
     contentCurrPage = window.location.pathname
-}
-
-function delNotAdmin() {
-    $('#admin-panel-nav').remove()
-    $('#lynx-admin-nav').remove()
-    $('#staff-apps-nav').remove()
-    $('.admin-only').remove()
 }
 
 async function getNotifications() {
@@ -431,41 +376,51 @@ async function loadContent(loc) {
             ws.send(JSON.stringify({request: "loa"}))
         })
         return
-    }
-
-    console.log(loc)
-
-    if(loc.startsWith("/admin")) {
-        window.location.href = res.url
-    }
-
-    let res = await fetch(loc + '?json=true', {
-        method: "GET",
-        credentials: 'same-origin',
-        headers: {
-            "Frostpaw-Staff-Notify": "0.1.0",
-            "Accept": "application/json"
-        },
-    })
-
-    if(res.url.startsWith("https://fateslist.xyz/frostpaw/herb")) {
-        window.location.href = res.url
-    }
-
-    if(res.ok) {
-        let body = await res.json()
-        setData(body)
+    } else if(loc.startsWith("/staff-apps")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for staff-apps")
+            const urlParams = new URLSearchParams(window.location.search);
+            ws.send(JSON.stringify({request: "staff_apps", open: urlParams.get("open")}))
+        })
+        return
+    } else if(loc.startsWith("/user-actions")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for user-actions")
+            const urlParams = new URLSearchParams(window.location.search);
+            ws.send(JSON.stringify({request: "user_actions", data: {
+                add_staff_id: urlParams.get("add_staff_id"),
+            }}))
+        })
+        return
+    } else if(loc.startsWith("/requests")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for requests")
+            ws.send(JSON.stringify({request: "request_logs"}))
+        })
+        return 
+    } else if(loc.startsWith("/reset")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for reset_page")
+            ws.send(JSON.stringify({request: "reset_page"}))
+        })
+        return 
+    } else if(loc.startsWith("/bot-actions")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for bot-actions")
+            ws.send(JSON.stringify({request: "bot_actions"}))
+        })
+        return
+    } else if(loc.startsWith("/staff-verify")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for staff-verify")
+            ws.send(JSON.stringify({request: "staff_verify"}))
+        })
+        return
+    } else if(loc.startsWith("/admin")) {
+        window.location.href = loc
     } else {
-        let status = res.status
-
-        if(status == 404) {
-            status = `<h1>404</h1><h3>Page not found</h3>`
-        } else {
-            status = `<h1>${status}</h1>`
-        }
-
         document.querySelector("#title-full").innerHTML = "Animus magic is broken today!"
-        document.querySelectorAll(".content")[0].innerHTML = `${status}<h4><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a></h4>`
+        document.querySelectorAll(".content")[0].innerHTML = `<h4>404<h4><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a></h4>`
     }
 
     linkMod()
@@ -474,17 +429,17 @@ async function loadContent(loc) {
 async function linkMod() {
     links = document.querySelectorAll("a")
     links.forEach(link => {
-        console.log(link, link.href, link.hasPatched, link.hasPatched == undefined)
+        console.debug(link, link.href, link.hasPatched, link.hasPatched == undefined)
         if(link.href.startsWith("https://lynx.fateslist.xyz/") && link.hasPatched == undefined) {
             if(link.href == "https://lynx.fateslist.xyz/#") {
                 return // Don't patch # elements
             } 
-            if(link.href == window.location.href || link.href.endsWith("#")) {
+            if(link.href == window.location.href || link.href.endsWith("#") || link.pathname == window.location.pathname) {
                 return // Don't patch if same url
             }
 
             link.hasPatched = true
-            console.log("Add patch")
+            console.debug("Add patch")
             link.addEventListener('click', event => {
                 if ( event.preventDefault ) event.preventDefault();
                 // Now add some special code
@@ -500,4 +455,13 @@ async function linkMod() {
             })
         }
     })
+}
+
+function loginUser() {
+    if(user.id == "0" || !user.id) {
+        window.location.href = `https://fateslist.xyz/frostpaw/herb?redirect=${window.location.href}`
+    } else {
+        // TODO: Logout functionality in sunbeam
+        window.location.href = `https://fateslist.xyz/frostpaw/deathberry?redirect=${window.location.href}`
+    }
 }

@@ -154,6 +154,7 @@ class Notifications(Table, tablename="lynx_notifications"):
     type = Text(choices=_NotificationType)
     message = Text(null=False)
     staff_only = Boolean(default=False, null = False)
+    acked_users = Array(base_column = BigInt(), default=[])
 
 class LynxRatings(Table, tablename="lynx_ratings"):
     id = UUID(primary_key=True, default=uuid.uuid4)

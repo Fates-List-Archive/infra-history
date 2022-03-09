@@ -31,7 +31,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback"
     />
-    <link rel="stylesheet" href="/_static/core.css?v=2" />
+    <link rel="stylesheet" href="/_static/core.css?v=3" />
   </head>
   <body class="sidebar-mini sidebar-closed sidebar-collapse">
     <div class="wrapper">
@@ -46,13 +46,13 @@
             <a href="https://lynx.fateslist.xyz" class="nav-link">Home</a>
           </li>
           <li class="nav-item d-none d-sm-inline-block admin-only">
-            <a href="https://lynx.fateslist.xyz/admin" class="nav-link">Admin</a>
+            <a href="https://lynx.fateslist.xyz/admin" class="nav-link admin-only">Admin</a>
           </li>
           <li class="nav-item d-none d-sm-inline-block admin-only">
-            <a href="https://lynx.fateslist.xyz/bot-actions" class="nav-link">Bot Actions</a>
+            <a href="https://lynx.fateslist.xyz/bot-actions" class="nav-link admin-only">Bot Actions</a>
           </li>
           <li class="nav-item d-none d-sm-inline-block admin-only">
-            <a href="https://lynx.fateslist.xyz/user-actions" class="nav-link">User Actions</a>
+            <a href="https://lynx.fateslist.xyz/user-actions" class="nav-link admin-only">User Actions</a>
           </li>
         </ul>
         <ul class="navbar-nav ml-auto">
@@ -99,7 +99,13 @@
                   <p>Home</p>
                 </a>
               </li>
-              <li class="nav-item" id="lynx-admin-nav">
+              <li class="nav-item">
+                <a id="login-nav" href="#" onclick="loginUser()" class="nav-link">
+                <i class="nav-icon fa-solid fa-arrow-right-to-bracket"></i>
+                  <p>Login</p>
+                </a>
+              </li>
+              <li class="nav-item admin-only" id="lynx-admin-nav">
                 <a href="https://lynx.fateslist.xyz/admin" class="nav-link">
                 <i class="nav-icon fa-solid fa-server"></i>
                   <p>Piccolo Admin</p>
@@ -129,7 +135,7 @@
                   <p>Links</p>
                 </a>
               </li>
-              <li id="admin-panel-nav" class="nav-item">
+              <li id="admin-panel-nav" class="nav-item admin-only">
                 <a id="admin-panel-nav-link" href="#" class="nav-link">
                   <i class="nav-icon fa-solid fa-candy-cane"></i>
                   <p>Admin Panel <i class="right fas fa-angle-left"></i></p>
@@ -138,7 +144,7 @@
                   <li class="nav-item">
                     <a id="bot-actions-nav" href="https://lynx.fateslist.xyz/bot-actions" class="nav-link">
                     <i class="far fa-circle nav-icon"></i>
-                    <p>
+                      <p>
                         Bot Actions
                         <span class="right badge badge-info">Beta</span>
                       </p>
@@ -198,5 +204,5 @@
       <div id="sidebar-overlay"></div>
     </div>
   </body>
-  <script src="/_static/core.js?v=fjfieiiffkdgkkdwgfjfjdd-loa"></script>
+  <script src="/_static/core.js?v=cicada33434333390333dd3f23342d33f43s4"></script>
 </html>  
