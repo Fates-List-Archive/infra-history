@@ -138,8 +138,16 @@ async function wsStart() {
         } else if(wsContentResp.has(data.resp)) {
             console.log(`WS: Got ${data.resp}`)   
             setData(data)
-        } else if(data.resp == "user_action" || data.resp == "bot_action") {
+        } else if(data.resp == "user_action" || data.resp == "bot_action" || data.resp == "eternatus") {
             alert(data.detail)
+        } else if(data.resp == "cosmog") {
+            if(data.pass) {
+                alert(data.detail)
+                document.querySelector("#verify-screen").innerHTML = `<h4>Verified</h4><pre>Your lynx password is ${data.pass}</pre><br/><div id="verify-parent"><button id="verify-btn" onclick="window.location.href = '/'">Open Lynx</button></div>`
+            } else {
+                alert("Error: " + data.detail)
+                document.querySelector("#verify-btn").innerText = "Verify";    
+            }
         }
     }      
 }
@@ -173,6 +181,7 @@ function setData(data, noExtraCode=false) {
     }    
 
     if(!noExtraCode) {
+        extraCode()
         linkMod()
     } else if(noExtraCode && !contentLoadedOnce) {
         linkMod()
@@ -212,6 +221,8 @@ function docReady(fn) {
 
 async function extraCode() {
     $(".temp-item").remove()
+
+    loadDocs()
 
     var currentURL = window.location.pathname
     console.log('Chnaging Breadcrumb Paths')
@@ -309,8 +320,16 @@ function waitForWsAndLoad(data, f) {
 }
 
 myPermsInterval = -1
+inStaffVerify = false
 
 async function loadContent(loc) {
+    if(loc.startsWith("/staff-verify") && inStaffVerify) {
+        console.log("Ignoring fake alarm for force staff verify")
+        return
+    }
+
+    inStaffVerify = false
+
     clearInterval(myPermsInterval)
 
     loc = loc.replace('https://lynx.fateslist.xyz', '')
@@ -411,6 +430,7 @@ async function loadContent(loc) {
         })
         return
     } else if(loc.startsWith("/staff-verify")) {
+        inStaffVerify = true
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for staff-verify")
             ws.send(JSON.stringify({request: "staff_verify"}))
@@ -458,10 +478,11 @@ async function linkMod() {
 }
 
 function loginUser() {
-    if(user.id == "0" || !user.id) {
+    /* if(user.id == "0" || !user.id) {
         window.location.href = `https://fateslist.xyz/frostpaw/herb?redirect=${window.location.href}`
     } else {
         // TODO: Logout functionality in sunbeam
         window.location.href = `https://fateslist.xyz/frostpaw/deathberry?redirect=${window.location.href}`
-    }
+    } */
+    window.location.href = `https://fateslist.xyz/frostpaw/herb?redirect=${window.location.href}`
 }

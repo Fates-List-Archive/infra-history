@@ -907,49 +907,6 @@ async def unset_flags(request: Request, data: ActionWithReason):
 
     return {"detail": "Successfully unset flag"}
 
-@app.post("/verify-code")
-async def verify_code(request: Request):
-    if request.state.is_verified:
-        return ORJSONResponse({
-            "detail": "You are already verified"
-        },
-        status_code=400
-        )
-    try:
-        body = await request.json()
-        code = body["code"]
-    except:
-        return ORJSONResponse({"detail": "Bad Request"}, status_code=400)
-
-    if not code_check(body["code"], int(request.scope["sunbeam_user"]["user"]["id"])):
-        return ORJSONResponse({"detail": "Invalid code"}, status_code=400)
-    else:
-        username = request.scope["sunbeam_user"]["user"]["username"]
-        password = get_token(96)
-
-        try:
-            await app.state.db.execute("DELETE FROM piccolo_user WHERE username = $1", username)
-            await BaseUser.create_user(
-                username=username, 
-                password=password,
-                email=username + "@fateslist.xyz", 
-                active=True,
-                admin=True
-            )
-        except:
-            return ORJSONResponse({"detail": "Failed to create user on lynx"}, status_code=500)
-
-        await app.state.db.execute(
-            "UPDATE users SET staff_verify_code = $1 WHERE user_id = $2", 
-            body["code"],
-            int(request.scope["sunbeam_user"]["user"]["id"]),
-        )
-
-        await add_role(staff_server, request.scope["sunbeam_user"]["user"]["id"], access_granted_role, "Access granted to server")
-        await add_role(staff_server, request.scope["sunbeam_user"]["user"]["id"], request.state.member.staff_id, "Gets corresponding staff role")
-        
-        return ORJSONResponse({"detail": "Successfully verified staff member", "pass": password})
-
 @app.get("/_new_html")
 def new_html(request: Request):
     if request.headers.get("CF-Connecting-IP"):
@@ -978,6 +935,46 @@ class ConnectionManager:
     async def broadcast(self, message: str):
         for connection in self.active_connections:
             await connection.send_text(message)
+    
+    async def verify_code(self, ws: WebSocket, code: str):
+        if not ws.state.user:
+            return
+
+        if ws.state.verified:
+            return await ws.send_json({
+                "resp": "cosmog",
+                "detail": "You are already verified"
+            })            
+
+        if not code_check(code, int(ws.state.user["id"])):
+            return await ws.send_json({"resp": "cosmog", "detail": "Invalid code"})
+        else:
+            username = ws.state.user["username"]
+            password = get_token(96)
+
+            try:
+                await app.state.db.execute("DELETE FROM piccolo_user WHERE username = $1", username)
+                await BaseUser.create_user(
+                    username=username, 
+                    password=password,
+                    email=username + "@fateslist.xyz", 
+                    active=True,
+                    admin=True
+                )
+            except:
+                return await ws.send_json({"resp": "cosmog", "detail": "Failed to create user on lynx. Please contact Rootspring#6701"})
+
+            await app.state.db.execute(
+                "UPDATE users SET staff_verify_code = $1 WHERE user_id = $2", 
+                code,
+                int(ws.state.user["id"]),
+            )
+
+            await add_role(staff_server, ws.state.user["id"], access_granted_role, "Access granted to server")
+            await add_role(staff_server, ws.state.user["id"], ws.state.member.staff_id, "Gets corresponding staff role")
+            
+            return await ws.send_json({"resp": "cosmog", "detail": "Successfully verified staff member", "pass": password})
+
 
     async def send_request_logs(self, ws: WebSocket):
         requests = await app.state.db.fetch("SELECT user_id, method, url, status_code, request_time from lynx_logs")
@@ -1090,7 +1087,6 @@ placeholder='I feel like you could...'
             "resp": "docs",
             "title": page.split('/')[-1].replace('-', ' ').title(),
             "data": md.render(md_data).replace("<table", "<table class='table'").replace(".md", ""),
-            "ext_script": "/_static/docs.js?v=49433d63744",
         }, ws)
     
     async def send_loa(self, ws: WebSocket):
@@ -1588,27 +1584,9 @@ Please check site pages before approving/denying. You can save lots of time by d
             "script": """
     async function verify() {
         document.querySelector("#verify-btn").innerText = "Verifying...";
+        let code = document.querySelector("#staff-verify-code").value
 
-        let res = await fetch("/verify-code", {
-            method: "POST",
-            credentials: 'same-origin',
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                "code": document.querySelector("#staff-verify-code").value
-            })
-        })
-
-        if(res.ok) {
-            let json = await res.json()
-            document.querySelector("#verify-screen").innerHTML = `<h4>Verified</h4><pre>Your lynx password is ${json.pass}</pre><br/><div id="verify-parent"><button id="verify-btn" onclick="window.location.href = '/'">Open Lynx</button></div>`
-            await authWs();
-        } else {
-            let json = await res.json()
-            alert("Error: " + json.detail)
-            document.querySelector("#verify-btn").innerText = "Verify";
-        }
+        ws.send(JSON.stringify({request: "cosmog", code: code}))
     }
     """ 
         }, ws)
@@ -1638,6 +1616,31 @@ Please check site pages before approving/denying. You can save lots of time by d
             await self.send_personal_message({"resp": "bot_action", "detail": f"{type(exc)}: {str(exc)}"}, ws)
             return
         return await action(ws, action_data)
+    
+    async def send_docs_feedback(self, ws: WebSocket, data: dict):
+        if len(data.get("feedback", "")) < 5:
+            return await ws.send_json({"resp": "eternatus", "detail": "Feedback must be greater than 10 characters long!"})
+        
+        if ws.state.user:
+            user_id = int(ws.state.user["id"])
+            username = ws.state.user["username"]
+        else:
+            user_id = None
+            username = "Anonymous"
+
+        if not data.get("page", "").startswith("/"):
+            return await ws.send_json({"resp": "eternatus", "detail": "Unexpected page!"})
+        
+        await app.state.db.execute(
+            "INSERT INTO lynx_ratings (feedback, page, username_cached, user_id) VALUES ($1, $2, $3, $4)",
+            data["feedback"],
+            data["page"],
+            username,
+            user_id
+        )
+        
+        return await ws.send_json({"resp": "eternatus", "detail": "Successfully rated"})
+
 
 manager = ConnectionManager()
 
@@ -1680,6 +1683,7 @@ async def ws(ws: WebSocket):
             ws.state.verified = True
 
             if not code_check(data["staff_verify_code"], int(sunbeam_user["user"]["id"])):
+                await manager.send_personal_message({"resp": "staff_verify_forced"}, ws) # Request staff verify
                 ws.state.verified = False
 
         except Exception as exc:
@@ -1698,8 +1702,8 @@ async def ws(ws: WebSocket):
 
             if ws.state.user is not None:
                 # Check perms as this user is logged in
-                check = await app.state.db.fetchval(
-                    "SELECT user_id FROM users WHERE user_id = $1 AND api_token = $2", 
+                check = await app.state.db.fetchrow(
+                    "SELECT user_id, staff_verify_code FROM users WHERE user_id = $1 AND api_token = $2", 
                     int(ws.state.user["id"]), 
                     ws.state.token
                 )
@@ -1713,6 +1717,10 @@ async def ws(ws: WebSocket):
                 if ws.state.member.perm != member.perm:
                     ws.state.member = member
                     await manager.send_personal_message({"resp": "perms", "data": ws.state.member.dict()}, ws)
+
+                if ws.state.verified and not code_check(check["staff_verify_code"], int(sunbeam_user["user"]["id"])):
+                    await manager.send_personal_message({"resp": "staff_verify_forced"}, ws) # Request staff verify
+                    ws.state.verified = False
 
             if data.get("request") == "notifs":
                 asyncio.create_task(manager.send_notifs(ws))
@@ -1804,47 +1812,14 @@ In case, you haven't went through staff verification and you somehow didn't get 
                 asyncio.create_task(manager.bot_action(ws, data))
             elif data.get("request") == "request_logs":
                 asyncio.create_task(manager.send_request_logs(ws))
+            elif data.get("request") == "eternatus":
+                asyncio.create_task(manager.send_docs_feedback(ws, data))
+            elif data.get("request") == "cosmog":
+                asyncio.create_task(manager.verify_code(ws, data.get("code", "")))
 
     except WebSocketDisconnect:
         manager.disconnect(ws)
         await manager.broadcast(orjson.dumps({"detail": "Client left the chat"}).decode())
-
-class Rating(BaseModel):
-    feedback: str
-    page: str
-
-@app.get("/_user")
-async def user_ws_get(request: Request):
-    if not request.headers.get("Frostpaw-Websocket-Conn"):
-        return {}
-    await auth_user_cookies(request)
-    return request.scope.get("sunbeam_user", {})
-
-@app.post("/_eternatus")
-async def eternatus_rating(request: Request, rating: Rating):
-    await auth_user_cookies(request)
-    if len(rating.feedback) < 5:
-        return ORJSONResponse({"detail": "Feedback must be greater than 10 characters long!"}, status_code=400)
-    
-    if request.scope.get("sunbeam_user"):
-        user_id = int(request.scope["sunbeam_user"]["user"]["id"])
-        username = request.scope["sunbeam_user"]["user"]["username"]
-    else:
-        user_id = None
-        username = "Anonymous"
-
-    if not rating.page.startswith("/"):
-        return ORJSONResponse({"detail": "Unexpected page!"}, status_code=400)
-    
-    await app.state.db.execute(
-        "INSERT INTO lynx_ratings (feedback, page, username_cached, user_id) VALUES ($1, $2, $3, $4)",
-        rating.feedback,
-        rating.page,
-        username,
-        user_id
-    )
-    
-    return {"detail": "Successfully rated"}
 
 class UserActionWithReason(BaseModel):
     user_id: str

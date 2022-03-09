@@ -1,4 +1,4 @@
-docReady(() => {
+async function loadDocs() {
     hljs.highlightAll();
     window.highlightJsBadge();
 
@@ -23,23 +23,11 @@ docReady(() => {
 
         $(`<a href='${el.href}'>${el.previousSibling.data}</a></br/>`).appendTo("#toc");
     })
-})
+}
 
 async function rateDoc() {
     feedback = document.querySelector("#doc-feedback").value
-    let res = await fetch("/_eternatus", {
-        method: "POST",
-        credentials: 'same-origin',
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            "feedback": feedback,
-            "page": window.location.pathname
-        }),
-    })
-    let json = await res.json()
-    alert(json.detail)
+    ws.send(JSON.stringify({request: "eternatus", feedback: feedback, page: window.location.pathname}))
 }
 
 async function genClientWhitelist() {
