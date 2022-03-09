@@ -31,7 +31,7 @@ async function wsStart() {
         return
     }
 
-    document.querySelector("#verify-screen").innerHTML = `<div id="loader"><strong>WS is starting. Certain actions may be unavailable</strong></div>${document.querySelector("#verify-screen").innerHTML}`
+    $("#ws-info").html("Starting websocket...")
 
     startingWs = true
     
@@ -43,17 +43,16 @@ async function wsStart() {
             return
         }
 
-        $("#loader").html("<strong>Now sending auth to websocket</strong>")
-
         wsUp = true
         if(!addedDocTree) {
-            $("#loader").html("Fetching doctree from websocket")
+            $("#ws-info").html("Fetching doctree from websocket")
             ws.send(JSON.stringify({request: "doctree"}))
         } 
         getNotifications() // Get initial notifications
     }
 
     ws.onclose = function (event) {
+        $("#ws-info").html("Websocket unexpectedly closed, likely server maintenance")
         console.log(event, "WS: Closed due to an error")
         wsUp = false
         startingWs = false
@@ -61,6 +60,7 @@ async function wsStart() {
     }
 
     ws.onerror = function (event) {
+        $("#ws-info").html("Websocket unexpectedly errored, likely server maintenance")
         console.log(event, "WS: Closed due to an error")
         wsUp = false
         startingWs = false
@@ -71,6 +71,7 @@ async function wsStart() {
         console.log(event.data);
         var data = JSON.parse(event.data)
         if(data.resp == "user_info") {
+            $("#ws-info").html("Websocket auth success.")
             user = data.user
         } if(data.resp == "doctree") {
             console.log("WS: Got doctree")
@@ -79,6 +80,7 @@ async function wsStart() {
             extraCode()
         } else if(data.resp == "notifs") {
             console.log("WS: Got notifications")
+            $("#ws-info").text(`Websocket still connected as of ${Date()}`)
             data.data.forEach(function(notif) {
                 // Before ignoring acked message, check if its pushed
                 if(!pushedMessages.includes(notif.id)) {
@@ -111,10 +113,7 @@ async function wsStart() {
             loadContent("/staff-verify")
             return
         } else if(data.resp == "perms") {
-            if(!havePerm) {
-                $("#loader").remove()
-            }
-
+            $("#ws-info").html(`Websocket perm update done to ${data.data}`)
             havePerm = true
             console.log("WS: Got permissions")
             perms = data.data
@@ -130,6 +129,7 @@ async function wsStart() {
                 }
             })
         } else if(data.resp == "reset") {
+            $("#ws-info").html(`Websocket cred-reset called`)
             console.log("WS: Credentials reset")
             
             // Kill websocket
