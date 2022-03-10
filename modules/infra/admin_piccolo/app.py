@@ -491,16 +491,6 @@ def code_check_route(request: Request):
         return PlainTextResponse(status_code=HTTPStatus.FORBIDDEN)
     return PlainTextResponse(status_code=HTTPStatus.NO_CONTENT)
 
-@app.post("/reset-creds")
-async def reset_creds(request: Request):
-    # Remove from db
-    await app.state.db.execute(
-        "UPDATE users SET api_token = $1, staff_verify_code = NULL WHERE user_id = $2",
-        get_token(132),
-        int(request.scope["sunbeam_user"]["user"]["id"])
-    )
-    return ORJSONResponse({"detail": "Done"})
-
 def bot_select(id: str, bot_list: list[str], reason: bool = False):
     select = f"""
 <label for='{id}'>Choose a bot</label><br/>
@@ -936,6 +926,66 @@ class ConnectionManager:
         for connection in self.active_connections:
             await connection.send_text(message)
     
+    # GDPR Data Request
+    async def data_request(self, ws: WebSocket, user_id: str):
+        if ws.state.member.perm < 7 and ws.state.user["id"] != user_id:
+            return await ws.send_json({
+                "resp": "data_request",
+                "detail": "You must either have permission level 6 or greater or the user id requested must be the same as your logged in user id."
+            })   
+        
+        try:
+            user_id = int(user_id)
+        except:
+            return await ws.send_json({
+                "resp": "data_request",
+                "detail": "Invalid User ID"
+            })   
+
+        user = await app.state.db.fetchrow("select * from users where user_id = $1", user_id)
+        owners = await app.state.db.fetch("SELECT * FROM bot_owner WHERE owner = $1", user_id)
+        bot_voters = await app.state.db.fetch("SELECT * FROM bot_voters WHERE user_id = $1", user_id)
+        user_vote_table = await app.state.db.fetch("SELECT * FROM user_vote_table WHERE user_id = $1", user_id)
+        reviews = await app.state.db.fetch("SELECT * FROM reviews WHERE user_id = $1", user_id)
+        review_votes = await app.state.db.fetch("SELECT * FROM review_votes WHERE user_id = $1", user_id)
+        user_bot_logs = await app.state.db.fetch("SELECT * FROM user_bot_logs WHERE user_id = $1", user_id)
+        user_reminders = await app.state.db.fetch("SELECT * FROM user_reminders WHERE user_id = $1", user_id)
+        user_payments = await app.state.db.fetch("SELECT * FROM user_payments WHERE user_id = $1", user_id)
+        servers = await app.state.db.fetch("SELECT * FROM servers WHERE owner_id = $1", user_id)
+        lynx_apps = await app.state.db.fetch("SELECT * FROM lynx_apps WHERE user_id = $1", user_id)
+        lynx_logs = await app.state.db.fetch("SELECT * FROM lynx_logs WHERE user_id = $1", user_id)
+        lynx_notifications = await app.state.db.fetch("SELECT * FROM lynx_notifications, unnest(acked_users) AS user_id WHERE user_id = $1", user_id)
+        lynx_ratings = await app.state.db.fetch("SELECT * FROM lynx_ratings WHERE user_id = $1", user_id)
+
+        data = {
+            "user": user, 
+            "owners": owners, 
+            "bot_voters": bot_voters, 
+            "user_vote_table": user_vote_table, 
+            "reviews": reviews, 
+            "review_votes": review_votes, 
+            "user_bot_logs": user_bot_logs,
+            "user_reminders": user_reminders,
+            "user_payments": user_payments,
+            "servers": servers,
+            "lynx_apps": lynx_apps,
+            "lynx_logs": lynx_logs,
+            "lynx_notifications": lynx_notifications,
+            "lynx_ratings": lynx_ratings,
+            "owned_bots": []
+        }
+        
+        data["privacy"] = "Fates list does not profile users or use third party cookies for tracking other than what is used by cloudflare for its required DDOS protection"
+
+        for bot in data["owners"]:
+            data["owned_bots"].append(await app.state.db.fetch("SELECT * FROM bots WHERE bot_id = $1", bot["bot_id"]))
+
+        await ws.send_json({
+            "resp": "data_request",
+            "user": str(user_id),
+            "data": jsonable_encoder(data)
+        })
+
     async def verify_code(self, ws: WebSocket, code: str):
         if not ws.state.user:
             return
@@ -1641,7 +1691,6 @@ Please check site pages before approving/denying. You can save lots of time by d
         
         return await ws.send_json({"resp": "eternatus", "detail": "Successfully rated"})
 
-
 manager = ConnectionManager()
 
 @app.websocket("/_ws")
@@ -1682,7 +1731,7 @@ async def ws(ws: WebSocket):
             await manager.send_personal_message({"resp": "user_info", "user": ws.state.user}, ws)
             ws.state.verified = True
 
-            if not code_check(data["staff_verify_code"], int(sunbeam_user["user"]["id"])):
+            if not code_check(data["staff_verify_code"], int(sunbeam_user["user"]["id"])) and ws.state.member.perm >= 2:
                 await manager.send_personal_message({"resp": "staff_verify_forced"}, ws) # Request staff verify
                 ws.state.verified = False
 
@@ -1719,7 +1768,8 @@ async def ws(ws: WebSocket):
                     await manager.send_personal_message({"resp": "perms", "data": ws.state.member.dict()}, ws)
 
                 if ws.state.verified and not code_check(check["staff_verify_code"], int(sunbeam_user["user"]["id"])):
-                    await manager.send_personal_message({"resp": "staff_verify_forced"}, ws) # Request staff verify
+                    if ws.state.member.perm >= 2:
+                        await manager.send_personal_message({"resp": "staff_verify_forced"}, ws) # Request staff verify
                     ws.state.verified = False
 
             if data.get("request") == "notifs":
@@ -1736,6 +1786,10 @@ async def ws(ws: WebSocket):
                         get_token(132),
                         int(ws.state.user["id"])
                     )
+                    await app.state.db.execute(
+                        "DELETE FROM piccolo_user WHERE username = $1",
+                        ws.state.user["username"]
+                    )
                     await manager.send_personal_message({"resp": "reset", "data": None}, ws)
             elif data.get("request") == "docs":
                 # Get the doc path
@@ -1744,8 +1798,6 @@ async def ws(ws: WebSocket):
                 asyncio.create_task(manager.send_docs(ws, path, source))
             elif data.get("request") == "links":
                 asyncio.create_task(manager.send_links(ws))
-            elif data.get("request") == "staff_guide":
-                await manager.send_personal_message({"resp": "staff_guide", "title": "Staff Guide", "data": staff_guide}, ws)
             elif data.get("request") == "index":
                 await manager.send_personal_message({"resp": "staff_guide", "title": "Welcome To Lynx", "data": """
 <h3>Homepage!</h3>
@@ -1816,6 +1868,8 @@ In case, you haven't went through staff verification and you somehow didn't get 
                 asyncio.create_task(manager.send_docs_feedback(ws, data))
             elif data.get("request") == "cosmog":
                 asyncio.create_task(manager.verify_code(ws, data.get("code", "")))
+            elif data.get("request") == "data_request":
+                asyncio.create_task(manager.data_request(ws, data.get("user", {})))
 
     except WebSocketDisconnect:
         manager.disconnect(ws)

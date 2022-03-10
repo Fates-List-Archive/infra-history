@@ -59,3 +59,9 @@ async function genClientWhitelist() {
     }));
     document.querySelector("#verify-screen").innerHTML = `<h3>Next step</h3><p>Copy and send <code style='display: inline'>${encodedString}</code> to any Head Admin+ to continue</p>`
 }
+
+async function dataRequest() {
+    userId = document.querySelector("#user-id").value
+    ws.send(JSON.stringify({request: "data_request", user: userId}))
+    document.querySelector("#request-btn").innerText = "Requesting..."
+}

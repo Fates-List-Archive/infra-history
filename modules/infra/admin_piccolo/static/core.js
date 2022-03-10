@@ -25,6 +25,14 @@ var user = {id: "0", username: "Please wait for websocket to finish loading"}
 
 const wsContentResp = new Set(['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify"])
 
+function downloadTextFile(text, name) {
+    const a = document.createElement('a');
+    const type = name.split(".").pop();
+    a.href = URL.createObjectURL( new Blob([text], { type:`text/${type === "txt" ? "plain" : type}` }) );
+    a.download = name;
+    a.click();
+  }  
+
 async function wsStart() {
     if(startingWs) {
         console.log("NOTE: Not starting WS when already starting or critically aborted")
@@ -77,7 +85,6 @@ async function wsStart() {
             console.log("WS: Got doctree")
             addedDocTree = true
             $(data.data).insertBefore("#doctree")
-            extraCode()
         } else if(data.resp == "notifs") {
             console.log("WS: Got notifications")
             $("#ws-info").text(`Websocket still connected as of ${Date()}`)
@@ -147,6 +154,20 @@ async function wsStart() {
             } else {
                 alert("Error: " + data.detail)
                 document.querySelector("#verify-btn").innerText = "Verify";    
+            }
+        } else if(data.resp == "data_request") {
+            console.log("WS: Got data request")
+            if(data.detail) {
+                alert(data.detail)
+                document.querySelector("#request-btn").innerText = "Request"
+                return
+            } else if(data.data) {
+                downloadTextFile(JSON.stringify(data.data), `data-request-${data.user}.json`)
+                hljs.highlightAll();
+                window.highlightJsBadge();
+                document.querySelector("#request-btn").innerText = "Requested"
+                document.querySelector("#request-btn").ariaDisabled = true
+                document.querySelector("#request-btn").setAttribute("disabled", "true")
             }
         }
     }      
@@ -220,6 +241,7 @@ function docReady(fn) {
 }    
 
 async function extraCode() {
+    console.log({extraCode})
     $(".temp-item").remove()
 
     loadDocs()
@@ -355,10 +377,14 @@ async function loadContent(loc) {
         return
     } else if(loc.startsWith("/staff-guide")) {
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for staff-guide")
-            ws.send(JSON.stringify({request: "staff_guide"}))
+            ws.send(JSON.stringify({request: "docs", "path": "staff-guide", source: false}))
+            return
         })
-        return
+    } else if(loc.startsWith("/privacy")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            ws.send(JSON.stringify({request: "docs", "path": "privacy", source: false}))
+            return
+        })
     } else if(loc == "/" || loc == "") {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for index")
@@ -439,7 +465,7 @@ async function loadContent(loc) {
     } else if(loc.startsWith("/admin")) {
         window.location.href = loc
     } else {
-        document.querySelector("#title-full").innerHTML = "Animus magic is broken today!"
+        document.querySelector("#verify-screen").innerHTML = "Animus magic is broken today!"
         document.querySelectorAll(".content")[0].innerHTML = `<h4>404<h4><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a></h4>`
     }
 
@@ -468,7 +494,6 @@ async function linkMod() {
                     $(".active").toggleClass("active")
                     $(".breadcrumb-temp").remove()
                     await loadContent(link.href)
-                    await extraCode()
                 }
 
                 handler()
