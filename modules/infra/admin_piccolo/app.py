@@ -909,6 +909,8 @@ async def reset_all_votes(request: Request, data: ActionWithReason):
         data.reason = "Monthly Vote Reset"
 
     async with app.state.db.acquire() as conn:
+        top_voted = await conn.fetch("SELECT bot_id, username_cached, votes, total_votes FROM bots WHERE state = 0 OR "
+                                     "state = 6 ORDER BY votes DESC, total_votes DESC LIMIT 7")
         async with conn.transaction():
             bots = await app.state.db.fetch("SELECT bot_id, votes FROM bots")
             for bot in bots:
@@ -918,12 +920,25 @@ async def reset_all_votes(request: Request, data: ActionWithReason):
             await conn.execute("DELETE FROM user_vote_table")
 
     embed = Embed(
+        url="https://fateslist.xyz",
         title="All Bot Votes Reset",
         color=0x00ff00,
         description=f"<@{request.state.user_id}> has resetted all votes!\n\nThank you for using Fates List :heart:",
     )
 
     embed.add_field(name="Reason", value=data.reason)
+
+    top_voted_str = ""
+    i = 1
+    for bot in top_voted:
+        add = f"**#{i}.** {bot['username_cached']} - {bot['votes']} votes and {bot['total_votes']} total " \
+                         f"votes. GG!\n"
+        if len(top_voted_str) + len(add) > 2048:
+            break
+        else:
+            top_voted_str += add
+
+    embed.add_field(name="Top Voted", value=top_voted_str)
 
     await redis_ipc_new(app.state.redis, "SENDMSG",
                         msg={"content": "", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
@@ -1628,7 +1643,7 @@ Please check site pages before approving/denying. You can save lots of time by d
 
 <textarea
 id="reset-all-votes-reason"
-placeholder="Reason for resetting all votes"
+placeholder="Reason for resetting all votes. Defaults to 'Monthly Votes Reset'"
 ></textarea>
 
 <button onclick="resetAllVotes()">Reset All</button>
