@@ -70,6 +70,15 @@ These are some requirements we test for and require. Note that this list is **no
 
 ### Certification
 
+This section includes the *additional* requirements for certification. This list builds *on top of* the above basic Bot Requirements
+
+::: info
+
+- You can certify a bot from `Bot Settings`
+- A bot must first be approved before it can be certified
+
+:::
+
 <blockquote class="quote">
 
 ### Basics
