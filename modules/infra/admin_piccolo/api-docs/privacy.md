@@ -187,6 +187,8 @@ We log all admin actions taken on Lynx for anti-nuke and debugging purposes. We 
 
 </blockquote>
 
+<blockquote class="quote">
+
 #### Security
 
 1. Our site is secure and we try to ensure that only you and Fates List Staff can edit your bot and that all actions require proper permission and clearance to be used. We may regenerate API tokens if needed.
