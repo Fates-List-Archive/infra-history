@@ -1,5 +1,7 @@
 ### Bot Requirements
 
+<blockquote class="quote">
+
 #### Basics
 
 1. It is perfectly OK to submit bots and servers that are in competition with Fates List (such as API/manager bots of other bot lists with their permission)
@@ -9,6 +11,11 @@
 5. Your bot must follow the Discord ToS and guidelines. This also includes no invite rewards, no nuking etc.
 6. Custom bots based of/dependant on/running an instance of another bot such as botmakers not allowed by discord, BotGhost, MEE6 Premium, Wick VIP is prohibited unless it has unique features that you have added to it and can be configured on other servers by users.
 7. For frameworks such as redbot, you must have at least 3 custom made cogs (or the equivalent for other frameworks). You must give credits to any framework you are using. *BDFD/BDScript/other bot makers are not allowed on Fates List unless it is also allowed by Discord and your bot is high-quality and has features*
+
+
+</blockquote>
+
+<blockquote class="quote">
 
 #### Commands
 
@@ -21,11 +28,21 @@
 7. Bots *should* have at least 5 working commands and at least 80% of commands shown in its help command working. If your bot has a really unique feature however, this rule may be reconsidered for your bot.
 8. Sensitive commands (such as eval) should be locked to bot owners only. Fates List is not responsible for the code you run or for any arbitary code execution/privilege escalation on your bot.
 
+
+</blockquote>
+
+<blockquote class="quote">
+
 #### Prefixes
 
 1. Bots with common prefixes (`!`, `?`, `.`, `;`) should have a customizable prefix or they may be muted on the support server. You may change the prefix for just Fates List if you want to and staff can do it for you if you tell them the command.
 2. You should use the Customizable Prefix feature in your bots settings to denote whather custom prefixes are supported. This is to make it easier for users to know this
 3. Your bot must have an easy way to find its prefix. Some good places for this are on bot mentions and bot status
+
+
+</blockquote>
+
+<blockquote class="quote">
 
 #### Safety
 
@@ -36,11 +53,21 @@
 5. Your bot may not be hosted on Glitch/Repl Free Plan and use a software to ping your project. This is also against Repl/Glitch ToS.
 6. Your bot must be online during testing
 
+
+</blockquote>
+
+<blockquote class="quote">
+
 #### Notes
 
 1. You can always appeal a ban or resubmit your bot. To do so, just login, click your username > My Profile > *your bot* > View and then click the link underneath the ban message to start the ban appeal or resubmission process
 
+
+</blockquote>
+
 ### Certification
+
+<blockquote class="quote">
 
 #### Basics
 
@@ -55,11 +82,21 @@
 9. Your bot may be exempted from requirements it does not meet on a case by case basis that staff (Admins/Mods+) will decide and/or vote on. We will let you know more information during the process
 10. You may apply for certification on our support server by creating a support ticket with Certification as the selected option. Your bot will undergo some basic automated checks and will then be sent to us. We will DM you when we are retesting your bot and for any updates or other info we have. Having a closed DM/friend requests will result in denial!
 
+
+</blockquote>
+
+<blockquote class="quote">
+
 #### Commands
 
 1. At least 98% to 100% of all commands should work unless the bot does not *have* commands (chat bots etc)
 2. All commands must implement error handling. Using embeds is recommended in commands
 3. The majority of all commands should gave clear documentation on how to use it, preferably with examples
+
+
+</blockquote>
+
+<blockquote class="quote">
 
 #### Perks
 
@@ -68,6 +105,9 @@
 3. Access to in-development 'unstable' API endpoints and potentially some certified bot only features
 4. Little to no API ratelimits as you are trusted to use the API responsibly. This *will* get revoked and your bot *may* be banned if you abuse this (decided on a case by case basis)!
 5. More coming soon ❤️
+
+
+</blockquote>
 
 
 
