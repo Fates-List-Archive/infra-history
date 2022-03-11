@@ -122,12 +122,15 @@ This section includes the *additional* requirements for certification. This list
 
 ### Data Collection
 
-This section relates to how we process and handle data as per the GDPR
+This section relates to how we process and handle data as per the GDPR and other local privacy laws
 
 %datacol%
 
+<hr/>
 
-This section was made to handle GDPR requirements such as data requests and deletions.
+### Data Actions
+
+This section was made to handle GDPR requirements such as data requests and deletions (not yet implemented, coming soon).
 
 ::: info
 
