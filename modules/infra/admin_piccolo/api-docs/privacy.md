@@ -143,9 +143,9 @@ These are our guidelines you must follow and adhere to when using Fates List!
 
 </blockquote>
 
-### Data Collection
+### Data Collection And Security
 
-This section relates to how we process and handle data as per the GDPR and other local privacy laws
+This section relates to how we process, secure and handle data as per the GDPR and other local privacy laws
 
 <blockquote class="quote">
 
@@ -193,6 +193,7 @@ We log all admin actions taken on Lynx for anti-nuke and debugging purposes. We 
 
 1. Our site is secure and we try to ensure that only you and Fates List Staff can edit your bot and that all actions require proper permission and clearance to be used. We may regenerate API tokens if needed.
 2. We backup our database on Google Drive. This backup is encrypted by rclone using AES and the configuration file for rclone is also encrypted
+3. All data *should* be encrypted at rest. Mistakes however may happen and Fates List does not take any responsibility for any data breaches that may occur. We also do not recommend sharing of private information such as addresses on Fates List
 
 </blockquote>
 
