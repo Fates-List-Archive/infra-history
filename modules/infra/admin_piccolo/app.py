@@ -33,7 +33,8 @@ from piccolo_api.fastapi.endpoints import FastAPIWrapper
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Mount
 from starlette.types import Scope, Message
-from tables import Bot, Reviews, ReviewVotes, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, LeaveOfAbsence, UserBotLogs, BotVotes, Notifications, LynxRatings
+from tables import Bot, Reviews, ReviewVotes, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, \
+    LeaveOfAbsence, UserBotLogs, BotVotes, Notifications, LynxRatings
 import orjson
 import aioredis
 from modules.core import redis_ipc_new
@@ -53,6 +54,7 @@ from fastapi.staticfiles import StaticFiles
 
 debug = False
 
+
 async def fetch_user(user_id: int):
     async with aiohttp.ClientSession() as sess:
         async with sess.get(f"http://localhost:1234/getch/{user_id}") as resp:
@@ -65,11 +67,13 @@ async def fetch_user(user_id: int):
                 }
             return await resp.json()
 
+
 def get_token(length: int) -> str:
     secure_str = ""
     for i in range(0, length):
         secure_str += secrets.choice(string.ascii_letters + string.digits)
     return secure_str
+
 
 with open("config/data/discord.json") as json:
     json = orjson.loads(json.read())
@@ -87,6 +91,7 @@ with open("config/data/secrets.json") as json:
 with open("config/data/staff_roles.json") as json:
     staff_roles = orjson.loads(json.read())
 
+
 async def add_role(server, member, role, reason):
     print(f"[LYNX] Giving role {role} to member {member} on server {server} for reason: {reason}")
     url = f"https://discord.com/api/v10/guilds/{server}/members/{member}/roles/{role}"
@@ -98,6 +103,7 @@ async def add_role(server, member, role, reason):
             if resp.status == HTTPStatus.NO_CONTENT:
                 return None
             return await resp.json()
+
 
 async def del_role(server, member, role, reason):
     print(f"[LYNX] Removing role {role} to member {member} on server {server} for reason: {reason}")
@@ -111,34 +117,39 @@ async def del_role(server, member, role, reason):
                 return None
             return await resp.json()
 
+
 async def ban_user(server, member, reason):
     url = f"https://discord.com/api/v10/guilds/{server}/bans/{member}"
     async with aiohttp.ClientSession() as sess:
         async with sess.put(url, headers={
             "Authorization": f"Bot {main_bot_token}",
-            "X-Audit-Log-Reason": f"[LYNX] Bot Banned: {reason[:14]+'...'}"
+            "X-Audit-Log-Reason": f"[LYNX] Bot Banned: {reason[:14] + '...'}"
         }) as resp:
             if resp.status == HTTPStatus.NO_CONTENT:
                 return None
             return await resp.json()
+
 
 async def unban_user(server, member, reason):
     url = f"https://discord.com/api/v10/guilds/{server}/bans/{member}"
     async with aiohttp.ClientSession() as sess:
         async with sess.delete(url, headers={
             "Authorization": f"Bot {main_bot_token}",
-            "X-Audit-Log-Reason": f"[LYNX] Bot Unbanned: {reason[:14]+'...'}"
+            "X-Audit-Log-Reason": f"[LYNX] Bot Unbanned: {reason[:14] + '...'}"
         }) as resp:
             if resp.status == HTTPStatus.NO_CONTENT:
                 return None
             return await resp.json()
 
+
 admin = create_admin(
-    [Notifications, LynxRatings, LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags, ServerTags, Reviews, ReviewVotes, UserBotLogs, BotVotes], 
-    allowed_hosts = ["lynx.fateslist.xyz"], 
-    production = True,
+    [Notifications, LynxRatings, LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags,
+     ServerTags, Reviews, ReviewVotes, UserBotLogs, BotVotes],
+    allowed_hosts=["lynx.fateslist.xyz"],
+    production=True,
     site_name="Lynx Admin"
 )
+
 
 def code_check(code: str, user_id: int):
     expected = hashlib.sha3_384()
@@ -151,28 +162,33 @@ def code_check(code: str, user_id: int):
         return False
     return True
 
+
 class Unknown:
     username = "Unknown"
+
 
 # Staff Permission Checks
 
 class StaffMember(BaseModel):
-    """Represents a staff member in Fates List""" 
+    """Represents a staff member in Fates List"""
     name: str
     id: Union[str, int]
     perm: int
     staff_id: Union[str, int]
 
+
 async def is_staff_unlocked(bot_id: int, user_id: int, redis: aioredis.Connection):
     return await redis.exists(f"fl_staff_access-{user_id}:{bot_id}")
 
-async def is_staff(staff_json: dict | None, user_id: int, base_perm: int, json: bool = False, *, worker_session = None, redis: aioredis.Connection = None) -> Union[bool, int, StaffMember]:
+
+async def is_staff(staff_json: dict | None, user_id: int, base_perm: int, json: bool = False, *, worker_session=None,
+                   redis: aioredis.Connection = None) -> Union[bool, int, StaffMember]:
     if worker_session:
         redis = worker_session.redis
     elif not redis:
         raise ValueError("No redis connection or worker_session provided")
-    
-    if user_id < 0: 
+
+    if user_id < 0:
         staff_perm = None
     else:
         staff_perm = await redis_ipc_new(redis, "GETPERM", args=[str(user_id)], worker_session=worker_session)
@@ -180,11 +196,13 @@ async def is_staff(staff_json: dict | None, user_id: int, base_perm: int, json: 
         staff_perm = {"fname": "Unknown", "id": "0", "staff_id": "0", "perm": 0}
     else:
         staff_perm = orjson.loads(staff_perm)
-    sm = StaffMember(name = staff_perm["fname"], id = staff_perm["id"], staff_id = staff_perm["staff_id"], perm = staff_perm["perm"]) # Initially
+    sm = StaffMember(name=staff_perm["fname"], id=staff_perm["id"], staff_id=staff_perm["staff_id"],
+                     perm=staff_perm["perm"])  # Initially
     rc = sm.perm >= base_perm
     if json:
         return rc, sm.perm, sm.dict()
     return rc, sm.perm, sm
+
 
 # Create the doc tree
 def doctree_gen():
@@ -211,7 +229,7 @@ def doctree_gen():
         if x[0] == "documentation":
             return 10000000000000000
         else:
-            return -1*len(x[0][0])
+            return -1 * len(x[0][0])
 
     doctree_dict = dict(sorted(doctree_dict.items(), key=key_doctree, reverse=True))
 
@@ -274,6 +292,7 @@ def doctree_gen():
 
     return doctree
 
+
 global lynx_form_beta
 
 with open("modules/infra/admin_piccolo/lynx-ui.html") as f:
@@ -284,34 +303,35 @@ with open("modules/infra/admin_piccolo/api-docs/staff-guide.md") as f:
 
 md = (
     MarkdownIt()
-    .use(front_matter_plugin)
-    .use(footnote_plugin)
-    .use(anchors_plugin, max_level=5, permalink=True)
-    .use(fieldlist_plugin)
-    .use(container_plugin, name="warning")
-    .use(container_plugin, name="info")
-    .use(container_plugin, name="aonly")
-    .use(container_plugin, name="guidelines")
-    .use(container_plugin, name="generic", validate = lambda *args: True)
-    .enable('table')
-    .enable('image')
+        .use(front_matter_plugin)
+        .use(footnote_plugin)
+        .use(anchors_plugin, max_level=5, permalink=True)
+        .use(fieldlist_plugin)
+        .use(container_plugin, name="warning")
+        .use(container_plugin, name="info")
+        .use(container_plugin, name="aonly")
+        .use(container_plugin, name="guidelines")
+        .use(container_plugin, name="generic", validate=lambda *args: True)
+        .enable('table')
+        .enable('image')
 )
 
 staff_guide = md.render(staff_guide_md)
+
 
 async def auth_user_cookies(request: Request):
     if request.cookies.get("sunbeam-session:warriorcats"):
         request.scope["sunbeam_user"] = orjson.loads(b64decode(request.cookies.get("sunbeam-session:warriorcats")))
         check = await app.state.db.fetchval(
-            "SELECT user_id FROM users WHERE user_id = $1 AND api_token = $2", 
-            int(request.scope["sunbeam_user"]["user"]["id"]), 
+            "SELECT user_id FROM users WHERE user_id = $1 AND api_token = $2",
+            int(request.scope["sunbeam_user"]["user"]["id"]),
             request.scope["sunbeam_user"]["token"]
         )
         if not check:
             print("Undoing login due to relogin requirement")
             del request.scope["sunbeam_user"]
             return
-        
+
         _, _, member = await is_staff(None, int(request.scope["sunbeam_user"]["user"]["id"]), 2, redis=app.state.redis)
 
         request.state.member = member
@@ -320,14 +340,15 @@ async def auth_user_cookies(request: Request):
 
     if request.state.member.perm >= 2:
         staff_verify_code = await app.state.db.fetchval(
-            "SELECT staff_verify_code FROM users WHERE user_id = $1", 
+            "SELECT staff_verify_code FROM users WHERE user_id = $1",
             int(request.scope["sunbeam_user"]["user"]["id"])
         )
 
         request.state.is_verified = True
 
-        if not staff_verify_code or not code_check(staff_verify_code, int(request.scope["sunbeam_user"]["user"]["id"])):                    
+        if not staff_verify_code or not code_check(staff_verify_code, int(request.scope["sunbeam_user"]["user"]["id"])):
             request.state.is_verified = False
+
 
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
@@ -342,10 +363,11 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             except:
                 lynx_form_html = lynx_form_beta
             return HTMLResponse(lynx_form_html)
-            
+
         print("[LYNX] Admin request. Middleware started")
 
-        if request.url.path.startswith(("/staff-guide", "/requests", "/links", "/roadmap", "/docs", "/my-perms")) or request.url.path == "/":
+        if request.url.path.startswith(
+                ("/staff-guide", "/requests", "/links", "/roadmap", "/docs", "/my-perms")) or request.url.path == "/":
             if request.headers.get("Frostpaw-Staff-Notify"):
                 return await call_next(request)
             else:
@@ -355,7 +377,6 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
 
         if not request.scope.get("sunbeam_user"):
             return RedirectResponse(f"https://fateslist.xyz/frostpaw/herb?redirect={request.url}")
-
 
         member: StaffMember = request.state.member
         perm = member.perm
@@ -370,21 +391,27 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         # Perm check
         if request.url.path.startswith("/admin/api"):
             if request.url.path == "/admin/api/tables/" and perm < 4:
-                return ORJSONResponse(["reviews", "review_votes", "bot_packs", "vanity", "leave_of_absence", "user_vote_table", "lynx_rating"])
+                return ORJSONResponse(
+                    ["reviews", "review_votes", "bot_packs", "vanity", "leave_of_absence", "user_vote_table",
+                     "lynx_rating"])
             elif request.url.path == "/admin/api/tables/users/ids/" and request.method == "GET":
                 pass
-            elif request.url.path in ("/admin/api/forms/", "/admin/api/user/", "/admin/api/openapi.json") or request.url.path.startswith("/admin/api/docs"):
+            elif request.url.path in (
+                    "/admin/api/forms/", "/admin/api/user/", "/admin/api/openapi.json") or request.url.path.startswith(
+                "/admin/api/docs"):
                 pass
             elif perm < 4:
                 if request.url.path.startswith("/admin/api/tables/vanity"):
                     if request.method != "GET":
                         return ORJSONResponse({"error": "You do not have permission to update vanity"}, status_code=403)
-                
+
                 elif request.url.path.startswith("/admin/api/tables/bot_packs"):
                     if request.method != "GET":
-                        return ORJSONResponse({"error": "You do not have permission to update bot packs"}, status_code=403)
-                
-                elif request.url.path.startswith("/admin/api/tables/leave_of_absence/") and request.method in ("PATCH", "DELETE"):
+                        return ORJSONResponse({"error": "You do not have permission to update bot packs"},
+                                              status_code=403)
+
+                elif request.url.path.startswith("/admin/api/tables/leave_of_absence/") and request.method in (
+                        "PATCH", "DELETE"):
                     ids = request.url.path.split("/")
                     loa_id = None
                     for id in ids:
@@ -393,12 +420,18 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                             break
                     else:
                         return abort(404)
-                    
-                    user_id = await app.state.db.fetchval("SELECT user_id::text FROM leave_of_absence WHERE id = $1", loa_id)
-                    if user_id != request.scope["sunbeam_user"]["user"]["id"]:
-                        return ORJSONResponse({"error": "You do not have permission to update this leave of absence"}, status_code=403)
 
-                elif not request.url.path.startswith(("/admin/api/tables/reviews", "/admin/api/tables/review_votes", "/admin/api/tables/bot_packs", "/admin/api/tables/user_vote_table", "/admin/api/tables/leave_of_absence", "/admin/api/tables/lynx_rating")):
+                    user_id = await app.state.db.fetchval("SELECT user_id::text FROM leave_of_absence WHERE id = $1",
+                                                          loa_id)
+                    if user_id != request.scope["sunbeam_user"]["user"]["id"]:
+                        return ORJSONResponse({"error": "You do not have permission to update this leave of absence"},
+                                              status_code=403)
+
+                elif not request.url.path.startswith(("/admin/api/tables/reviews", "/admin/api/tables/review_votes",
+                                                      "/admin/api/tables/bot_packs",
+                                                      "/admin/api/tables/user_vote_table",
+                                                      "/admin/api/tables/leave_of_absence",
+                                                      "/admin/api/tables/lynx_rating")):
                     return ORJSONResponse({"error": "You do not have permission to access this page"}, status_code=403)
 
         key = "rl:%s" % request.scope["sunbeam_user"]["user"]["id"]
@@ -409,19 +442,21 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             rl = await app.state.redis.incr(key)
             if int(rl) > 5:
                 expire = await app.state.redis.ttl(key)
-                await app.state.db.execute("UPDATE users SET api_token = $1 WHERE user_id = $2", get_token(128), int(request.scope["sunbeam_user"]["user"]["id"]))
-                return ORJSONResponse({"detail": f"You have exceeded the rate limit {expire} is TTL. API_TOKEN_RESET"}, status_code=429)
+                await app.state.db.execute("UPDATE users SET api_token = $1 WHERE user_id = $2", get_token(128),
+                                           int(request.scope["sunbeam_user"]["user"]["id"]))
+                return ORJSONResponse({"detail": f"You have exceeded the rate limit {expire} is TTL. API_TOKEN_RESET"},
+                                      status_code=429)
 
         embed = Embed(
-            title = "Lynx API Request", 
-            description = f"**This is usually malicious. When in doubt DM**", 
-            color = 0x00ff00,
+            title="Lynx API Request",
+            description=f"**This is usually malicious. When in doubt DM**",
+            color=0x00ff00,
         )
 
         embed.add_field(name="User ID", value=request.scope["sunbeam_user"]["user"]["id"])
         embed.add_field(name="Username", value=request.scope["sunbeam_user"]["user"]["username"])
         embed.add_field(name="Request", value=f"{request.method} {request.url}")
-        
+
         if request.url.path.startswith("/meta"):
             return ORJSONResponse({"piccolo_admin_version": "0.1a1", "site_name": "Lynx Admin"})
 
@@ -452,7 +487,8 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             response.body_iterator = iterate_in_threadpool(iter(response_body))
             content = response_body[0]
             content_dict = orjson.loads(content)
-            await app.state.db.execute("UPDATE leave_of_absence SET user_id = $1 WHERE id = $2", int(request.scope["sunbeam_user"]["user"]["id"]), content_dict[0]["id"])
+            await app.state.db.execute("UPDATE leave_of_absence SET user_id = $1 WHERE id = $2",
+                                       int(request.scope["sunbeam_user"]["user"]["id"]), content_dict[0]["id"])
             return ORJSONResponse(content_dict)
 
         if request.url.path.startswith("/admin/api/tables/bots") and request.method == "PATCH":
@@ -462,27 +498,32 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             print("Got bot id: ", bot_id)
             owner = await app.state.db.fetchval("SELECT owner FROM bot_owner WHERE bot_id = $1", bot_id)
             embed = Embed(
-                title = "Bot Edited Via Lynx", 
-                description = f"Bot <@{bot_id}> has been edited via Lynx by user {request.user.user.username}", 
-                color = 0x00ff00,
+                title="Bot Edited Via Lynx",
+                description=f"Bot <@{bot_id}> has been edited via Lynx by user {request.user.user.username}",
+                color=0x00ff00,
                 url=f"https://fateslist.xyz/bot/{bot_id}"
             )
-            await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+            await redis_ipc_new(app.state.redis, "SENDMSG",
+                                msg={"content": f"<@{owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
 
         return response
 
+
 admin = CustomHeaderMiddleware(admin)
+
 
 async def server_error(request, exc):
     return HTMLResponse(content="Error", status_code=exc.status_code)
 
+
 app = FastAPI(routes=[
-    Mount("/admin", admin), 
+    Mount("/admin", admin),
     Mount("/_static", StaticFiles(directory="modules/infra/admin_piccolo/static")),
 ],
-docs_url="/_docs",
-openapi_url="/_openapi"
+    docs_url="/_docs",
+    openapi_url="/_openapi"
 )
+
 
 @app.get("/_admin_code_check")
 def code_check_route(request: Request):
@@ -490,6 +531,7 @@ def code_check_route(request: Request):
     if not code_check(query.get("code", ""), query.get("user_id", 0)):
         return PlainTextResponse(status_code=HTTPStatus.FORBIDDEN)
     return PlainTextResponse(status_code=HTTPStatus.NO_CONTENT)
+
 
 def bot_select(id: str, bot_list: list[str], reason: bool = False):
     select = f"""
@@ -502,7 +544,7 @@ def bot_select(id: str, bot_list: list[str], reason: bool = False):
         select += f"""
 <option value="{bot['bot_id']}">{bot['username_cached'] or 'No cached username'} ({bot['bot_id']})</option>
         """
-    
+
     select += "</select><br/>"
 
     # Add a input for bot id instead of select
@@ -526,29 +568,33 @@ def bot_select(id: str, bot_list: list[str], reason: bool = False):
 
     return select
 
+
 app.state.valid_csrf = {}
 app.state.valid_csrf_user = {}
+
 
 class ActionWithReason(BaseModel):
     bot_id: str
     csrf_token: str
-    owners: list[dict] | None = None # This is filled in by action decorator
-    main_owner: int | None = None # This is filled in by action decorator
+    owners: list[dict] | None = None  # This is filled in by action decorator
+    main_owner: int | None = None  # This is filled in by action decorator
     context: Any | None = None
     reason: str
 
+
 app.state.bot_actions = {}
 
+
 def action(
-    name: str,
-    states: list[enums.BotState], 
-    min_perm: int = 2,
-    action_log: enums.UserBotAction | None = None
+        name: str,
+        states: list[enums.BotState],
+        min_perm: int = 2,
+        action_log: enums.UserBotAction | None = None
 ):
     async def state_check(bot_id: int):
         bot_state = await app.state.db.fetchval("SELECT state FROM bots WHERE bot_id = $1", bot_id)
         return (bot_state in states) or len(states) == 0
-    
+
     async def _core(ws: WebSocket, data: ActionWithReason):
         if ws.state.member.perm < min_perm:
             return await ws.send_json({
@@ -569,14 +615,14 @@ def action(
             })
             return
         data.bot_id = int(data.bot_id)
-        
+
         if not await state_check(data.bot_id):
             await ws.send_json({
                 "resp": "bot_action",
                 "detail": f"Bot is not in acceptable states or doesn't exist: Acceptable states are {states}"
             })
             return
-        
+
         data.owners = await app.state.db.fetch("SELECT owner, main FROM bot_owner WHERE bot_id = $1", data.bot_id)
 
         for owner in data.owners:
@@ -588,7 +634,7 @@ def action(
     def decorator(function):
         async def wrapper(ws: WebSocket, data: ActionWithReason):
             if not await _core(ws, data):
-                return # Already sent ws message, ignore
+                return  # Already sent ws message, ignore
             if len(data.reason) < 5:
                 return await ws.send_json({
                     "resp": "bot_action",
@@ -597,37 +643,43 @@ def action(
 
             ws.state.user_id = int(ws.state.user["id"])
 
-            res = await function(ws, data) # Fake Websocket as Request for now TODO: Make this not fake
+            res = await function(ws, data)  # Fake Websocket as Request for now TODO: Make this not fake
             if action_log:
                 ...
             res = jsonable_encoder(res)
             res["resp"] = "bot_action"
             await ws.send_json(res)
             return
+
         app.state.bot_actions[name] = wrapper
         return wrapper
+
     return decorator
+
 
 @action("claim", [enums.BotState.pending])
 async def claim(request: Request, data: ActionWithReason):
-    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.under_review, request.state.user_id, int(data.bot_id))
-    
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3",
+                               enums.BotState.under_review, request.state.user_id, int(data.bot_id))
+
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0x00ff00,
         title="Bot Claimed",
         description=f"<@{request.state.user_id}> has claimed <@{data.bot_id}> and this bot is now under review.\n**If all goes well, this bot should be approved (or denied) soon!**\n\nThank you for using Fates List :heart:",
     )
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
     return {"detail": "Successfully claimed bot!"}
+
 
 @action("unclaim", [enums.BotState.under_review])
 async def unclaim(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1 WHERE bot_id = $2", enums.BotState.pending, data.bot_id)
 
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0x00ff00,
         title="Bot Unclaimed",
         description=f"<@{request.state.user_id}> has stopped testing <@{data.bot_id}> for now and this bot is now pending review from another bot reviewer.\n**This is perfectly normal. All bot reviewers need breaks too! If all goes well, this bot should be approved (or denied) soon!**\n\nThank you for using Fates List :heart:",
@@ -635,9 +687,11 @@ async def unclaim(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
 
     return {"detail": "Successfully unclaimed bot"}
+
 
 @action("approve", [enums.BotState.under_review])
 async def approve(request: Request, data: ActionWithReason):
@@ -651,10 +705,11 @@ async def approve(request: Request, data: ActionWithReason):
             japi = await resp.json()
             approx_guild_count = japi["data"]["bot"]["approximate_guild_count"]
 
-    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2, guild_count = $3 WHERE bot_id = $4", enums.BotState.approved, request.state.user_id, approx_guild_count, data.bot_id)
-    
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2, guild_count = $3 WHERE bot_id = $4",
+                               enums.BotState.approved, request.state.user_id, approx_guild_count, data.bot_id)
+
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0x00ff00,
         title="Bot Approved!",
         description=f"<@{request.state.user_id}> has approved <@{data.bot_id}>\nCongratulations on your accompishment and thank you for using Fates List :heart:",
@@ -663,19 +718,22 @@ async def approve(request: Request, data: ActionWithReason):
     embed.add_field(name="Reason", value=data.reason)
     embed.add_field(name="Guild Count (approx)", value=str(approx_guild_count))
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
-    
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
     for owner in data.owners:
         asyncio.create_task(add_role(main_server, owner["owner"], bot_developer, "Bot Approved"))
 
     return {"detail": "Successfully approved bot", "guild_id": str(main_server)}
 
+
 @action("deny", [enums.BotState.under_review])
 async def deny(request: Request, data: ActionWithReason):
-    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.denied, request.state.user_id, data.bot_id)
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.denied,
+                               request.state.user_id, data.bot_id)
 
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0xe74c3c,
         title="Bot Denied",
         description=f"<@{request.state.user_id}> has denied <@{data.bot_id}>!\n**Once you've fixed what we've asked you to fix, please resubmit your bot by going to `Bot Settings`.**\n\nThank you for using Fates List :heart:",
@@ -683,16 +741,19 @@ async def deny(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
 
     return {"detail": "Successfully denied bot"}
 
+
 @action("ban", [enums.BotState.approved], min_perm=4)
 async def ban(request: Request, data: ActionWithReason):
-    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.banned, request.state.user_id, data.bot_id)
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.banned,
+                               request.state.user_id, data.bot_id)
 
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0xe74c3c,
         title="Bot Banned",
         description=f"<@{request.state.user_id}> has banned <@{data.bot_id}>!\n**Once you've fixed what we've need you to fix, please appeal your ban by going to `Bot Settings`.**\n\nThank you for using Fates List :heart:",
@@ -702,16 +763,19 @@ async def ban(request: Request, data: ActionWithReason):
 
     asyncio.create_task(ban_user(main_server, data.bot_id, data.reason))
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
 
     return {"detail": "Successfully banned bot"}
 
+
 @action("unban", [enums.BotState.banned], min_perm=4)
 async def unban(request: Request, data: ActionWithReason):
-    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.approved, request.state.user_id, data.bot_id)
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.approved,
+                               request.state.user_id, data.bot_id)
 
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0x00ff00,
         title="Bot Unbanned",
         description=f"<@{request.state.user_id}> has unbanned <@{data.bot_id}>!\n\nThank you for using Fates List again and sorry for any inconveniences caused! :heart:",
@@ -721,16 +785,19 @@ async def unban(request: Request, data: ActionWithReason):
 
     asyncio.create_task(unban_user(main_server, data.bot_id, data.reason))
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
 
     return {"detail": "Successfully unbanned bot"}
 
+
 @action("certify", [enums.BotState.approved], min_perm=5)
 async def certify(request: Request, data: ActionWithReason):
-    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.certified, request.state.user_id, data.bot_id)
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.certified,
+                               request.state.user_id, data.bot_id)
 
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0x00ff00,
         title="Bot Certified",
         description=f"<@{request.state.user_id}> has certified <@{data.bot_id}>.\n**Good Job!!!**\n\nThank you for using Fates List :heart:",
@@ -739,21 +806,24 @@ async def certify(request: Request, data: ActionWithReason):
     embed.add_field(name="Feedback", value=data.reason)
 
     for owner in data.owners:
-        asyncio.create_task(add_role(main_server, owner["owner"], certified_developer, "Bot certified - owner gets role"))
+        asyncio.create_task(
+            add_role(main_server, owner["owner"], certified_developer, "Bot certified - owner gets role"))
 
     # Add certified bot role to bot
     asyncio.create_task(add_role(main_server, data.bot_id, certified_bot, "Bot certified - add bots role"))
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
 
     return {"detail": "Successfully certified bot"}
+
 
 @action("uncertify", [enums.BotState.certified], min_perm=5)
 async def uncertify(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1 WHERE bot_id = $2", enums.BotState.approved, data.bot_id)
 
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0xe74c3c,
         title="Bot Uncertified",
         description=f"<@{request.state.user_id}> has uncertified <@{data.bot_id}>.\n\nThank you for using Fates List but this was a necessary action :heart:",
@@ -762,21 +832,25 @@ async def uncertify(request: Request, data: ActionWithReason):
     embed.add_field(name="Reason", value=data.reason)
 
     for owner in data.owners:
-        asyncio.create_task(del_role(main_server, owner["owner"], certified_developer, "Bot uncertified - Owner gets role"))
+        asyncio.create_task(
+            del_role(main_server, owner["owner"], certified_developer, "Bot uncertified - Owner gets role"))
 
     # Add certified bot role to bot
     asyncio.create_task(del_role(main_server, data.bot_id, certified_bot, "Bot uncertified - Bots Role"))
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
 
     return {"detail": "Successfully uncertified bot"}
 
+
 @action("unverify", [enums.BotState.approved], min_perm=3)
 async def unverify(request: Request, data: ActionWithReason):
-    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.pending, request.state.user_id, data.bot_id)
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.pending,
+                               request.state.user_id, data.bot_id)
 
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0xe74c3c,
         title="Bot Unverified",
         description=f"<@{request.state.user_id}> has unverified <@{data.bot_id}> due to some issues we are looking into!\n\nThank you for using Fates List and we thank you for your patience :heart:",
@@ -784,16 +858,19 @@ async def unverify(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
 
     return {"detail": "Successfully unverified bot"}
 
+
 @action("requeue", [enums.BotState.banned, enums.BotState.denied], min_perm=3)
 async def requeue(request: Request, data: ActionWithReason):
-    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.pending, request.state.user_id, data.bot_id)
+    await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.pending,
+                               request.state.user_id, data.bot_id)
 
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0x00ff00,
         title="Bot Requeued",
         description=f"<@{request.state.user_id}> has requeued <@{data.bot_id}> for re-review!\n\nThank you for using Fates List and we thank you for your patience :heart:",
@@ -801,16 +878,18 @@ async def requeue(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
 
     return {"detail": "Successfully requeued bot"}
+
 
 @action("reset-votes", [], min_perm=3)
 async def reset_votes(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET votes = 0 WHERE bot_id = $1", data.bot_id)
 
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0xe74c3c,
         title="Bot Votes Reset",
         description=f"<@{request.state.user_id}> has force resetted <@{data.bot_id}> votes due to abuse!\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
@@ -818,9 +897,39 @@ async def reset_votes(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
 
     return {"detail": "Successfully reset bot votes"}
+
+
+@action("reset-all-votes", [], min_perm=5)
+async def reset_all_votes(request: Request, data: ActionWithReason):
+    if data.reason == "STUB_REASON":
+        data.reason = "Monthly Vote Reset"
+
+    async with app.state.db.acquire() as conn:
+        async with conn.transaction():
+            bots = await app.state.db.fetch("SELECT bot_id, votes FROM bots")
+            for bot in bots:
+                await conn.execute("INSERT INTO bot_stats_votes_pm (bot_id, epoch, votes) VALUES ($1, $2, $3)",
+                                   bot["bot_id"], time.time(), bot["votes"])
+            await conn.execute("UPDATE bots SET votes = 0")
+            await conn.execute("DELETE FROM user_vote_table")
+
+    embed = Embed(
+        title="All Bot Votes Reset",
+        color=0x00ff00,
+        description=f"<@{request.state.user_id}> has resetted all votes!\n\nThank you for using Fates List :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": "", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully reset all bot votes"}
+
 
 @action("set-flags", [], min_perm=3)
 async def set_flags(request: Request, data: ActionWithReason):
@@ -830,7 +939,7 @@ async def set_flags(request: Request, data: ActionWithReason):
         flag = enums.BotFlag(data.context)
     except:
         return {"detail": "Flag must be of enum Flag"}
-    
+
     existing_flags = await app.state.db.fetchval("SELECT flags FROM bots WHERE bot_id = $1", data.bot_id)
     existing_flags = existing_flags or []
     existing_flags = set(existing_flags)
@@ -846,7 +955,7 @@ async def set_flags(request: Request, data: ActionWithReason):
     await app.state.db.fetchval("UPDATE bots SET flags = $1 WHERE bot_id = $2", existing_flags, data.bot_id)
 
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0xe74c3c,
         title="Bot Flag Updated",
         description=f"<@{request.state.user_id}> has modified the flags of <@{data.bot_id}> with addition of {flag.name} ({flag.value}) -> {flag.__doc__} !\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
@@ -854,9 +963,11 @@ async def set_flags(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
 
     return {"detail": "Successfully set flag"}
+
 
 @action("unset-flag", [], min_perm=3)
 async def unset_flags(request: Request, data: ActionWithReason):
@@ -866,7 +977,7 @@ async def unset_flags(request: Request, data: ActionWithReason):
         flag = enums.BotFlag(data.context)
     except:
         return {"detail": "Flag must be of enum Flag"}
-    
+
     existing_flags = await app.state.db.fetchval("SELECT flags FROM bots WHERE bot_id = $1", data.bot_id)
     existing_flags = existing_flags or []
     existing_flags = set(existing_flags)
@@ -885,7 +996,7 @@ async def unset_flags(request: Request, data: ActionWithReason):
     await app.state.db.fetchval("UPDATE bots SET flags = $1 WHERE bot_id = $2", existing_flags, data.bot_id)
 
     embed = Embed(
-        url=f"https://fateslist.xyz/bot/{data.bot_id}", 
+        url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0xe74c3c,
         title="Bot Flag Updated",
         description=f"<@{request.state.user_id}> has modified the flags of <@{data.bot_id}> with removal of {flag.name} ({flag.value}) -> {flag.__doc__} !\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
@@ -893,9 +1004,11 @@ async def unset_flags(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG", msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
 
     return {"detail": "Successfully unset flag"}
+
 
 @app.get("/_new_html")
 def new_html(request: Request):
@@ -904,8 +1017,9 @@ def new_html(request: Request):
         return
     with open("modules/infra/admin_piccolo/lynx-ui.html") as f:
         app.state.lynx_form_beta = f.read()
-    
+
     return
+
 
 # Lynx base websocket
 class ConnectionManager:
@@ -925,22 +1039,22 @@ class ConnectionManager:
     async def broadcast(self, message: str):
         for connection in self.active_connections:
             await connection.send_text(message)
-    
+
     # GDPR Data Request
     async def data_request(self, ws: WebSocket, user_id: str):
         if ws.state.member.perm < 7 and ws.state.user["id"] != user_id:
             return await ws.send_json({
                 "resp": "data_request",
                 "detail": "You must either have permission level 6 or greater or the user id requested must be the same as your logged in user id."
-            })   
-        
+            })
+
         try:
             user_id = int(user_id)
         except:
             return await ws.send_json({
                 "resp": "data_request",
                 "detail": "Invalid User ID"
-            })   
+            })
 
         user = await app.state.db.fetchrow("select * from users where user_id = $1", user_id)
         owners = await app.state.db.fetch("SELECT * FROM bot_owner WHERE owner = $1", user_id)
@@ -954,28 +1068,17 @@ class ConnectionManager:
         servers = await app.state.db.fetch("SELECT * FROM servers WHERE owner_id = $1", user_id)
         lynx_apps = await app.state.db.fetch("SELECT * FROM lynx_apps WHERE user_id = $1", user_id)
         lynx_logs = await app.state.db.fetch("SELECT * FROM lynx_logs WHERE user_id = $1", user_id)
-        lynx_notifications = await app.state.db.fetch("SELECT * FROM lynx_notifications, unnest(acked_users) AS user_id WHERE user_id = $1", user_id)
+        lynx_notifications = await app.state.db.fetch("SELECT * FROM lynx_notifications, unnest(acked_users) AS "
+                                                      "user_id WHERE user_id = $1", user_id)
         lynx_ratings = await app.state.db.fetch("SELECT * FROM lynx_ratings WHERE user_id = $1", user_id)
 
-        data = {
-            "user": user, 
-            "owners": owners, 
-            "bot_voters": bot_voters, 
-            "user_vote_table": user_vote_table, 
-            "reviews": reviews, 
-            "review_votes": review_votes, 
-            "user_bot_logs": user_bot_logs,
-            "user_reminders": user_reminders,
-            "user_payments": user_payments,
-            "servers": servers,
-            "lynx_apps": lynx_apps,
-            "lynx_logs": lynx_logs,
-            "lynx_notifications": lynx_notifications,
-            "lynx_ratings": lynx_ratings,
-            "owned_bots": []
-        }
-        
-        data["privacy"] = "Fates list does not profile users or use third party cookies for tracking other than what is used by cloudflare for its required DDOS protection"
+        data = {"user": user, "owners": owners, "bot_voters": bot_voters, "user_vote_table": user_vote_table,
+                "reviews": reviews, "review_votes": review_votes, "user_bot_logs": user_bot_logs,
+                "user_reminders": user_reminders, "user_payments": user_payments, "servers": servers,
+                "lynx_apps": lynx_apps, "lynx_logs": lynx_logs, "lynx_notifications": lynx_notifications,
+                "lynx_ratings": lynx_ratings, "owned_bots": [],
+                "privacy": "Fates list does not profile users or use third party cookies for tracking other than what "
+                           "is used by cloudflare for its required DDOS protection"}
 
         for bot in data["owners"]:
             data["owned_bots"].append(await app.state.db.fetch("SELECT * FROM bots WHERE bot_id = $1", bot["bot_id"]))
@@ -994,7 +1097,7 @@ class ConnectionManager:
             return await ws.send_json({
                 "resp": "cosmog",
                 "detail": "You are already verified"
-            })            
+            })
 
         if not code_check(code, int(ws.state.user["id"])):
             return await ws.send_json({"resp": "cosmog", "detail": "Invalid code"})
@@ -1005,26 +1108,27 @@ class ConnectionManager:
             try:
                 await app.state.db.execute("DELETE FROM piccolo_user WHERE username = $1", username)
                 await BaseUser.create_user(
-                    username=username, 
+                    username=username,
                     password=password,
-                    email=username + "@fateslist.xyz", 
+                    email=username + "@fateslist.xyz",
                     active=True,
                     admin=True
                 )
             except:
-                return await ws.send_json({"resp": "cosmog", "detail": "Failed to create user on lynx. Please contact Rootspring#6701"})
+                return await ws.send_json(
+                    {"resp": "cosmog", "detail": "Failed to create user on lynx. Please contact Rootspring#6701"})
 
             await app.state.db.execute(
-                "UPDATE users SET staff_verify_code = $1 WHERE user_id = $2", 
+                "UPDATE users SET staff_verify_code = $1 WHERE user_id = $2",
                 code,
                 int(ws.state.user["id"]),
             )
 
             await add_role(staff_server, ws.state.user["id"], access_granted_role, "Access granted to server")
             await add_role(staff_server, ws.state.user["id"], ws.state.member.staff_id, "Gets corresponding staff role")
-            
-            return await ws.send_json({"resp": "cosmog", "detail": "Successfully verified staff member", "pass": password})
 
+            return await ws.send_json(
+                {"resp": "cosmog", "detail": "Successfully verified staff member", "pass": password})
 
     async def send_request_logs(self, ws: WebSocket):
         requests = await app.state.db.fetch("SELECT user_id, method, url, status_code, request_time from lynx_logs")
@@ -1041,7 +1145,7 @@ class ConnectionManager:
             "data": f"""
             {requests_html}
             """
-        })        
+        })
 
     async def send_notifs(self, ws: WebSocket):
         notifs = await app.state.db.fetch("SELECT id, acked_users, message, type, staff_only FROM lynx_notifications")
@@ -1063,18 +1167,19 @@ class ConnectionManager:
     async def send_docs(self, ws: WebSocket, page: str, source: bool):
         if page.endswith(".md"):
             page = f"/docs/{page[:-3]}"
-        
+
         elif not page or page == "/docs":
             page = "/index"
 
         if not page.replace("-", "").replace("_", "").replace("/", "").isalnum():
             return await self.send_personal_message({"resp": "docs", "detail": "Invalid page"}, ws)
-        
+
         try:
             with open(f"modules/infra/admin_piccolo/api-docs/{page}.md", "r") as f:
                 md_data = f.read()
         except FileNotFoundError as exc:
-            return await self.send_personal_message({"resp": "docs", "detail": f"api-docs/{page}.md not found -> {exc}"}, ws)
+            return await self.send_personal_message(
+                {"resp": "docs", "detail": f"api-docs/{page}.md not found -> {exc}"}, ws)
 
         # Inject rating code
         md_data = f"""
@@ -1120,17 +1225,17 @@ placeholder='I feel like you could...'
 
         md = (
             MarkdownIt()
-            .use(front_matter_plugin)
-            .use(footnote_plugin)
-            .use(anchors_plugin, max_level=5, permalink=True)
-            .use(fieldlist_plugin)
-            .use(container_plugin, name="warning")
-            .use(container_plugin, name="info")
-            .use(container_plugin, name="aonly")
-            .use(container_plugin, name="guidelines")
-            .use(container_plugin, name="generic", validate = lambda *args: True)
-            .enable('table')
-            .enable('image')
+                .use(front_matter_plugin)
+                .use(footnote_plugin)
+                .use(anchors_plugin, max_level=5, permalink=True)
+                .use(fieldlist_plugin)
+                .use(container_plugin, name="warning")
+                .use(container_plugin, name="info")
+                .use(container_plugin, name="aonly")
+                .use(container_plugin, name="guidelines")
+                .use(container_plugin, name="generic", validate=lambda *args: True)
+                .enable('table')
+                .enable('image')
         )
 
         return await self.send_personal_message({
@@ -1138,10 +1243,11 @@ placeholder='I feel like you could...'
             "title": page.split('/')[-1].replace('-', ' ').title(),
             "data": md.render(md_data).replace("<table", "<table class='table'").replace(".md", ""),
         }, ws)
-    
+
     async def send_loa(self, ws: WebSocket):
         if ws.state.member.perm < 2:
-            return await self.send_personal_message({"resp": "loa", "detail": "You do not have permission to view this page", "wait_for_upg": True}, ws)
+            return await self.send_personal_message(
+                {"resp": "loa", "detail": "You do not have permission to view this page", "wait_for_upg": True}, ws)
         return await self.send_personal_message({
             "resp": "loa",
             "title": "Leave Of Absense",
@@ -1210,7 +1316,9 @@ Just a tip for those new to lynx (for now)
     async def user_actions(self, ws: WebSocket, data: dict):
         # Easiest way to block cross origin is to just use a hidden input
         if ws.state.member.perm < 3:
-            return await self.send_personal_message({"resp": "user_actions", "detail": "You do not have permission to view this page. Minimum perm needed is 3", "wait_for_upg": True}, ws)
+            return await self.send_personal_message({"resp": "user_actions",
+                                                     "detail": "You do not have permission to view this page. Minimum perm needed is 3",
+                                                     "wait_for_upg": True}, ws)
         elif not ws.state.verified:
             return await manager.send_personal_message({"resp": "staff_verify_forced"}, ws)
         csrf_token = get_token(132)
@@ -1218,17 +1326,17 @@ Just a tip for those new to lynx (for now)
 
         md = (
             MarkdownIt()
-            .use(front_matter_plugin)
-            .use(footnote_plugin)
-            .use(anchors_plugin, max_level=5, permalink=True)
-            .use(fieldlist_plugin)
-            .use(container_plugin, name="warning")
-            .use(container_plugin, name="info")
-            .use(container_plugin, name="aonly")
-            .use(container_plugin, name="guidelines")
-            .use(container_plugin, name="generic", validate = lambda *args: True)
-            .enable('table')
-            .enable('image')
+                .use(front_matter_plugin)
+                .use(footnote_plugin)
+                .use(anchors_plugin, max_level=5, permalink=True)
+                .use(fieldlist_plugin)
+                .use(container_plugin, name="warning")
+                .use(container_plugin, name="info")
+                .use(container_plugin, name="aonly")
+                .use(container_plugin, name="guidelines")
+                .use(container_plugin, name="generic", validate=lambda *args: True)
+                .enable('table')
+                .enable('image')
         )
 
         return await self.send_personal_message({
@@ -1255,34 +1363,49 @@ Just a tip for those new to lynx (for now)
             var csrfToken = "{csrf_token}"
             """
         }, ws)
-    
+
     async def bot_actions(self, ws: WebSocket):
         if ws.state.member.perm < 2:
-            return await self.send_personal_message({"resp": "bot_actions", "detail": "You do not have permission to view this page. Minimum perm needed is 3", "wait_for_upg": True}, ws)
+            return await self.send_personal_message({"resp": "bot_actions",
+                                                     "detail": "You do not have permission to view this page. Minimum perm needed is 3",
+                                                     "wait_for_upg": True}, ws)
         elif not ws.state.verified:
             return await manager.send_personal_message({"resp": "staff_verify_forced"}, ws)
 
-        queue = await app.state.db.fetch("SELECT bot_id, username_cached, description, prefix, created_at FROM bots WHERE state = $1 ORDER BY created_at ASC", enums.BotState.pending)
+        queue = await app.state.db.fetch(
+            "SELECT bot_id, username_cached, description, prefix, created_at FROM bots WHERE state = $1 ORDER BY created_at ASC",
+            enums.BotState.pending)
 
         queue_select = bot_select("queue", queue)
 
-        under_review = await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.under_review)
+        under_review = await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1",
+                                                enums.BotState.under_review)
 
         under_review_select_approved = bot_select("under_review_approved", under_review, reason=True)
         under_review_select_denied = bot_select("under_review_denied", under_review, reason=True)
         under_review_select_claim = bot_select("under_review_claim", under_review, reason=True)
-        
-        approved = await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1 ORDER BY created_at DESC", enums.BotState.approved)
+
+        approved = await app.state.db.fetch(
+            "SELECT bot_id, username_cached FROM bots WHERE state = $1 ORDER BY created_at DESC",
+            enums.BotState.approved)
 
         ban_select = bot_select("ban", approved, reason=True)
         certify_select = bot_select("certify", approved, reason=True)
-        unban_select = bot_select("unban", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.banned), reason=True)
-        unverify_select = bot_select("unverify", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.approved), reason=True)
-        requeue_select = bot_select("requeue", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1 OR state = $2", enums.BotState.denied, enums.BotState.banned), reason=True)
+        unban_select = bot_select("unban",
+                                  await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1",
+                                                           enums.BotState.banned), reason=True)
+        unverify_select = bot_select("unverify", await app.state.db.fetch(
+            "SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.approved), reason=True)
+        requeue_select = bot_select("requeue", await app.state.db.fetch(
+            "SELECT bot_id, username_cached FROM bots WHERE state = $1 OR state = $2", enums.BotState.denied,
+            enums.BotState.banned), reason=True)
 
-        uncertify_select = bot_select("uncertify", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.certified), reason=True)
+        uncertify_select = bot_select("uncertify", await app.state.db.fetch(
+            "SELECT bot_id, username_cached FROM bots WHERE state = $1", enums.BotState.certified), reason=True)
 
-        reset_bot_votes_select = bot_select("reset-votes", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots WHERE state = $1 OR state = $2", enums.BotState.approved, enums.BotState.certified), reason=True)
+        reset_bot_votes_select = bot_select("reset-votes", await app.state.db.fetch(
+            "SELECT bot_id, username_cached FROM bots WHERE state = $1 OR state = $2", enums.BotState.approved,
+            enums.BotState.certified), reason=True)
 
         flag_list = list(enums.BotFlag)
         flags_select = "<label>Select Flag</label><select id='flag' name='flag'>"
@@ -1290,7 +1413,8 @@ Just a tip for those new to lynx (for now)
             flags_select += f"<option value={flag.value}>{flag.name} ({flag.value}) -> {flag.__doc__}</option>"
         flags_select += "</select>"
 
-        flags_bot_select = bot_select("set-flag", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots"), reason=True)
+        flags_bot_select = bot_select("set-flag", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots"),
+                                      reason=True)
 
         # Easiest way to block cross origin is to just use a hidden input
         csrf_token = get_token(132)
@@ -1300,13 +1424,13 @@ Just a tip for those new to lynx (for now)
 
         for bot in queue:
             owners = await app.state.db.fetch("SELECT owner, main FROM bot_owner WHERE bot_id = $1", bot["bot_id"])
-            
+
             owners_md = ""
 
             for owner in owners:
                 user = await fetch_user(owner["owner"])
                 owners_md += f"""\n     - {user['username']}  ({owner['owner']}) |  main -> {owner["main"]}"""
-            
+
             queue_md += f"""
 {bot['username_cached']} | [Site Page](https://fateslist.xyz/bot/{bot['bot_id']})
 
@@ -1319,17 +1443,17 @@ Just a tip for those new to lynx (for now)
 
         md = (
             MarkdownIt()
-            .use(front_matter_plugin)
-            .use(footnote_plugin)
-            .use(anchors_plugin, max_level=5, permalink=True)
-            .use(fieldlist_plugin)
-            .use(container_plugin, name="warning")
-            .use(container_plugin, name="info")
-            .use(container_plugin, name="aonly")
-            .use(container_plugin, name="guidelines")
-            .use(container_plugin, name="generic", validate = lambda *args: True)
-            .enable('table')
-            .enable('image')
+                .use(front_matter_plugin)
+                .use(footnote_plugin)
+                .use(anchors_plugin, max_level=5, permalink=True)
+                .use(fieldlist_plugin)
+                .use(container_plugin, name="warning")
+                .use(container_plugin, name="info")
+                .use(container_plugin, name="aonly")
+                .use(container_plugin, name="guidelines")
+                .use(container_plugin, name="generic", validate=lambda *args: True)
+                .enable('table')
+                .enable('image')
         )
 
         return await self.send_personal_message({
@@ -1513,21 +1637,24 @@ Please check site pages before approving/denying. You can save lots of time by d
 
 <button onclick="setFlag()">Update</button>
 :::
-"""), 
-    "ext_script": "/_static/bot-actions.js?v=2",
-    "script": f"""
+"""),
+            "ext_script": "/_static/bot-actions.js?v=2",
+            "script": f"""
         var csrfToken = "{csrf_token}"
         """}, ws)
 
     async def staff_apps(self, ws: WebSocket, open: str):
         # Get staff application list
         if ws.state.member.perm < 2:
-            return await self.send_personal_message({"resp": "staff_apps", "detail": "You do not have permission to view this page", "wait_for_upg": True}, ws)
+            return await self.send_personal_message(
+                {"resp": "staff_apps", "detail": "You do not have permission to view this page", "wait_for_upg": True},
+                ws)
         elif not ws.state.verified:
             return await manager.send_personal_message({"resp": "staff_verify_forced"}, ws)
 
-        staff_apps = await app.state.db.fetch("SELECT user_id, app_id, questions, answers, created_at FROM lynx_apps ORDER BY created_at DESC")
-        app_html = "" 
+        staff_apps = await app.state.db.fetch(
+            "SELECT user_id, app_id, questions, answers, created_at FROM lynx_apps ORDER BY created_at DESC")
+        app_html = ""
 
         # Easiest way to block cross origin is to just use a hidden input
         csrf_token = get_token(132)
@@ -1591,7 +1718,9 @@ Please check site pages before approving/denying. You can save lots of time by d
 
     async def staff_verify(self, ws: WebSocket):
         if ws.state.member.perm < 2:
-            return await self.send_personal_message({"resp": "staff_verify", "detail": "You do not have permission to view this page", "wait_for_upg": True}, ws)
+            return await self.send_personal_message(
+                {"resp": "staff_verify", "detail": "You do not have permission to view this page",
+                 "wait_for_upg": True}, ws)
         return await self.send_personal_message({
             "resp": "staff_verify",
             "title": "Fates List Staff Verification",
@@ -1638,9 +1767,9 @@ Please check site pages before approving/denying. You can save lots of time by d
 
         ws.send(JSON.stringify({request: "cosmog", code: code}))
     }
-    """ 
+    """
         }, ws)
-    
+
     async def user_action(self, ws: WebSocket, data: dict):
         try:
             action = app.state.user_actions[data["action"]]
@@ -1666,11 +1795,12 @@ Please check site pages before approving/denying. You can save lots of time by d
             await self.send_personal_message({"resp": "bot_action", "detail": f"{type(exc)}: {str(exc)}"}, ws)
             return
         return await action(ws, action_data)
-    
+
     async def send_docs_feedback(self, ws: WebSocket, data: dict):
         if len(data.get("feedback", "")) < 5:
-            return await ws.send_json({"resp": "eternatus", "detail": "Feedback must be greater than 10 characters long!"})
-        
+            return await ws.send_json(
+                {"resp": "eternatus", "detail": "Feedback must be greater than 10 characters long!"})
+
         if ws.state.user:
             user_id = int(ws.state.user["id"])
             username = ws.state.user["username"]
@@ -1680,7 +1810,7 @@ Please check site pages before approving/denying. You can save lots of time by d
 
         if not data.get("page", "").startswith("/"):
             return await ws.send_json({"resp": "eternatus", "detail": "Unexpected page!"})
-        
+
         await app.state.db.execute(
             "INSERT INTO lynx_ratings (feedback, page, username_cached, user_id) VALUES ($1, $2, $3, $4)",
             data["feedback"],
@@ -1688,10 +1818,12 @@ Please check site pages before approving/denying. You can save lots of time by d
             username,
             user_id
         )
-        
+
         return await ws.send_json({"resp": "eternatus", "detail": "Successfully rated"})
 
+
 manager = ConnectionManager()
+
 
 @app.websocket("/_ws")
 async def ws(ws: WebSocket):
@@ -1711,8 +1843,8 @@ async def ws(ws: WebSocket):
         try:
             sunbeam_user = orjson.loads(b64decode(ws.cookies.get("sunbeam-session:warriorcats")))
             data = await app.state.db.fetchrow(
-                "SELECT api_token, staff_verify_code FROM users WHERE user_id = $1 AND api_token = $2", 
-                int(sunbeam_user["user"]["id"]), 
+                "SELECT api_token, staff_verify_code FROM users WHERE user_id = $1 AND api_token = $2",
+                int(sunbeam_user["user"]["id"]),
                 sunbeam_user["token"]
             )
             if not data:
@@ -1732,7 +1864,7 @@ async def ws(ws: WebSocket):
             ws.state.verified = True
 
             if not code_check(data["staff_verify_code"], int(sunbeam_user["user"]["id"])) and ws.state.member.perm >= 2:
-                await manager.send_personal_message({"resp": "staff_verify_forced"}, ws) # Request staff verify
+                await manager.send_personal_message({"resp": "staff_verify_forced"}, ws)  # Request staff verify
                 ws.state.verified = False
 
         except Exception as exc:
@@ -1752,8 +1884,8 @@ async def ws(ws: WebSocket):
             if ws.state.user is not None:
                 # Check perms as this user is logged in
                 check = await app.state.db.fetchrow(
-                    "SELECT user_id, staff_verify_code FROM users WHERE user_id = $1 AND api_token = $2", 
-                    int(ws.state.user["id"]), 
+                    "SELECT user_id, staff_verify_code FROM users WHERE user_id = $1 AND api_token = $2",
+                    int(ws.state.user["id"]),
                     ws.state.token
                 )
                 if not check:
@@ -1769,14 +1901,14 @@ async def ws(ws: WebSocket):
 
                 if ws.state.verified and not code_check(check["staff_verify_code"], int(sunbeam_user["user"]["id"])):
                     if ws.state.member.perm >= 2:
-                        await manager.send_personal_message({"resp": "staff_verify_forced"}, ws) # Request staff verify
+                        await manager.send_personal_message({"resp": "staff_verify_forced"}, ws)  # Request staff verify
                     ws.state.verified = False
 
             if data.get("request") == "notifs":
                 asyncio.create_task(manager.send_notifs(ws))
             elif data.get("request") == "doctree":
                 asyncio.create_task(manager.send_doctree(ws))
-            elif data.get("request") == "perms": 
+            elif data.get("request") == "perms":
                 await manager.send_personal_message({"resp": "perms", "data": ws.state.member.dict()}, ws)
             elif data.get("request") == "reset":
                 # Remove from db
@@ -1875,22 +2007,25 @@ In case, you haven't went through staff verification and you somehow didn't get 
         manager.disconnect(ws)
         await manager.broadcast(orjson.dumps({"detail": "Client left the chat"}).decode())
 
+
 class UserActionWithReason(BaseModel):
     user_id: str
     reason: str
     csrf_token: str
 
+
 app.state.user_actions = {}
 
+
 def user_action(
-    name: str,
-    states: list[enums.UserState], 
-    min_perm: int = 2,
+        name: str,
+        states: list[enums.UserState],
+        min_perm: int = 2,
 ):
     async def state_check(bot_id: int):
         user_state = await app.state.db.fetchval("SELECT state FROM users WHERE user_id = $1", bot_id)
         return (user_state in states) or len(states) == 0
-    
+
     async def _core(ws: WebSocket, data: UserActionWithReason):
         if ws.state.member.perm < min_perm:
             await ws.send_json({
@@ -1914,7 +2049,7 @@ def user_action(
             return False
 
         data.user_id = int(data.user_id)
-        
+
         if not await state_check(data.user_id):
             await ws.send_json({
                 "resp": "user_action",
@@ -1922,11 +2057,11 @@ def user_action(
             })
             return False
         return True
-        
+
     def decorator(function):
         async def wrapper(ws, data: UserActionWithReason):
             if not await _core(ws, data):
-                return # Exit if true, we've already sent
+                return  # Exit if true, we've already sent
             if len(data.reason) < 5:
                 return await ws.send_json({
                     "resp": "user_action",
@@ -1936,9 +2071,12 @@ def user_action(
             res = jsonable_encoder(res)
             res["resp"] = "user_action"
             return await ws.send_json(res)
+
         app.state.user_actions[name] = wrapper
         return wrapper
+
     return decorator
+
 
 ### Client should lie here and give a generic reason for add_staff
 
@@ -1950,9 +2088,9 @@ async def add_staff(data: UserActionWithReason):
     # Check if DMable by attempting to send a message
     async with aiohttp.ClientSession() as sess:
         async with sess.post(
-            "https://discord.com/api/v10/users/@me/channels", 
-            json={"recipient_id": str(data.user_id)},
-            headers={"Authorization": f"Bot {main_bot_token}"}) as res:
+                "https://discord.com/api/v10/users/@me/channels",
+                json={"recipient_id": str(data.user_id)},
+                headers={"Authorization": f"Bot {main_bot_token}"}) as res:
             if res.status != 200:
                 json = await res.json()
                 return {
@@ -1968,16 +2106,16 @@ async def add_staff(data: UserActionWithReason):
         )
 
         async with sess.post(
-            f"https://discord.com/api/v10/channels/{channel_id}/messages",
-            json={
-                "content": """
+                f"https://discord.com/api/v10/channels/{channel_id}/messages",
+                json={
+                    "content": """
 Please join our staff server first of all: https://fateslist.xyz/banappeal/invite
 
 Then head on over to https://lynx.fateslist.xyz to read our staff guide and get started!
-                """, 
-                "embeds": [embed.to_dict()],
-            },
-            headers={"Authorization": f"Bot {main_bot_token}"}
+                """,
+                    "embeds": [embed.to_dict()],
+                },
+                headers={"Authorization": f"Bot {main_bot_token}"}
         ) as resp:
             if resp.status != 200:
                 json = await resp.json()
@@ -1987,12 +2125,14 @@ Then head on over to https://lynx.fateslist.xyz to read our staff guide and get 
 
     return {"detail": "Successfully added staff member"}
 
+
 ### Client should lie here and give a generic reason for ack_staff_app
 
 @user_action("ack_staff_app", [], min_perm=4)
 async def ack_staff_app(data: UserActionWithReason):
     await app.state.db.execute("DELETE FROM lynx_apps WHERE user_id = $1", data.user_id)
     return {"detail": "Acked"}
+
 
 print(app.state.user_actions)
 print(app.state.bot_actions)
@@ -2006,8 +2146,10 @@ async def startup():
     app.state.db = await asyncpg.create_pool()
     await engine.start_connection_pool()
 
+
 @app.on_event("shutdown")
 async def close():
     await app.state.engine.close_connection_pool()
+
 
 app.add_middleware(CustomHeaderMiddleware)
