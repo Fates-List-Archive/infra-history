@@ -192,8 +192,9 @@ We log all admin actions taken on Lynx for anti-nuke and debugging purposes. We 
 #### Security
 
 1. Our site is secure and we try to ensure that only you and Fates List Staff can edit your bot and that all actions require proper permission and clearance to be used. We may regenerate API tokens if needed.
-2. We backup our database on Google Drive. This backup is encrypted by rclone using AES and the configuration file for rclone is also encrypted
+2. We backup our database on Google Drive. This backup is encrypted by ``rclone`` using AES and the configuration file for rclone is also encrypted
 3. All data *should* be encrypted at rest. Mistakes however may happen and Fates List does not take any responsibility for any data breaches that may occur. We also do not recommend sharing of private information such as addresses on Fates List
+4. Our site is hosted on Digital Ocean. You can find the privacy policy of Digital Ocean [here](https://www.digitalocean.com/legal/privacy-policy)
 
 </blockquote>
 
@@ -229,8 +230,8 @@ We update constantly, and changes are made often. By joining the support server,
 #### Contributing
 
 1. Fates List was made possible thanks to the help of our staff team.
-2. In particular, Fates List would like to give a shoutout to skylarr#6666 for giving us a Digital Ocean droplet to host Fates List on.
-3. You can find the source code for Fates List at https://github.com/Fates-List
+2. In particular, Fates List would like to give a shoutout to ``skylarr#6666`` for giving us a Digital Ocean droplet to host Fates List on.
+3. You can find the source code for Fates List [here](https://github.com/Fates-List)
 
 </blockquote>
 
