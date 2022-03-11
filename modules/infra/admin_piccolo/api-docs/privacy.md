@@ -4,7 +4,7 @@ These are some requirements we test for and require. Note that this list is **no
 
 <blockquote class="quote">
 
-#### Basics
+### Basics
 
 1. It is perfectly OK to submit bots and servers that are in competition with Fates List (such as API/manager bots of other bot lists with their permission)
 2. Your bot may not be a fork or instance of another bot without substantial modifications and prior permission from the owner of the bot you have forked/made an instance of.
@@ -19,7 +19,7 @@ These are some requirements we test for and require. Note that this list is **no
 
 <blockquote class="quote">
 
-#### Commands
+### Commands
 
 1. Your bot must have a working help command
 2. If your bot has level messages or welcome messages, it must be optional and disableable
@@ -35,7 +35,7 @@ These are some requirements we test for and require. Note that this list is **no
 
 <blockquote class="quote">
 
-#### Prefixes
+### Prefixes
 
 1. Bots with common prefixes (`!`, `?`, `.`, `;`) should have a customizable prefix or they may be muted on the support server. You may change the prefix for just Fates List if you want to and staff can do it for you if you tell them the command.
 2. You should use the Customizable Prefix feature in your bots settings to denote whather custom prefixes are supported. This is to make it easier for users to know this
@@ -46,7 +46,7 @@ These are some requirements we test for and require. Note that this list is **no
 
 <blockquote class="quote">
 
-#### Safety
+### Safety
 
 1. Bots should not mass DM or be malicious in any way such as mass nuke, scam bots, free nitro bots. This also applies to servers as well when server listing is done.
 2. DMing staff to ask for your bot to be approved/reviewed is strictly prohibited. Your bot will be denied or banned if you do so. You may however ask staff politely to review/show off your bot on your support server if it needs to be verified.
@@ -60,10 +60,9 @@ These are some requirements we test for and require. Note that this list is **no
 
 <blockquote class="quote">
 
-#### Notes
+### Notes
 
-1. You can always appeal a ban or resubmit your bot. To do so, just login, click your username > My Profile > *your bot* > View and then click the link underneath the ban message to start the ban appeal or resubmission process
-
+-You can always appeal a ban or resubmit your bot. To do so, just login, click your username > My Profile > *your bot* > View and then click the link underneath the ban message to start the ban appeal or resubmission process
 
 </blockquote>
 
@@ -71,7 +70,7 @@ These are some requirements we test for and require. Note that this list is **no
 
 <blockquote class="quote">
 
-#### Basics
+### Basics
 
 1. Your bot must have a banner (either bot card and/or bot page)
 2. Your bot should have a high quality bot page including a good long/short description and good banner choices
@@ -84,23 +83,21 @@ These are some requirements we test for and require. Note that this list is **no
 9. Your bot may be exempted from requirements it does not meet on a case by case basis that staff (Admins/Mods+) will decide and/or vote on. We will let you know more information during the process
 10. You may apply for certification on our support server by creating a support ticket with Certification as the selected option. Your bot will undergo some basic automated checks and will then be sent to us. We will DM you when we are retesting your bot and for any updates or other info we have. Having a closed DM/friend requests will result in denial!
 
-
 </blockquote>
 
 <blockquote class="quote">
 
-#### Commands
+### Commands
 
 1. At least 98% to 100% of all commands should work unless the bot does not *have* commands (chat bots etc)
 2. All commands must implement error handling. Using embeds is recommended in commands
 3. The majority of all commands should gave clear documentation on how to use it, preferably with examples
 
-
 </blockquote>
 
 <blockquote class="quote">
 
-#### Perks
+### Perks
 
 1. Certified Bots appear higher on the main page and will be above all bots other than the random bot
 2. Special channel to show off certified bots and potential access to #general or a channel for just your bot!
@@ -108,9 +105,7 @@ These are some requirements we test for and require. Note that this list is **no
 4. Little to no API ratelimits as you are trusted to use the API responsibly. This *will* get revoked and your bot *may* be banned if you abuse this (decided on a case by case basis)!
 5. More coming soon ❤️
 
-
 </blockquote>
-
 
 
 This section was made to handle GDPR requirements such as data requests and deletions.
