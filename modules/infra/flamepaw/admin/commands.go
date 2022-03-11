@@ -192,8 +192,14 @@ func CmdInit() map[string]types.SlashCommand {
 				if botId.Status != pgtype.Present {
 					return "Unable to get botID and votes"
 				}
-				tx.Exec(context.Context, "INSERT INTO bot_stats_votes_pm (bot_id, epoch, votes) VALUES ($1, $2, $3)", botId.Int, float64(time.Now().Unix())+0.001, votes.Int)
-				tx.Exec(context.Context, "UPDATE bots SET votes = 0 WHERE bot_id = $1", botId.Int)
+				_, err := tx.Exec(context.Context, "INSERT INTO bot_stats_votes_pm (bot_id, epoch, votes) VALUES ($1, $2, $3)", botId.Int, float64(time.Now().Unix())+0.001, votes.Int)
+				if err != nil {
+					return ""
+				}
+				_, err = tx.Exec(context.Context, "UPDATE bots SET votes = 0 WHERE bot_id = $1", botId.Int)
+				if err != nil {
+					return ""
+				}
 			}
 			err = tx.Commit(context.Context)
 			if err != nil {
