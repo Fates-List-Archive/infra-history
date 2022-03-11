@@ -143,6 +143,8 @@ These are our guidelines you must follow and adhere to when using Fates List!
 
 </blockquote>
 
+<hr/>
+
 ### Data Collection And Security
 
 This section relates to how we process, secure and handle data as per the GDPR and other local privacy laws
