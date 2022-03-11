@@ -120,11 +120,9 @@ This section includes the *additional* requirements for certification. This list
 
 <hr/>
 
-### Data Collection
+### Guidelines
 
-This section relates to how we process and handle data as per the GDPR and other local privacy laws
-
-### Basics
+These are our guidelines you must follow and adhere to when using Fates List!
 
 <blockquote class="quote">
 
@@ -145,63 +143,9 @@ This section relates to how we process and handle data as per the GDPR and other
 
 </blockquote>
 
-<blockquote class="quote">
+### Data Collection
 
-#### Security
-
-1. Our site is secure and we try to ensure that only you and Fates List Staff can edit your bot and that all actions require proper permission and clearance to be used. We may regenerate API tokens if needed.
-2. We backup our database on Google Drive. This backup is encrypted by rclone using AES and the configuration file for rclone is also encrypted
-
-</blockquote>
-
-<blockquote class="quote">
-
-#### Privacy
-
-1. Your privacy matters to us. By continuing, you agree to your data being processed and/or stored for analytical purpose such as statistics as per our privacy policy. This information is not shared with third-parties whatsoever and is kept confidential
-2. The data we collect is your IP address, username, user id, avatar and any info you submit to us.
-3. We may also use IPs for access logs. Due to technical reasons, these cannot be easily deleted from our servers so please use a VPN if you do not want your IP to be exposed to us.
-4. We also store timestamps of when you vote for a bot and these timestamps are exposed to bot owners via our API which they may then use for their own purposes such as determining whether you can vote for a bot or not.
-
-
-</blockquote>
-
-<blockquote class="quote">
-
-#### Contact
-
-You can contact our staff by joining the Fates List support server. Note that our support server is the only official way of contacting the Fates List staff team and we may not respond elsewhere.
-
-</blockquote>
-
-<blockquote class="quote">
-
-#### Updates
-
-We update constantly, and changes are made often. By joining the support server, you may be notified of changes we make, including privacy policy changes. This page may be changed at any time in the future.
-
-</blockquote>
-
-<blockquote class="quote">
-
-#### Contributing
-
-1. Fates List was made possible thanks to the help of our staff team.
-2. In particular, Fates List would like to give a shoutout to skylarr#6666 for giving us a Digital Ocean droplet to host Fates List on.
-3. You can find the source code for Fates List at https://github.com/Fates-List
-
-</blockquote>
-
-<blockquote class="quote">
-
-#### Affiliations
-
-We are not affiliated with Discord Inc. or any of its partners or affiliates.
-
-
-</blockquote>
-
-### Data
+This section relates to how we process and handle data as per the GDPR and other local privacy laws
 
 <blockquote class="quote">
 
@@ -240,6 +184,58 @@ We log all interactions to console. Note that these logs are *private*, not perm
 #### Staff
 
 We log all admin actions taken on Lynx for anti-nuke and debugging purposes. We may or may not permanently (within the realms of local law) store this data however this is not yet implemented.
+
+</blockquote>
+
+#### Security
+
+1. Our site is secure and we try to ensure that only you and Fates List Staff can edit your bot and that all actions require proper permission and clearance to be used. We may regenerate API tokens if needed.
+2. We backup our database on Google Drive. This backup is encrypted by rclone using AES and the configuration file for rclone is also encrypted
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Privacy
+
+1. Your privacy matters to us. By continuing, you agree to your data being processed and/or stored for analytical purpose such as statistics as per our privacy policy. This information is not shared with third-parties whatsoever and is kept confidential
+2. The data we collect is your IP address, username, user id, avatar and any info you submit to us.
+3. We may also use IPs for access logs. Due to technical reasons, these cannot be easily deleted from our servers so please use a VPN if you do not want your IP to be exposed to us.
+4. We also store timestamps of when you vote for a bot and these timestamps are exposed to bot owners via our API which they may then use for their own purposes such as determining whether you can vote for a bot or not.
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Contact
+
+You can contact our staff by joining the Fates List support server. Note that our support server is the only official way of contacting the Fates List staff team and we may not respond elsewhere.
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Updates
+
+We update constantly, and changes are made often. By joining the support server, you may be notified of changes we make, including privacy policy changes. This page may be changed at any time in the future.
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Contributing
+
+1. Fates List was made possible thanks to the help of our staff team.
+2. In particular, Fates List would like to give a shoutout to skylarr#6666 for giving us a Digital Ocean droplet to host Fates List on.
+3. You can find the source code for Fates List at https://github.com/Fates-List
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Affiliations
+
+We are not affiliated with Discord Inc. or any of its partners or affiliates.
 
 </blockquote>
 
