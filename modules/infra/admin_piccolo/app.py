@@ -1619,6 +1619,22 @@ Please check site pages before approving/denying. You can save lots of time by d
 
 :::
 
+::: action-reset-all-votes
+
+### Reset All Votes
+
+- Head Admin+ only
+- Definition: votes => 0 %all%
+
+<textarea
+id="reset-all-votes-reason"
+placeholder="Reason for resetting all votes"
+></textarea>
+
+<button onclick="resetAllVotes()">Reset All</button>
+
+:::
+
 ::: action-setflag
 
 ### Set/Unset Bot Flag
@@ -1638,7 +1654,7 @@ Please check site pages before approving/denying. You can save lots of time by d
 <button onclick="setFlag()">Update</button>
 :::
 """),
-            "ext_script": "/_static/bot-actions.js?v=2",
+            "ext_script": "/_static/bot-actions.js?v=4",
             "script": f"""
         var csrfToken = "{csrf_token}"
         """}, ws)

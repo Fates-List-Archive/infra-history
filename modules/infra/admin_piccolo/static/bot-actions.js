@@ -82,6 +82,11 @@ async function resetVotes() {
     sendBotAction("reset-votes", botId, reason)
 }
 
+async function resetAllVotes() {
+    let reason = document.querySelector("#reset-all-votes-reason").value || "STUB_REASON"
+    sendBotAction("reset-all-votes", "0", reason)
+}
+
 async function setFlag() {
     let botId = getBotId("#set-flag")
     let reason = document.querySelector("#set-flag-reason").value
