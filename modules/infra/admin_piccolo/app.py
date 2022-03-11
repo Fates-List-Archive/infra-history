@@ -931,8 +931,7 @@ async def reset_all_votes(request: Request, data: ActionWithReason):
     top_voted_str = ""
     i = 1
     for bot in top_voted:
-        add = f"**#{i}.** {bot['username_cached']} - {bot['votes']} votes this month and {bot['total_votes']} total " \
-                         f"votes. GG!\n"
+        add = f"**#{i}.** [{bot['username_cached'] or 'Uncached User'}](https://fateslist.xyz/bot/{bot['bot_id']}) - {bot['votes']} votes this month and {bot['total_votes']} total votes. GG!\n"
         if len(top_voted_str) + len(add) > 2048:
             break
         else:
