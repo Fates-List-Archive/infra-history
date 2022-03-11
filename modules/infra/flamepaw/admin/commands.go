@@ -6,14 +6,12 @@ import (
 	"flamepaw/slashbot"
 	"flamepaw/supportsystem"
 	"flamepaw/types"
-	"strconv"
-	"time"
-
 	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
+	"strconv"
 )
 
 const embedColorGood = 0x00ff00
@@ -147,86 +145,6 @@ func CmdInit() map[string]types.SlashCommand {
 			},
 		},
 		Server: common.StaffServer,
-	}
-
-	// Reset all bot votes
-	commands["RESETVOTESALL"] = AdminOp{
-		InternalName: "resetallvotes",
-		Cooldown:     types.CooldownNone,
-		Description:  "Reset votes for all bots on the list",
-		MinimumPerm:  6,
-		Event:        types.EventNone,
-		SlashRaw:     true,
-		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "reason",
-				Description: "Reason for resetting all votes. Defaults to Monthly Vote Reset",
-				Required:    false,
-			},
-		},
-		Server: common.StaffServer,
-		Handler: func(context types.SlashContext) string {
-			if context.Reason == "" {
-				context.Reason = "Monthly Votes Reset"
-			}
-			bots, err := context.Postgres.Query(context.Context, "SELECT bot_id, votes FROM bots")
-			if err != nil {
-				log.Error(err)
-				return err.Error()
-			}
-
-			defer bots.Close()
-
-			tx, err := context.Postgres.Begin(context.Context)
-			if err != nil {
-				return err.Error()
-			}
-
-			defer tx.Rollback(context.Context)
-
-			for bots.Next() {
-				var botId pgtype.Int8
-				var votes pgtype.Int8
-				bots.Scan(&botId, &votes)
-				if botId.Status != pgtype.Present {
-					return "Unable to get botID and votes"
-				}
-				_, err := tx.Exec(context.Context, "INSERT INTO bot_stats_votes_pm (bot_id, epoch, votes) VALUES ($1, $2, $3)", botId.Int, float64(time.Now().Unix())+0.001, votes.Int)
-				if err != nil {
-					return ""
-				}
-				_, err = tx.Exec(context.Context, "UPDATE bots SET votes = 0 WHERE bot_id = $1", botId.Int)
-				if err != nil {
-					return ""
-				}
-			}
-			err = tx.Commit(context.Context)
-			if err != nil {
-				return err.Error()
-			}
-
-			keys := context.Redis.Keys(context.Context, "vote_lock:*").Val()
-
-			context.Redis.Del(context.Context, keys...)
-
-			embed := discordgo.MessageEmbed{
-				URL:         "https://fateslist.xyz",
-				Title:       "All Bot Votes Reset",
-				Description: "All bots have had its votes reset!",
-				Color:       embedColorGood,
-				Fields: []*discordgo.MessageEmbedField{
-					{
-						Name:  "Reason",
-						Value: context.Reason,
-					},
-				},
-			}
-			common.DiscordMain.ChannelMessageSendComplex(common.SiteLogs, &discordgo.MessageSend{
-				Embed: &embed,
-			})
-			return "OK. But make sure to clear the database to get rid of existing vote locks"
-		},
 	}
 
 	commands["SENDROLEMSG"] = AdminOp{
