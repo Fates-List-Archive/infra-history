@@ -1,16 +1,18 @@
 ### Bot Requirements
 
+These are some requirements we test for and require. Note that this list is **non-inclusive**
+
 <blockquote class="quote">
 
 #### Basics
 
 1. It is perfectly OK to submit bots and servers that are in competition with Fates List (such as API/manager bots of other bot lists with their permission)
 2. Your bot may not be a fork or instance of another bot without substantial modifications and prior permission from the owner of the bot you have forked/made an instance of.
-3. Your bot should handle errors in a user friendly way. A way of reporting errors is a nice extra tidbit to have though not strictly required. Giving tracebacks is allowed if it does not leak sensitive information such as bot tokens or private information on a user.
-4. Your bot must respect the Discord API and ratelimits. This also means that your bot should not spam messages or be a 'rainbow role' bot.
+3. Your bot should handle errors in a user-friendly way. A way of reporting errors is a nice extra tidbit to have though not strictly required. Giving tracebacks is allowed if it does not leak sensitive information such as bot tokens or private information on a user.
+4. Your bot must respect the Discord API and rate-limits. This also means that your bot should not spam messages or be a 'rainbow role' bot.
 5. Your bot must follow the Discord ToS and guidelines. This also includes no invite rewards, no nuking etc.
-6. Custom bots based of/dependant on/running an instance of another bot such as botmakers not allowed by discord, BotGhost, MEE6 Premium, Wick VIP is prohibited unless it has unique features that you have added to it and can be configured on other servers by users.
-7. For frameworks such as redbot, you must have at least 3 custom made cogs (or the equivalent for other frameworks). You must give credits to any framework you are using. *BDFD/BDScript/other bot makers are not allowed on Fates List unless it is also allowed by Discord and your bot is high-quality and has features*
+6. Custom bots based of/dependent on/running an instance of another bot such as bot-makers not allowed by discord, BotGhost, MEE6 Premium, Wick VIP is prohibited unless it has unique features that you have added to it and can be configured on other servers by users.
+7. For frameworks such as redbot, you must have at least 3 custom-made cogs (or the equivalent for other frameworks). You must give credits to any framework you are using. *BDFD/BDScript/other bot makers are not allowed on Fates List unless it is also allowed by Discord and your bot is high-quality and has features*
 
 
 </blockquote>
