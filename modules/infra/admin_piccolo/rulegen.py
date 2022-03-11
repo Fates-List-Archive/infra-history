@@ -27,3 +27,23 @@ with open("api-docs/privacy.md") as policy:
 
 with open("api-docs/privacy.md", "w") as policy:
     policy.write(f.replace("%botreqs%", bot_req))
+
+# datacol code
+
+datacol = ""
+
+for key in data["privacy_policy"].keys():
+    datacol += f"### {title(key)}\n\n"
+    for section in data["privacy_policy"][key].keys():
+        datacol += f'<blockquote class="quote">\n\n#### {title(section)}\n\n'
+        i = 1
+        for line in data["privacy_policy"][key][section]:
+            datacol += f"{i}. {line}\n"
+            i += 1
+        datacol += "\n\n</blockquote>\n\n"  # Empty line
+
+with open("api-docs/privacy.md") as policy:
+    f = policy.read()
+
+with open("api-docs/privacy.md", "w") as policy:
+    policy.write(f.replace("%datacol%", datacol))

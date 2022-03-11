@@ -124,7 +124,124 @@ This section includes the *additional* requirements for certification. This list
 
 This section relates to how we process and handle data as per the GDPR and other local privacy laws
 
-%datacol%
+### Basics
+
+<blockquote class="quote">
+
+#### Terms Of Service
+
+1. Fates List is the legal entity owning this site and by using the site, you agree to be bound by these terms
+2. We reserve the right to make changes to our privacy policy at any time with an announcement on our support server. We also reserve the right to edit bot pages at any time to protect our site
+3. We may store cookies on your browser in order to keep you signed in and to potentially improve the site experience
+4. You must be at least 13 years old in order to use this service
+5. You may not DDOS, attempt to exploit or otherwise harm the service without permission from the owner(s) of Fates List
+6. You may not leak private information on another user's bots, such as API tokens, without permission from the bot owner or from a Head Admin or higher. This is legally binding and will be enforced to the fullest degree permitted by law
+7. May log you IP address which may be used by Fates List to protect against abuse of our service or by approved third parties, such as Digital Ocean and local law enforcement. Most sites log IP addresses and they are usually changed periodically by your Internet Service Provider
+8. You agree that we are not responsible for any possible accidents that may happen such as leaked IP addresses or leaked API tokens. We aim to never have this happen but accidents can and do happen at times
+9. Many bot logs are public to your users for auditing purposes
+10. You must follow Discord's Terms Of Service
+11. All user information on the site is cached for 8 hours. Data is kept only for the amount of time required
+12. All complaints and legal issues regarding the site should be made to Rootspring#6701
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Security
+
+1. Our site is secure and we try to ensure that only you and Fates List Staff can edit your bot and that all actions require proper permission and clearance to be used. We may regenerate API tokens if needed.
+2. We backup our database on Google Drive. This backup is encrypted by rclone using AES and the configuration file for rclone is also encrypted
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Privacy
+
+1. Your privacy matters to us. By continuing, you agree to your data being processed and/or stored for analytical purpose such as statistics as per our privacy policy. This information is not shared with third-parties whatsoever and is kept confidential
+2. The data we collect is your IP address, username, user id, avatar and any info you submit to us.
+3. We may also use IPs for access logs. Due to technical reasons, these cannot be easily deleted from our servers so please use a VPN if you do not want your IP to be exposed to us.
+4. We also store timestamps of when you vote for a bot and these timestamps are exposed to bot owners via our API which they may then use for their own purposes such as determining whether you can vote for a bot or not.
+
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Contact
+
+You can contact our staff by joining the Fates List support server. Note that our support server is the only official way of contacting the Fates List staff team and we may not respond elsewhere.
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Updates
+
+We update constantly, and changes are made often. By joining the support server, you may be notified of changes we make, including privacy policy changes. This page may be changed at any time in the future.
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Contributing
+
+1. Fates List was made possible thanks to the help of our staff team.
+2. In particular, Fates List would like to give a shoutout to skylarr#6666 for giving us a Digital Ocean droplet to host Fates List on.
+3. You can find the source code for Fates List at https://github.com/Fates-List
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Affiliations
+
+We are not affiliated with Discord Inc. or any of its partners or affiliates.
+
+
+</blockquote>
+
+### Data
+
+<blockquote class="quote">
+
+#### Collection
+
+We cache user information from Discord as well as handling ratelimits using Redis to significantly improve site performance and your experience using the site. We store data on bots using PostgreSQL. Information you give us, such as bots information, badges you or your bots earn in the future, and your profile information is all stored on our servers. We also may log user information temporarily to console however these logs are not persistent. We also use IPC over Redis for most if not all Discord API related activities and data transferred over IPC is only temporarily stored in Redis for a maximum of 30 seconds to one minute.
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Deletion
+
+You can easily have your data deleted at any time. You may delete your account by opening a Data Deletion Request below on Lynx or by DMing `Rootspring#6701`. You can delete your bots from Bot Settings. Data Deletion Requests may take up to 24 hours to process and the time of when you last vote will still be stored to prevent against abuse. All of your bots will also be deleted permanently and this is irreversible
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Access
+
+Fates List needs to access your username, avatar, status and user id in order to identify who you are on Discord so you can use the site. Fates List also needs to know which servers you are in for server listing if you choose to enable it. Fates List also needs the ability to join servers for you if you choose to be automatically added to the support server on login.
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Server Listing
+
+We log all interactions to console. Note that these logs are *private*, not permanently stored and are only used for debugging purposes.
+
+</blockquote>
+
+<blockquote class="quote">
+
+#### Staff
+
+We log all admin actions taken on Lynx for anti-nuke and debugging purposes. We may or may not permanently (within the realms of local law) store this data however this is not yet implemented.
+
+</blockquote>
 
 <hr/>
 
