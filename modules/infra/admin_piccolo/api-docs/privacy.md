@@ -66,6 +66,8 @@ These are some requirements we test for and require. Note that this list is **no
 
 </blockquote>
 
+<hr/>
+
 ### Certification
 
 <blockquote class="quote">
@@ -102,10 +104,18 @@ These are some requirements we test for and require. Note that this list is **no
 1. Certified Bots appear higher on the main page and will be above all bots other than the random bot
 2. Special channel to show off certified bots and potential access to #general or a channel for just your bot!
 3. Access to in-development 'unstable' API endpoints and potentially some certified bot only features
-4. Little to no API ratelimits as you are trusted to use the API responsibly. This *will* get revoked and your bot *may* be banned if you abuse this (decided on a case by case basis)!
+4. Little to no API rate-limits as you are trusted to use the API responsibly. This *will* get revoked and your bot *may* be banned if you abuse this (decided on a case by case basis)!
 5. More coming soon ❤️
 
 </blockquote>
+
+<hr/>
+
+### Data Collection
+
+This section relates to how we process and handle data as per the GDPR
+
+%datacol%
 
 
 This section was made to handle GDPR requirements such as data requests and deletions.
