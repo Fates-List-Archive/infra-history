@@ -1057,6 +1057,12 @@ class ConnectionManager:
 
     # GDPR Data Request
     async def data_request(self, ws: WebSocket, user_id: str):
+        if not ws.state.user:
+            return await ws.send_json({
+                "resp": "data_request",
+                "detail": "You must be logged in first!"
+            })
+
         if ws.state.member.perm < 7 and ws.state.user["id"] != user_id:
             return await ws.send_json({
                 "resp": "data_request",
