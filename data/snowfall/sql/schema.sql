@@ -149,7 +149,7 @@ CREATE TABLE bot_commands (
    notes text[], -- notes on said command
    doc_link text, -- link to documentation of command
    CONSTRAINT bots_fk FOREIGN KEY (bot_id) REFERENCES bots(bot_id) ON DELETE CASCADE ON UPDATE CASCADE,
-   PRIMARY KEY (id, cmd_name)
+   PRIMARY KEY (id, name)
 );
 
 CREATE TABLE bot_stats_votes_pm (
@@ -199,12 +199,12 @@ CREATE TABLE reviews (
    review_upvotes bigint[] not null default '{}',
    review_downvotes bigint[] not null default '{}',
    flagged boolean not null default false,
-   epoch bigint[] default not null '{}',
+   epoch bigint[] not null default '{}',
    parent_id uuid REFERENCES reviews (id),
    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-create index review_index on reviews (id, target_id, user_id, review_text, review_upvotes, review_downvotes, epoch, parent_id, target_type, star_rating, flagged, reply);
+create index review_index on reviews (id, target_id, user_id, review_text, review_upvotes, review_downvotes, epoch, parent_id, target_type, star_rating, flagged, parent_id);
 
 CREATE TABLE review_votes (
     id uuid not null REFERENCES reviews (id) ON DELETE CASCADE ON UPDATE CASCADE,

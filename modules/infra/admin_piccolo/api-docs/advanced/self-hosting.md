@@ -28,9 +28,7 @@ Fates List is rather annoying (without knowledge in python/golang/rust) to self 
 
 ## VPS Setup
 
-1. Download the Fates List repo on the VPS using `git clone https://github.com/Fates-List/FatesList`. Make sure the location it is downloaded to is publicly accessible AKA not in a /root folder or anything like that.
-
-2. Download infra using `git clone https://github.com/Fates-List/infra FatesList`. Make sure you have xkcdpass, python3.10, *nightly* rust, go 1.18 or newer and docker-compose ready. Make sure gcc-c++, libffi-devel, libxslt-devel, libxml2-devel, libpq-devel packages are installed. Run `make install` to install Snowtuft
+1. Download the Fates List repo on the VPS using `git clone https://github.com/Fates-List/FatesList`. Make sure the location it is downloaded to is publicly accessible AKA not in a /root folder or anything like that. Make sure you have `xkcdpass, python3.10, *nightly* rust, go 1.18 or newer and docker-compose, gcc-c++, libffi-devel, libxslt-devel, libxml2-devel, libpq-devel packages are installed`.
 
 3. Run `tmux new -s flamepaw-pinger`. Then enter the ``modules/infra/flamepaw`` folder and run `make && make install`. This will build flamepaw for your system.
 
