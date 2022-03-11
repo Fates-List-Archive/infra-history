@@ -62,7 +62,7 @@ These are some requirements we test for and require. Note that this list is **no
 
 ### Notes
 
--You can always appeal a ban or resubmit your bot. To do so, just login, click your username > My Profile > *your bot* > View and then click the link underneath the ban message to start the ban appeal or resubmission process
+- You can always appeal a ban or resubmit your bot. To do so, just login, click your username > My Profile > *your bot* > View and then click the link underneath the ban message to start the ban appeal or resubmission process
 
 </blockquote>
 
