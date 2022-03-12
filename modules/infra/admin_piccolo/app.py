@@ -216,6 +216,7 @@ def doctree_gen():
             if path_split[0] not in doctree_dict:
                 doctree_dict[path_split[0]] = []
             doctree_dict[path_split[0]].append(path_split[1])
+            doctree_dict[path_split[0]] = sorted(doctree_dict[path_split[0]])
         else:
             raise RuntimeError("Max nesting of 2 reached")
 

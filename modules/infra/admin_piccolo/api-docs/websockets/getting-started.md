@@ -1,6 +1,15 @@
-# Getting Started
+### Some History
 
-Fates List offers websockets to allow you to get real time stats about your bot. This has been rewritten in golang to allow for better performance and reliability as well as new features that could not be implemented performantly in python
+Fates List offers websockets to allow you to get real time stats about your bot. This has been rewritten in golang to allow for better performance and reliability as well as new features that could not be implemented performantly in python. These docs contain the protocol used and how to actually use WebSockets on Fates List. *The protocol may be rewritten but this is highly unlikely at this point. The API is stable*
+
+
+::: warning
+
+While Lynx *does* have it's own WebSocket API for internal use and actually running Lynx. 
+External use is probihited without explicit permission from Fates List however you can't
+do much anyways without having staff permissions :)
+
+:::
 
 ### What are Websockets?
 
@@ -13,7 +22,6 @@ Large responses are seperated using ASCII Code 31 This is ``\x1f`` in python.
 Some example code on how to recieve responses from websocket is below:
 
 ```py
-
 for m in event.split("\x1f"):
     for e in m.split("\x1f"):
         if e == "":
