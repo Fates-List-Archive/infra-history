@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <link
       href="https://fonts.googleapis.com/css?family=Lexend Deca"
       rel="stylesheet"
     />
+    <title>Lynx Is Loading</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.4.0/build/styles/a11y-light.min.css">
     <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.4.0/build/highlight.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/RickStrahl/highlightjs-badge@master/highlightjs-badge.min.js"></script>
@@ -31,7 +32,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback"
     />
-    <link rel="stylesheet" href="/_static/core.css?v=3" />
+    <link rel="stylesheet" href="/_static/core.css?v=19" />
   </head>
   <body class="sidebar-mini sidebar-closed sidebar-collapse">
     <div class="wrapper">
@@ -42,17 +43,8 @@
               ><i class="fas fa-bars"></i
             ></a>
           </li>
-          <li class="nav-item d-none d-sm-inline-block">
+          <li class="nav-item d-none d-sm-inline-block" id="home-link">
             <a href="https://lynx.fateslist.xyz" class="nav-link">Home</a>
-          </li>
-          <li class="nav-item d-none d-sm-inline-block admin-only">
-            <a href="https://lynx.fateslist.xyz/admin" class="nav-link admin-only">Admin</a>
-          </li>
-          <li class="nav-item d-none d-sm-inline-block admin-only">
-            <a href="https://lynx.fateslist.xyz/bot-actions" class="nav-link admin-only">Bot Actions</a>
-          </li>
-          <li class="nav-item d-none d-sm-inline-block admin-only">
-            <a href="https://lynx.fateslist.xyz/user-actions" class="nav-link admin-only">User Actions</a>
           </li>
         </ul>
         <ul class="navbar-nav ml-auto">
@@ -64,7 +56,7 @@
             <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
               <span class="dropdown-header">Announcements</span>
               <div class="dropdown-divider"></div>
-				    <span id="messages">
+				    <span id="messages"></span>
           </div>
           </li>
           <li class="nav-item">
@@ -106,69 +98,31 @@
                 </a>
               </li>
               <li class="nav-item">
+                <a id="status-nav" href="https://lynx.fateslist.xyz/status" class="nav-link">
+                <i class="nav-icon fa-solid fa-gear"></i>
+                  <p>Status</p>
+                </a>
+              </li>
+              <li class="nav-item">
                 <a id="privacy-nav" href="https://lynx.fateslist.xyz/privacy" class="nav-link">
                 <i class="nav-icon fa-solid fa-shield"></i>
                   <p>Privacy</p>
                 </a>
               </li>
-              <li class="nav-item admin-only" id="lynx-admin-nav">
-                <a href="https://lynx.fateslist.xyz/admin" class="nav-link">
-                <i class="nav-icon fa-solid fa-server"></i>
-                  <p>Piccolo Admin</p>
-                </a>
-              </li>
-              <li class="nav-item">
+              <li class="nav-item" id="staff-guide-nav-li">
                 <a id="staff-guide-nav" href="https://lynx.fateslist.xyz/staff-guide" class="nav-link">
                 <i class="nav-icon fa-solid fa-rectangle-list"></i>
                   <p>Staff Guide</p>
                 </a>
               </li>
-              <li class="nav-item admin-only">
-                <a id="staff-apps-nav" href="https://lynx.fateslist.xyz/staff-apps" class="nav-link">
-                <i class="nav-icon fa-solid fa-rectangle-list"></i>
-                  <p>Staff Applications</p>
-                </a>
-              </li>
-              <li class="nav-item admin-only">
-                <a id="loa-nav" href="https://lynx.fateslist.xyz/loa" class="nav-link">
-                <i class="nav-icon fa-solid fa-baby-carriage"></i>
-                  <p>Leave Of Absence</p>
-                </a>
-              </li>
-              <li class="nav-item">
+              <li class="nav-item" id="links-nav-li">
                 <a id="links-nav" href="https://lynx.fateslist.xyz/links" class="nav-link">
                 <i class="nav-icon fa-solid fa-link"></i>
                   <p>Links</p>
                 </a>
               </li>
-              <li id="admin-panel-nav" class="nav-item admin-only">
-                <a id="admin-panel-nav-link" href="#" class="nav-link">
-                  <i class="nav-icon fa-solid fa-candy-cane"></i>
-                  <p>Admin Panel <i class="right fas fa-angle-left"></i></p>
-                </a>
-                <ul class="nav nav-treeview">
-                  <li class="nav-item">
-                    <a id="bot-actions-nav" href="https://lynx.fateslist.xyz/bot-actions" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                      <p>
-                        Bot Actions
-                        <span class="right badge badge-info">Beta</span>
-                      </p>
-                    </a>
-                  </li>
-                  <li class="nav-item">
-                    <a id="user-actions-nav" href="https://lynx.fateslist.xyz/user-actions" class="nav-link"
-                      ><i class="far fa-circle nav-icon"></i>
-                      <p>
-                        User Actions
-                        <span class="right badge badge-info">Beta</span>
-                      </p></a
-                    >
-                  </li>
-                </ul>
-              </li>
               <li class="nav-item temp-item">
-                <a id="links-nav" href="#" class="nav-link">
+                <a id="api-docs-nav" href="#" class="nav-link">
                 <i class="nav-icon fa-solid fa-link"></i>
                   <p>Loading Documentation...</p>
                 </a>
@@ -208,9 +162,10 @@
         >
         All rights reserved.
       </footer>
+      <button class="refresh-btn" onclick="refreshPage()"><i class="fa-solid fa-arrow-rotate-right"></i></button>
       <div id="sidebar-overlay"></div>
     </div>
   </body>
-  <script src="/_static/core.js?v=cisc33a343333d334fjd3a333f4f33333444345dd333390333dd3f23ff22342dd33f43s44"></script>
+  <script src="/_static/core.js?v=cisc3333a33334d33j2438333323333d334fjd33a33333f4f33333444345dd333390333dd3f23ff22342dd33f43s44"></script>
   <script src="/_static/docs.js?v=c4id4ca4da33304"></script>
 </html>  

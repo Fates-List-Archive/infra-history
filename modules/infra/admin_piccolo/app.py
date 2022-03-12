@@ -157,8 +157,8 @@ def code_check(code: str, user_id: int):
         f"Baypaw/Flamepaw/Sunbeam/Lightleap::{user_id}+Mew".encode()
     )
     expected = expected.hexdigest()
-    print(f"Expected: {expected}, but got {code}")
     if code != expected:
+        print(f"Expected: {expected}, but got {code}")
         return False
     return True
 
@@ -219,8 +219,12 @@ def doctree_gen():
         else:
             raise RuntimeError("Max nesting of 2 reached")
 
+    to_hide = ["privacy.md", "status-page.md"]
+
     for path in pathlib.Path("modules/infra/admin_piccolo/api-docs").rglob("*.md"):
         proper_path = str(path).replace("modules/infra/admin_piccolo/api-docs/", "")
+        if proper_path in to_hide:
+            continue
         print(f"DOCS: {proper_path}")
         path_split = proper_path.split("/")
         _gen_doctree(path_split)
@@ -1913,9 +1917,15 @@ async def ws(ws: WebSocket):
 
     try:
         while True:
-            data = await ws.receive_json()
+            try:
+                data = await ws.receive_json()
+            except Exception as exc:
+                if isinstance(exc, RuntimeError):
+                    return
+                print(f"{type(exc)}: {exc}")
+                continue
 
-            if data.get("request") not in ("notifs", "upgrade"):
+            if data.get("request") not in ("notifs",):
                 print(data)
 
             if ws.state.user is not None:

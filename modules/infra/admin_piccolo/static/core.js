@@ -1,6 +1,6 @@
 // https://stackoverflow.com/a/46959528
 function title(str) {
-    return str.replaceAll("_", " ").replace(/(^|\s)\S/g, function(t) { return t.toUpperCase() });
+    return str.replaceAll("-", " ").replaceAll("_", " ").replace(/(^|\s)\S/g, function(t) { return t.toUpperCase() });
 }
 
 if(!localStorage.ackedMsg) {
@@ -18,6 +18,9 @@ var addedDocTree = false
 var havePerm = false
 var staffPerm = 1
 var alreadyUp = false
+var refresh = false
+
+var hasLoadedAdminScript = false
 
 var perms = {name: "Please wait for websocket to finish loading", perm: 0}
 
@@ -128,6 +131,14 @@ async function wsStart() {
 
             // Remove admin panel
             if(staffPerm >= 2) {
+                if(!hasLoadedAdminScript) {
+                    let script = document.createElement("script")
+                    script.src = "/_static/admin-nav.js?v=132492"
+                    document.body.appendChild(script)
+                    hasLoadedAdminScript = true
+                } else {
+                    loadAdmin()
+                }
                 $('.admin-only').css("display", "block")
             }
             setInterval(() => {
@@ -173,8 +184,15 @@ async function wsStart() {
     }      
 }
 
+function clearRefresh() {
+    document.querySelector(".refresh-btn").classList.remove("refresh-btn-active")
+    document.querySelector(".refresh-btn").classList.remove("disabled")
+}
+
 function setData(data, noExtraCode=false) {
+    refresh = false
     if(data.detail) {
+        clearRefresh()
         alert(data.detail)
         return
     }
@@ -210,6 +228,8 @@ function setData(data, noExtraCode=false) {
 
     contentLoadedOnce = true
     contentCurrPage = window.location.pathname
+
+    clearRefresh()
 }
 
 async function getNotifications() {
@@ -331,7 +351,7 @@ function waitForWsAndLoad(data, f) {
         console.log("WS: Requested for data")
 
         // Are we even in a new page
-        if(contentCurrPage == data.loc && contentLoadedOnce) {
+        if(contentCurrPage == data.loc && contentLoadedOnce && !refresh) {
             console.log("Ignoring bad request", contentCurrPage, data.loc)
             return
         }
@@ -349,6 +369,10 @@ async function loadContent(loc) {
         console.log("Ignoring fake alarm for force staff verify")
         return
     }
+
+    locSplit = loc.split("/")
+
+    document.title = title(locSplit[locSplit.length - 1])
 
     inStaffVerify = false
 
@@ -383,6 +407,11 @@ async function loadContent(loc) {
     } else if(loc.startsWith("/privacy")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             ws.send(JSON.stringify({request: "docs", "path": "privacy", source: false}))
+            return
+        })
+    } else if(loc.startsWith("/status")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            ws.send(JSON.stringify({request: "docs", "path": "status-page", source: false}))
             return
         })
     } else if(loc == "/" || loc == "") {
@@ -510,4 +539,13 @@ function loginUser() {
         window.location.href = `https://fateslist.xyz/frostpaw/deathberry?redirect=${window.location.href}`
     } */
     window.location.href = `https://fateslist.xyz/frostpaw/herb?redirect=${window.location.href}`
+}
+
+function refreshPage() {
+    document.querySelector(".refresh-btn").classList.add("refresh-btn-active")
+    document.querySelector(".refresh-btn").classList.add("disabled")
+    refresh = true
+    $(".active").toggleClass("active")
+    $(".breadcrumb-temp").remove()
+    loadContent(window.location.pathname)
 }

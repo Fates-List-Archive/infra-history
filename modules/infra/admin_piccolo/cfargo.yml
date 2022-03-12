@@ -1,7 +1,0 @@
-tunnel: f43abfd7-616f-42c7-9c8b-00348febfcde
-credentials-file: /home/meow/.cloudflared/f43abfd7-616f-42c7-9c8b-00348febfcde.json
-
-ingress:
-        - hostname: lynx.fateslist.xyz
-          service: http://127.0.0.1:10000
-        - service: https://www.isitdown.com

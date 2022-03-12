@@ -126,7 +126,7 @@ These are our guidelines you must follow and adhere to when using Fates List!
 
 <blockquote class="quote">
 
-#### Terms Of Service
+### Terms Of Service
 
 1. Fates List is the legal entity owning this site and by using the site, you agree to be bound by these terms
 2. We reserve the right to make changes to our privacy policy at any time with an announcement on our support server. We also reserve the right to edit bot pages at any time to protect our site
@@ -151,7 +151,7 @@ This section relates to how we process, secure and handle data as per the GDPR a
 
 <blockquote class="quote">
 
-#### Collection
+### Collection
 
 We cache user information from Discord as well as handling ratelimits using Redis to significantly improve site performance and your experience using the site. We store data on bots using PostgreSQL. Information you give us, such as bots information, badges you or your bots earn in the future, and your profile information is all stored on our servers. We also may log user information temporarily to console however these logs are not persistent. We also use IPC over Redis for most if not all Discord API related activities and data transferred over IPC is only temporarily stored in Redis for a maximum of 30 seconds to one minute.
 
@@ -159,7 +159,7 @@ We cache user information from Discord as well as handling ratelimits using Redi
 
 <blockquote class="quote">
 
-#### Deletion
+### Deletion
 
 You can easily have your data deleted at any time. You may delete your account by opening a Data Deletion Request below on Lynx or by DMing `Rootspring#6701`. You can delete your bots from Bot Settings. Data Deletion Requests may take up to 24 hours to process and the time of when you last vote will still be stored to prevent against abuse. All of your bots will also be deleted permanently and this is irreversible
 
@@ -167,7 +167,7 @@ You can easily have your data deleted at any time. You may delete your account b
 
 <blockquote class="quote">
 
-#### Access
+### Access
 
 Fates List needs to access your username, avatar, status and user id in order to identify who you are on Discord so you can use the site. Fates List also needs to know which servers you are in for server listing if you choose to enable it. Fates List also needs the ability to join servers for you if you choose to be automatically added to the support server on login.
 
@@ -175,7 +175,7 @@ Fates List needs to access your username, avatar, status and user id in order to
 
 <blockquote class="quote">
 
-#### Server Listing
+### Server Listing
 
 We log all interactions to console. Note that these logs are *private*, not permanently stored and are only used for debugging purposes.
 
@@ -183,7 +183,7 @@ We log all interactions to console. Note that these logs are *private*, not perm
 
 <blockquote class="quote">
 
-#### Staff
+### Staff
 
 We log all admin actions taken on Lynx for anti-nuke and debugging purposes. We may or may not permanently (within the realms of local law) store this data however this is not yet implemented.
 
@@ -191,7 +191,7 @@ We log all admin actions taken on Lynx for anti-nuke and debugging purposes. We 
 
 <blockquote class="quote">
 
-#### Security
+### Security
 
 1. Our site is secure and we try to ensure that only you and Fates List Staff can edit your bot and that all actions require proper permission and clearance to be used. We may regenerate API tokens if needed.
 2. We backup our database on Google Drive. This backup is encrypted by ``rclone`` using AES and the configuration file for rclone is also encrypted
@@ -202,7 +202,7 @@ We log all admin actions taken on Lynx for anti-nuke and debugging purposes. We 
 
 <blockquote class="quote">
 
-#### Privacy
+### Privacy
 
 1. Your privacy matters to us. By continuing, you agree to your data being processed and/or stored for analytical purpose such as statistics as per our privacy policy. This information is not shared with third-parties whatsoever and is kept confidential
 2. The data we collect is your IP address, username, user id, avatar and any info you submit to us.
@@ -217,7 +217,7 @@ we do not use this whatsoever for privacy purposes. We do not use IP addresses f
 
 <blockquote class="quote">
 
-#### Contact
+### Contact
 
 You can contact our staff by joining the Fates List support server. Note that our support server is the only official way of contacting the Fates List staff team and we may not respond elsewhere.
 
@@ -225,7 +225,7 @@ You can contact our staff by joining the Fates List support server. Note that ou
 
 <blockquote class="quote">
 
-#### Updates
+### Updates
 
 We update constantly, and changes are made often. By joining the support server, you may be notified of changes we make, including privacy policy changes. This page may be changed at any time in the future.
 
@@ -233,7 +233,7 @@ We update constantly, and changes are made often. By joining the support server,
 
 <blockquote class="quote">
 
-#### Contributing
+### Contributing
 
 1. Fates List was made possible thanks to the help of our staff team.
 2. In particular, Fates List would like to give a shoutout to ``skylarr#6666`` for giving us a Digital Ocean droplet to host Fates List on.
@@ -243,7 +243,7 @@ We update constantly, and changes are made often. By joining the support server,
 
 <blockquote class="quote">
 
-#### Affiliations
+### Affiliations
 
 We are not affiliated with Discord Inc. or any of its partners or affiliates.
 
