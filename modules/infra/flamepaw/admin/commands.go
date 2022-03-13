@@ -6,12 +6,13 @@ import (
 	"flamepaw/slashbot"
 	"flamepaw/supportsystem"
 	"flamepaw/types"
+	"strconv"
+
 	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
-	"strconv"
 )
 
 const embedColorGood = 0x00ff00
@@ -89,48 +90,6 @@ func UpdateBotLogs(ctx context.Context, postgres *pgxpool.Pool, userId string, b
 // Admin OP Getter
 func CmdInit() map[string]types.SlashCommand {
 	// Mock is only here for registration, actual code is on slashbot
-
-	commands["USERSTATE"] = AdminOp{
-		InternalName: "userstate",
-		Cooldown:     types.CooldownBan,
-		Description:  "Sets a users state",
-		SlashRaw:     true,
-		Event:        types.EventNone,
-		MinimumPerm:  5,
-		SlashOptions: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionInteger,
-				Name:        "state",
-				Description: "The new state to set",
-				Choices:     types.GetStateChoices(types.UserStateUnknown),
-				Required:    true,
-			},
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "user",
-				Description: "The user id to set the state of",
-				Required:    true,
-			},
-		},
-		Server: common.StaffServer,
-		Handler: func(context types.SlashContext) string {
-			stateVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "state", false)
-			state, ok := stateVal.(int64)
-			if !ok {
-				return "Invalid state"
-			}
-			userVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "user", false)
-			user, ok := userVal.(string)
-			if !ok {
-				return "Invalid user provided"
-			}
-			_, err := context.Postgres.Exec(context.Context, "UPDATE users SET state = $1 WHERE user_id = $2", state, user)
-			if err != nil {
-				return err.Error()
-			}
-			return "OK."
-		},
-	}
 
 	commands["MOCK"] = AdminOp{
 		InternalName: "mock",

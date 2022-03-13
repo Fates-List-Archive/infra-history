@@ -1350,6 +1350,17 @@ Just a tip for those new to lynx (for now)
         csrf_token = get_token(132)
         app.state.valid_csrf_user |= {csrf_token: time.time()}
 
+        user_state_select = """
+<label for='user_state_select'>New State</label><br/>
+<select name='user_state_select' id='user_state_select'> 
+        """
+
+        for state in list(enums.UserState):
+            user_state_select += f"""
+<option value={state.value}>{state.name} ({state.value}) -> {state.__doc__}</option>
+            """
+        user_state_select += "</select>"
+
         md = (
             MarkdownIt()
                 .use(front_matter_plugin)
@@ -1369,22 +1380,52 @@ Just a tip for those new to lynx (for now)
             "resp": "user_actions",
             "title": "User Actions",
             "data": md.render(f"""
-                
-<div class="panel panel-default">
-<div class="panel-heading">
-    <h3 class="panel-title">Add Staff</h3>
-</div>
-<div class="panel-body">
-    - Head Admin+ only
-<div class="form-group">
+## For refreshers, the staff guide is here:
+
+{staff_guide_md}
+
+<hr/>
+
+Now that we're all caught up with the staff guide, here are the list of actions you can take:
+
+::: action-addstaff
+
+### Add Staff
+
+- Head Admin+ only
+- Definition: user => bot_reviewer
+
 <label for="staff_user_id">User ID</label>
 <input class="form-control" id="staff_user_id" name="staff_user_id" placeholder='user id here' type="number" value="{data.get("add_staff_id") or ''}" />
-<button class="btn btn-primary" onclick="addStaff()">Add</button>
-</div>
-</div>
-</div>
+<button onclick="addStaff()">Add</button>
+
+:::
+
+::: action-userstate
+
+### Set User State
+
+- Admin+ only
+- Definition: state => $user_state
+
+<label for="user_state_id">User ID</label>
+<input class="form-control" id="user_state_id" name="user_state_id" placeholder='user id here' type="number" />
+
+{user_state_select}
+
+<label for="user_state_reason">Reason</label>
+<textarea 
+    type="text" 
+    id="user_state_reason" 
+    name="user_state_reason"
+    placeholder="Enter reason for state change here!"
+></textarea>
+
+<button onclick="setUserState()">Set State</button>
+
+:::
             """),
-            "ext_script": "/_static/user-actions.js?v=2",
+            "ext_script": "/_static/user-actions.js?v=5",
             "script": f"""
             var csrfToken = "{csrf_token}"
             """
@@ -2058,8 +2099,10 @@ In case, you haven't went through staff verification and you somehow didn't get 
 
 class UserActionWithReason(BaseModel):
     user_id: str
+    initiator: int | None = None
     reason: str
     csrf_token: str
+    context: Any | None = None
 
 
 app.state.user_actions = {}
@@ -2081,6 +2124,8 @@ def user_action(
                 "detail": f"This operation has a minimum perm of {min_perm} but you have permission level {ws.state.member.perm}"
             })
             return False
+        
+        data.initiator = int(ws.state.user["id"])
 
         if data.csrf_token not in app.state.valid_csrf_user:
             await ws.send_json({
@@ -2180,6 +2225,32 @@ Then head on over to https://lynx.fateslist.xyz to read our staff guide and get 
 async def ack_staff_app(data: UserActionWithReason):
     await app.state.db.execute("DELETE FROM lynx_apps WHERE user_id = $1", data.user_id)
     return {"detail": "Acked"}
+
+
+@user_action("set_user_state", [], min_perm=4)
+async def set_user_state(data: UserActionWithReason):
+    if not isinstance(data.context, int):
+        return {"detail": "State must be an integer"}
+    try:
+        state = enums.UserState(data.context)
+    except:
+        return {"detail": "State must be of enum UserState"}
+
+    await app.state.db.fetchval("UPDATE users SET state = $1 WHERE user_id = $2", state, data.user_id)
+
+    embed = Embed(
+        url=f"https://fateslist.xyz/profile/{data.user_id}",
+        color=0xe74c3c,
+        title="User State Updated",
+        description=f"<@{data.initiator}> has modified the state of <@{data.user_id}> with new state of {state.name} ({state.value}) -> {state.__doc__} !\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
+    )
+
+    embed.add_field(name="Reason", value=data.reason)
+
+    await redis_ipc_new(app.state.redis, "SENDMSG",
+                        msg={"content": f"<@{data.user_id}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+
+    return {"detail": "Successfully set user state"}
 
 
 print(app.state.user_actions)
