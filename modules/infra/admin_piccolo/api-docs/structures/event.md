@@ -27,6 +27,10 @@ All event contexts in Fates List share the basic format in the below table. If i
 
 If an event does not appear here, then it uses the simple base context format.
 
+### Event Properties
+
+Some events have a additional ``prop`` key. This contains extra event information. They are not documented here as they are self-explanatory when seen but can be considered stable to be relied upon.
+
 #### Reviews
 
 The context of a new review or a edit review event is a [Partial Review](partial-review.md) object

@@ -242,14 +242,11 @@ CREATE TABLE user_payments (
     paid BOOLEAN DEFAULT FALSE
 );
 
-CREATE TABLE bot_api_event (
-    bot_id BIGINT, 
-    ts timestamptz default now(),
-    event INTEGER, 
-    context JSONB, 
-    id UUID,
-    posted integer DEFAULT 0,
-    CONSTRAINT bots_fk FOREIGN KEY (bot_id) REFERENCES bots(bot_id) ON DELETE CASCADE ON UPDATE CASCADE
+CREATE TABLE events (
+    id BIGINT not null, 
+    type TEXT NOT NULL,
+    ts timestamptz not null default now(),
+    event jsonb not null
 );
 
 CREATE TABLE bot_promotions (

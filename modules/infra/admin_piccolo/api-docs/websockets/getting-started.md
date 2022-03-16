@@ -1,6 +1,6 @@
 ### Some History
 
-Fates List offers websockets to allow you to get real time stats about your bot. This has been rewritten in golang to allow for better performance and reliability as well as new features that could not be implemented performantly in python. These docs contain the protocol used and how to actually use WebSockets on Fates List. *The protocol may be rewritten but this is highly unlikely at this point. The API is stable*
+Fates List offers websockets to allow you to get real time stats about your bot. This has been rewritten in golang and now in actix-web to allow for better performance and reliability as well as new features that could not be implemented performantly in python. These docs contain the protocol used and how to actually use WebSockets on Fates List. *The protocol may be rewritten again but this is highly unlikely at this point. The API is stable*
 
 
 ::: warning
@@ -15,322 +15,153 @@ do much anyways without having staff permissions :)
 
 Please read [this nice MDN doc on WebSockets](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API) first before attempting this from scratch. We have example libraries below in case you just want to get it done quickly!
 
-### Receiving Responses
+### API v3 note
 
-Large responses are seperated using ASCII Code 31 This is ``\x1f`` in python.
+With API v3, the websocket API was *rewritten* and has been completely changed.
 
-Some example code on how to recieve responses from websocket is below:
+As of right now, not all features have been fully implemented, heres the list of features that will be added soon:
+
+- Archived WS Response views (using a ``ARCHIVE`` command)  
+
+### Too long; didn't read
+
+- Events are now wrapped 
+- Subscribe/Archive is no longer implicit
+- Archive is coming out
+- Addition of "Gateway Tasks" for background tasks spawned by the user
+
+### Gateway Tasks
+
+All user-invokable background tasks are called as "Gateway Tasks". A websocket connection can only have one "Gateway Task" running on it. Make a new connection or stop the existing task using ``ENDGWTASK``.
+
+On creation of a gateway task, ``GWTASK TASK_NAME`` will be sent to you from the spawned background task. *When ending a background task, TASK_NAME will be NONE*. 
+
+If a background task fails to spawn for whatever reason, you will not recieve a ``GWTASK`` message, in this case, do one of the following:
+
+- Unsubsribe from the running task using ``ENDGWTASK``. If a "Gateway Task" is not running however, this will close the websocket with a close code of `4002`.
+- Rerun the command thats *supposed* to create a "Gateway Task". If a "Gateway Task" is already running however, this will close the websocket with a close code of `4001`.
+- Do nothing as these errors are extremely rare and usually mean a bug in your code. Additionally the task may actually be running but you may have missed the ``GWTASK`` response.
+
+**A websocket connection starts with no tasks running by defauls**. This also means no events are sent to you until you create a task. This is to reduce 'accidental' bogus connections.
+
+If a gateway task (such as ``ARCHIVE``) exits, the gateway task will *still* be considered as spawned until you call ``ENDGWTASK``.
+
+A ``GWTASKACK TASK_NAME`` will be sent in the event a ackable "Gateway Task" finishes. A ackable task is one that can finish or end after a period of time. For example ``ARCHIVE`` is ackable as it ends after it has consumed all archived messages and delivered all that it could deliver.
+
+A general rule of thumb when you're confused as to why something is a "Gateway Task":
+
+- Is it asynchronous?
+- Is it long-running?
+- Can it overwhelm the client or server if multiple calls to it or a "Gateway Task" is called?
+
+You create a "Gateway Task" by just sending it as plaintext just like how you send ``PING``s.
+
+### Authentication
+
+Websockets right now do *not* need authentication to get real-time stats as such information is public through other means anyways and is not considered sensitive
+
+If sensitive information is added to websockets, an additional ``UPGRADE`` command will be created for these commands, it is not documented here as it does not exist yet.
+
+Authorization may also be readded in the future if needed.
+
+Removal of authorization for now however allows simplification of the protocol.
+
+### Pings
+
+Your websocket client must send a ``PING`` every 20 seconds or it will be disconnected. A ping frame does not count though is still needed, it must be a message frame containing the string ``PING``. 
+
+The server will acknowledge your ``PING`` with a number that is the amount of time (in microseconds) you have been connected to the Websocket. 
+
+This server response is the only case of a number and you should use your languages ``isdigit()`` function to check for pings. The reason for all of this extra complicity is to avoid disconnects and ensure client is properly connected
+
+**The ``PING`` system also applies to the Preview API**
+
+### Gateway Tasks
+
+| Task Name | Description |
+| :--- | :--- |
+| SUB | *Subscribes* to the redis pubsub channel for events. After creating this task successfully, you will begin recieving real time stats for your bot/server. |
+| ARCHIVE | Iterates over all archived events from the beginning of event recording (Wednesday 16th March 11PM) to the current time. Is a ackable "Gateway Task" |
+
+### Base URL
+
+The base URL for api v3 websockets is ``wss://api.fateslist.xyz/ws/{id}?mode={mode}``
+
+- id is a ``i64`` (int64) that is either your Bot ID or your Server ID you wish to connect to websocket API for. **For all practical cases and purposes, id can also be treated as a Discord Snowflake**
+- mode is either ``Bot`` or ``Server`` (case-sensitive)
+
+### Example Program
+
+Here's a example on the above:
 
 ```py
-for m in event.split("\x1f"):
-    for e in m.split("\x1f"):
-        if e == "":
-            continue
-        e_json = json.loads(e)
-        if e_json.get("m"):
-            e_type = e_json["m"].get("e")
-            ...
-        elif e_json.get("control"):
-            ...
-        await self.hooks["default"](e_json)
-```
-
-### Payloads
-
-Payloads sent by the websocket server are either [events](../structures/event.md) or control payloads.
-
-The format for sending data from the client to the websocket is still being worked on and is not used in any case.
-
-Below is the format for a control payload:
-
-| Key | Description | Type |
-| :--- | :--- | :--- |
-| chan | The redis channel of the object | String? |
-| code | The control payload name. This can be used to check for an identity etc. | String |
-| detail | Human friendly information describing the control payload for debugging. May be used in future for non-debugging purposes | String |
-| ts | The timestamp in seconds for the event | Integer/Float |
-| requests_remaining | The amount of requests remaining before you are ratelimited. Is always -1 in initial identity *for now* | Integer |
-| control | Always set to true in a control payload | Boolean |
-
-All other payloads sent to you by websocket will be a event as of right now. This may change in the future.
-
-### Identity
-
-When you recieve a ``identity`` control payload, you should respond with the following format (or as given in the ``detail`` key)
-
-| Key | Description | Type |
-| :--- | :--- | :--- |
-| id | Bot/Server ID | Snowflake |
-| token | API Token | String |
-| send_all | Whether or not to send all prior events. This may cause disconnects/instability, more memory usage and ratelimits on large bots | Boolean |
-| send_none | Whether or not to send events after sending prior events if ``send_all`` is set | Boolean |
-| bot | Set this to true for a bot, otherwise this will default to a guild | Boolean |
-
-After a successful identity, you will now have a established websocket connection. You will then start receiving payloads.
-
-### Simple Libraries
-
-**Python websocket library**
-
-```py
-# Simple library-esque to handle websockets
+#!/usr/bin/env python
 
 import asyncio
-import json
-import sys
-
 import websockets
-
-sys.path.append(".")
-sys.path.append("../../../")
-sys.path.append("/home/meow/FatesList")
-
-URL = "wss://api.fateslist.xyz/api/flamepaw/ws/"
-
-
-class Bot:
-    def __init__(
-        self,
-        bot_id: int,
-        token: str,
-        send_all: bool = True,
-        send_none: bool = False,
-        bot: bool = True,
-    ):
-        self.bot_id = bot_id
-        self.token = token
-        self.send_all = send_all
-        self.send_none = send_none
-        self.hooks = {
-            "ready": self.none,
-            "identity": self.identity,
-            "default": self.default,
-            "event": self._on_event_payload,
-        }
-        self.websocket = None
-        self.bot = bot
-
-    async def _render_event(self, event):
-        for m in event.split("\x1f"):
-            for e in m.split("\x1f"):
-                if e == "":
-                    continue
-                e_json = json.loads(e)
-                await self.hooks["default"](e_json)
-                try:
-                    await self.hooks[e_json["code"]](e_json)
-                except KeyError:
-                    ...
-
-    async def _ws_handler(self):
-        try:
-            async with websockets.connect(URL) as self.websocket:
-                while True:
-                    event = await self.websocket.recv()
-                    await self._render_event(event)
-        except websockets.WebSocketException as exc:
-            print(f"Got error {exc}. Retrying connection...")
-            return await self._ws_handler()
-
-
-    async def identity(self, event):
-        # print(event)
-        payload = {
-            "id": str(self.bot_id),
-            "token": self.token,
-            "send_all": self.send_all,
-            "send_none": self.send_none,
-            "bot": self.bot,
-        }
-        await self.websocket.send(json.dumps(payload))
-        print(f"Sending {json.dumps(payload)}")
-
-    @staticmethod
-    async def default(event):
-        print(event, type(event))
-
-    async def none(self, event):
-        ...
-
-    async def _on_event_payload(self, event):
-        await self.on_event(
-            EventContext(event["dat"], event["dat"]["m"]["e"], self.bot))
-
-    @staticmethod
-    async def on_event(ctx):
-        print(ctx.parse_vote())
-
-    def start(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self._ws_handler())
-
-    def close(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.websocket.close())
-
-
-class Vote:
-    def __init__(self, user_id: str, test: bool):
-        self.user_id = int(user_id)
-        self.test = test
-
-
-class EventContext:
-    def __init__(self, data, event, bot):
-        self.data: dict = data
-        self.event: int = event
-        self.bot: bool = bot
-
-    def parse_vote(self) -> Vote:
-        """Returns the User ID who voted"""
-        if self.data["m"]["e"] == 0 and self.bot:
-            return Vote(self.data["ctx"]["user"], self.data["ctx"]["test"])
-        if self.data["m"]["e"] == 71 and not self.bot:
-            return Vote(self.data["ctx"]["user"], self.data["ctx"]["test"])
-```
-
-**Test code**
-
-```py
-
 import asyncio
-import json
-import time
-import uuid
-import sys
-sys.path.append(".")
-sys.path.append("../../../")
 
+async def ping(ws):
+    while True:
+        await ws.send("PING")
 
-# For server testing:
-# guild id is 816130947274899487
-# guild api token is dkKLvVMoFtFKFpUpCPiREqQsLyMRrEWldwrQeWuYayehfGVJYUKmsupGvRfNbGpoGHVNVjqIWDiBCRrQuDkEuUnPYVfRrNrATIrgzLPbREjRqFpUDqZbAhrPsbaYpPYwsDImGuhoSFgJSxFerBpKWdsKXEzoRkdGDSmQjatievbANVvSDvCETPxgRCKTwgSdbJuRkI
+        # Wait 20 more seconds
+        await asyncio.sleep(20)
 
+async def mock_unsub(ws):
+    await asyncio.sleep(60)
+    print("Ending GWTASK")
+    await ws.send("ENDGWTASK")
 
-import ws
-import os
+async def hello():
+    async with websockets.connect("wss://api.fateslist.xyz/ws/519850436899897346?mode=Bot") as websocket:
+        # Start ping
+        asyncio.create_task(ping(websocket))
 
-try:
-    import dotenv
-    dotenv.load_dotenv(".env")
-except:
-    pass
+        # Subscribe to the pubsub channel
+        await websocket.send("SUB")
 
-from modules.models import enums
+        # After 60 seconds, this will close the subscription task
+        asyncio.create_task(mock_unsub(websocket))
 
-if os.environ.get("ID"):
-    bot_id = int(os.environ.get("ID"))
-    api_token = os.environ.get("TOKEN")
-else:
-    bot_id = input("Enter Bot ID: ")
-    try:
-        bot_id = int(bot_id)
-    except ValueError:
-        bot_id = 811073947382579200
+        # Handle messages as well as PING responses by just printing them
+        async for msg in websocket:
+            if(msg.isdigit()):
+                print("GOT PING:", msg)
+                continue
 
-    if bot_id == 811073947382579200:
-        api_token = "AzbnMlEABvKnIe3zt6zHMCOGrnoan5tS0hXCfzpBa3UiHdl045p1h5vxivMBtH5UFETZJdQ9TkpoDsy954uia74Hak5KWECqCufjvRZfV66enoB1rHf1HQtk6g04GajKqr98"
-    else:
-        api_token = input("Enter API Token: ")
+            print(msg)
 
-bot = input("Is this a bot (Y/N): ")
-bot = bot.lower() in ("y", "yes")
-
-bot = ws.Bot(bot_id, api_token, bot = bot)
-try:
-    bot.start()
-except KeyboardInterrupt:
-    bot.close()
+asyncio.run(hello())
 ```
 
-**Javascript (browser only, you will have to port this to NodeJS yourself)**
+### Event Wrapping
 
-```js
-// This only works in browsers, not NodeJS
-class FatesWS {
-	constructor(id, token, sendAll, sendNone, bot) {
-		this.id = id
-		this.token = token
-		this.sendAll = sendAll
-		this.sendNone = sendNone
-		this.bot = bot
-		this.hooks = {
-			"ready": this.ready,
-			"identity": this.identity,
-			"fallback": this.fallback,
-			"event": this.event
-		}
-		this.websocket = null
-	}
+Unless specified otherwise, all events sent over websocket will be JSON just like all other events
 
-	start() {
-		this.websocket = new WebSocket("wss://fateslist.xyz/api/flamepaw/ws")
-		this.websocket.onmessage = (event) => {
-			let data = event.data.split("\x1f")
-			data.forEach(dat => {
-				if(dat == "") {
-					// It is possible for the event to be empty so ignore those
-					return
-				}
-				let json = JSON.parse(dat)
-				console.log({json}, json.code)
-				try {
-					let hook = this.hooks[json.code]
-					if(hook) {
-						hook(this, json)
-					} else {
-						console.log(json.code, "hook not found")
-					}
-				}
-				catch (error) {
-					console.log(error)
-					// This is normal do nothing
-				}
-			})
-		}
-	}
+Events sent over API v3 websockets are considered to be *wrapped*. That is, the event is wrapped in another key that is the id for the event.
 
-	ready(cls, data) {
-		console.log(data)
-	}
+**Example** 
 
-	fallback(cls, data) {
-		console.log(data)
-	}
-
-	identity(cls, data) {
-		console.log(data)
-		let identityPayload = {
-			id: cls.id,
-			token: cls.token,
-			send_all: cls.sendAll,
-			send_none: cls.sendNone,
-			bot: cls.bot
-		}
-		console.log({identityPayload})
-		cls.websocket.send(JSON.stringify(identityPayload))
-	}
-
-	event(cls, data) {
-		console.log(data)
-	}
-
-	close(code) {
-		if(!code) {
-			code = 1000
-		}
-		this.websocket.close(code)
-	}
+```json
+{
+    "deba8751-3547-448e-b564-a6ccbc9a00cb": {
+        "m": {
+            "e":16, 
+            "eid": "deba8751-3547-448e-b564-a6ccbc9a00cb"
+        }, 
+        "ctx": {
+            "user": null, 
+            "target": "519850436899897346", 
+            "target_type": 0, 
+            "ts": 1647431531
+        }, 
+        "props": {
+            "widget": false, 
+            "vote_page":false, 
+            "invite": false
+        }
+    }
 }
 
-class EventsClass {
-	constructor() {
-		this.VoteEvent = 0
-		this.ViewEvent = 16
-		this.InviteEvent = 17
-	}
-}
-
-var Events = new EventsClass()
 ```
