@@ -93,9 +93,6 @@ func apiReturn(c *gin.Context, statusCode int, done bool, reason interface{}, co
 }
 
 func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
-	hub := newHub(db, redis)
-	go hub.run()
-
 	r := gin.New()
 
 	r.Use(ginlogrus.Logger(logger), gin.Recovery())
@@ -111,27 +108,6 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 	document("GET", "/ping", "ping_server", "Ping the server", nil, types.APIResponse{})
 	router.GET("/ping", func(c *gin.Context) {
 		apiReturn(c, 200, true, nil, nil)
-	})
-
-	document("GET", "/__stats", "get_stats", "Get stats of websocket server", nil, nil)
-	router.GET("/__stats", func(c *gin.Context) {
-		stats := "Websocket server stats:\n\n"
-		i := 0
-		for client := range hub.clients {
-			stats += fmt.Sprintf(
-				"Client #%d\nID: %d\nIdentityStatus: %t\nBot: %t\nRLChannel: %s\nSendAll: %t\nSendNone: %t\nMessagePumpUp: %t\nToken: [redacted] \n\n\n",
-				i,
-				client.ID,
-				client.IdentityStatus,
-				client.Bot,
-				client.RLChannel,
-				client.SendAll,
-				client.SendNone,
-				client.MessagePumpUp,
-			)
-			i++
-		}
-		c.String(200, stats)
 	})
 
 	document("POST", "/github", "github_webhook", "Post to github webhook. Needs authorization", types.GithubWebhook{}, types.APIResponse{})
@@ -435,11 +411,6 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		}
 
 		apiReturn(c, 200, true, nil, nil)
-	})
-
-	document("WS", "/ws", "websocket", "The websocket gateway for Fates List", nil, nil)
-	router.GET("/ws", func(c *gin.Context) {
-		serveWs(hub, c.Writer, c.Request)
 	})
 
 	err := r.RunUnix("/home/meow/fatesws.sock")

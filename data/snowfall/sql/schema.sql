@@ -354,3 +354,19 @@ CREATE TABLE lynx_ratings (
     username_cached text not null,
     user_id bigint
 );
+
+CREATE TABLE lynx_surveys (
+    id uuid primary key default uuid_generate_v4(),
+    title text not null,
+    questions jsonb not null,
+    created_at timestamptz default NOW()
+);
+
+CREATE TABLE lynx_survey_responses (
+    id uuid not null default uuid_generate_v4(),
+    survey_id uuid not null,
+    questions jsonb not null,
+    answers jsonb not null,
+    username_cached text not null,
+    user_id bigint
+);

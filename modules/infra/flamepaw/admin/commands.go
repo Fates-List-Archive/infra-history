@@ -3,14 +3,11 @@ package admin
 import (
 	"context"
 	"flamepaw/common"
-	"flamepaw/slashbot"
 	"flamepaw/supportsystem"
 	"flamepaw/types"
-	"strconv"
 
 	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
 )
@@ -24,61 +21,6 @@ var (
 	commandNameCache = make(map[string]string)
 	staffOnlyFlags   = []types.BotFlag{types.BotFlagStatsLocked, types.BotFlagVoteLocked, types.BotFlagSystem, types.BotFlagStaffLocked}
 )
-
-func autocompleter(state int) func(context types.SlashContext) (ac []*discordgo.ApplicationCommandOptionChoice) {
-	return func(context types.SlashContext) (ac []*discordgo.ApplicationCommandOptionChoice) {
-		dataVal := slashbot.GetArg(common.DiscordMain, context.Interaction, "bot", false)
-		data, ok := dataVal.(string)
-		if !ok {
-			return
-		}
-
-		bots, err := context.Postgres.Query(context.Context, "SELECT bot_id::text, username_cached, verifier FROM bots WHERE state = $1 AND (bot_id::text ILIKE $2 OR username_cached ILIKE $2) ORDER BY created_at DESC LIMIT 25", state, "%"+data+"%")
-		if err != nil {
-			log.Error(err)
-			return
-		}
-		defer bots.Close()
-
-		for bots.Next() {
-			var botId pgtype.Text
-			var usernameCached pgtype.Text
-			var verifier pgtype.Int8
-			bots.Scan(&botId, &usernameCached, &verifier)
-
-			var username string = usernameCached.String
-			if username == "" {
-				user, err := common.DiscordMain.User(botId.String)
-				if err != nil {
-					username = botId.String
-				} else {
-					_, err = context.Postgres.Exec(context.Context, "UPDATE bots SET username_cached = $1 WHERE bot_id = $2", user.Username, botId.String)
-					if err != nil {
-						log.Error(err)
-					}
-					username = user.Username
-				}
-			}
-
-			var val discordgo.ApplicationCommandOptionChoice = discordgo.ApplicationCommandOptionChoice{
-				Name:  username,
-				Value: botId.String,
-			}
-
-			if verifier.Status == pgtype.Present && verifier.Int > 0 {
-				if state == types.BotStateUnderReview.Int() {
-					val.Name += " (Claimed by " + strconv.FormatInt(verifier.Int, 10) + ")"
-				} else if state == types.BotStateDenied.Int() {
-					val.Name += " (Denied by " + strconv.FormatInt(verifier.Int, 10) + ")"
-				}
-			}
-
-			ac = append(ac, &val)
-		}
-
-		return
-	}
-}
 
 func UpdateBotLogs(ctx context.Context, postgres *pgxpool.Pool, userId string, botId string, action types.UserBotAuditLog) {
 	_, err := postgres.Exec(ctx, "INSERT INTO user_bot_logs (user_id, bot_id, action) VALUES ($1, $2, $3)", userId, botId, action)

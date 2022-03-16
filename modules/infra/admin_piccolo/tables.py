@@ -3,7 +3,7 @@ from typing import ForwardRef
 
 from piccolo.columns.column_types import (UUID, Array, BigInt, Boolean, Float,
                                           ForeignKey, Integer, Secret, Text,
-                                          Timestamptz, Varchar, Interval, Serial)
+                                          Timestamptz, Varchar, Interval, Serial, JSONB)
 from piccolo.columns.readable import Readable
 from piccolo.table import Table
 import uuid
@@ -160,5 +160,19 @@ class LynxRatings(Table, tablename="lynx_ratings"):
     id = UUID(primary_key=True, default=uuid.uuid4)
     feedback = Text(null=False)
     page = Text(null=False)
+    username_cached = Text(null=False)
+    user_id = ForeignKey(references=User)
+
+class LynxSurveys(Table, tablename="lynx_surveys"):
+    id = UUID(primary_key=True, default=uuid.uuid4)
+    title = Text(null=False)
+    questions = JSONB(null=False)
+    created_at = Timestamptz(default=datetime.datetime.now())
+
+class LynxSurveyResponses(Table, tablename="lynx_survey_responses"):
+    id = UUID(primary_key=True, default=uuid.uuid4)
+    survey_id = ForeignKey(references=LynxSurveys)
+    questions = JSONB(null=False)
+    answers = JSONB(null=False)
     username_cached = Text(null=False)
     user_id = ForeignKey(references=User)

@@ -30,8 +30,6 @@ async function approve() {
     let botId = getBotId("#under_review_approved")
     let reason = document.querySelector("#under_review_approved-reason").value
     sendBotAction("approve", botId, reason)
-    // Now put the invite to the bot
-    window.open(`https://discord.com/api/oauth2/authorize?client_id=${botId}&scope=bot&application.command&guild_id=${json.guild_id}`, "_blank")
 }
 
 async function deny() {

@@ -138,6 +138,10 @@ class UserBotAction(IntEnum):
     transfer_ownership = 6, "Transfer Bot Ownership"
     edit_bot = 7, "Edit Bot"
     delete_bot = 8, "Delete Bot"
+    unban = 9, "Unban"
+    uncertify = 10, "Uncertify"
+    unverify = 11, "Unverify"
+    requeue = 12, "Requeue"
 
 class LongDescType(IntEnum):
     _init_ = 'value __doc__'

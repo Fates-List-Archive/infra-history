@@ -317,9 +317,9 @@ Get policies (rules, privacy policy, terms of service)
 
 
 ### Preview Description
-#### POST /partners
+#### WS /ws/_preview
 
-Given the preview and long description, parse it and give the sanitized output
+Given the preview and long description, parse it and give the sanitized output. You must first connect over websocket!
 
 **API v2 analogue:** None
 
@@ -2445,7 +2445,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "0440f138-b3b8-477a-bab6-5ad4c44df306",
+    "id": "42954125-ba55-43ce-8113-51663da52a85",
     "reply": false,
     "star_rating": "0",
     "review_text": "",
@@ -2512,7 +2512,7 @@ set this a TargetType anyways so you might as well set it correctly.
 
 ```json
 {
-    "rid": "cadd32f2-b7fe-40c6-b5cd-16d22d351e24"
+    "rid": "73643610-fa61-4a23-98e8-4c3a7f6085b3"
 }
 ```
 
@@ -2583,7 +2583,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 
 ```json
 {
-    "rid": "cd16a048-54f8-45ef-bc5f-d38db0d8f9a0"
+    "rid": "0f508817-d168-4ddc-8d2a-16f9bd9a298d"
 }
 ```
 
@@ -2777,7 +2777,7 @@ This is the ``target_type``
 
 ```json
 {
-    "id": "8e077c89-b7bf-44da-82b1-c43b0959abda",
+    "id": "67faa927-11e8-46c6-90f8-81dcfb074d1a",
     "target_type": 0
 }
 ```

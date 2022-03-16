@@ -9,4 +9,4 @@ We hope you enjoy using the Fates List API just as we enjoyed making it for you!
 
 ## Endpoints
 
-Please click [here](api-v3) for our HTTP API documentation. 
+Please click [here](endpoints) for our HTTP API documentation. 

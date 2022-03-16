@@ -26,7 +26,7 @@ var perms = {name: "Please wait for websocket to finish loading", perm: 0}
 
 var user = {id: "0", username: "Please wait for websocket to finish loading"}
 
-const wsContentResp = new Set(['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify"])
+const wsContentResp = new Set(['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list"])
 
 function downloadTextFile(text, name) {
     const a = document.createElement('a');
@@ -156,8 +156,13 @@ async function wsStart() {
         } else if(wsContentResp.has(data.resp)) {
             console.log(`WS: Got ${data.resp}`)   
             setData(data)
-        } else if(data.resp == "user_action" || data.resp == "bot_action" || data.resp == "eternatus") {
+        } else if(data.resp == "user_action" || data.resp == "bot_action" || data.resp == "eternatus" || data.resp == "survey") {
             alert(data.detail)
+            if(data.resp == "bot_action" && data.guild_id) {
+                // Now put the invite to the bot
+                window.open(`https://discord.com/api/oauth2/authorize?client_id=${data.bot_id}&scope=bot&application.command&guild_id=${data.guild_id}`, "_blank")
+                alert("Now invite bot to main server")
+            }
         } else if(data.resp == "cosmog") {
             if(data.pass) {
                 alert(data.detail)
@@ -229,6 +234,8 @@ function setData(data, noExtraCode=false) {
     contentLoadedOnce = true
     contentCurrPage = window.location.pathname
 
+    $('#sidebar-search').SidebarSearch('init')
+
     clearRefresh()
 }
 
@@ -278,7 +285,11 @@ async function extraCode() {
             return
         }
         console.log(el)
-        breadURL += `/${el}`
+        if(currentURL.startsWith("/docs/")) {
+            breadURL += `#`
+        } else {
+            breadURL += `/${el}`
+        }
         var currentBreadPath = title(el.replace('-', ' '))
         $('#currentBreadPath').append(`<li class="breadcrumb-item breadcrumb-temp active"><a href="${breadURL}">${currentBreadPath}</a></li>`)
     })
@@ -414,6 +425,12 @@ async function loadContent(loc) {
             ws.send(JSON.stringify({request: "docs", "path": "status-page", source: false}))
             return
         })
+    } else if(loc.startsWith("/surveys")) {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for survey list")
+            ws.send(JSON.stringify({request: "survey_list"}))
+        })
+        return
     } else if(loc == "/" || loc == "") {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for index")
@@ -549,3 +566,10 @@ function refreshPage() {
     $(".breadcrumb-temp").remove()
     loadContent(window.location.pathname)
 }
+
+document.body.addEventListener('click', function(event) {
+    // main-sidebar
+    if(event.target.id == "sidebar-overlay") {
+        $('#toggle-sidebar').PushMenu('toggle');
+    }
+}, true); 

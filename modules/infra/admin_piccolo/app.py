@@ -34,7 +34,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Mount
 from starlette.types import Scope, Message
 from tables import Bot, Reviews, ReviewVotes, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, \
-    LeaveOfAbsence, UserBotLogs, BotVotes, Notifications, LynxRatings
+    LeaveOfAbsence, UserBotLogs, BotVotes, Notifications, LynxRatings, LynxSurveys, LynxSurveyResponses
 import orjson
 import aioredis
 from modules.core import redis_ipc_new
@@ -143,7 +143,7 @@ async def unban_user(server, member, reason):
 
 
 admin = create_admin(
-    [Notifications, LynxRatings, LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags,
+    [Notifications, LynxSurveys, LynxSurveyResponses, LynxRatings, LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags,
      ServerTags, Reviews, ReviewVotes, UserBotLogs, BotVotes],
     allowed_hosts=["lynx.fateslist.xyz"],
     production=True,
@@ -243,7 +243,7 @@ def doctree_gen():
     <li id="docs-main-nav" class="nav-item">
     <a href="#" class="nav-link">
         <i class="nav-icon fa-solid fa-book"></i>
-        <p>API Documentation <i class="right fas fa-angle-left"></i></p>
+        <p>Docs and Blogs <i class="right fas fa-angle-left"></i></p>
     </a>
     <ul class="nav nav-treeview">
     """
@@ -445,7 +445,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             rl = await app.state.redis.set(key, "0", ex=30)
         if request.method != "GET":
             rl = await app.state.redis.incr(key)
-            if int(rl) > 5:
+            if int(rl) > 10:
                 expire = await app.state.redis.ttl(key)
                 await app.state.db.execute("UPDATE users SET api_token = $1 WHERE user_id = $2", get_token(128),
                                            int(request.scope["sunbeam_user"]["user"]["id"]))
@@ -650,7 +650,8 @@ def action(
 
             res = await function(ws, data)  # Fake Websocket as Request for now TODO: Make this not fake
             if action_log:
-                ...
+                await app.state.db.execute("INSERT INTO user_bot_logs (user_id, bot_id, action, context) VALUES ($1, $2, $3, $4)", ws.state.user_id, data.bot_id, action_log.value, data.reason)
+
             res = jsonable_encoder(res)
             res["resp"] = "bot_action"
             await ws.send_json(res)
@@ -662,7 +663,7 @@ def action(
     return decorator
 
 
-@action("claim", [enums.BotState.pending])
+@action("claim", [enums.BotState.pending], action_log=enums.UserBotAction.claim)
 async def claim(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3",
                                enums.BotState.under_review, request.state.user_id, int(data.bot_id))
@@ -679,7 +680,7 @@ async def claim(request: Request, data: ActionWithReason):
     return {"detail": "Successfully claimed bot!"}
 
 
-@action("unclaim", [enums.BotState.under_review])
+@action("unclaim", [enums.BotState.under_review], action_log=enums.UserBotAction.unclaim)
 async def unclaim(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1 WHERE bot_id = $2", enums.BotState.pending, data.bot_id)
 
@@ -698,7 +699,7 @@ async def unclaim(request: Request, data: ActionWithReason):
     return {"detail": "Successfully unclaimed bot"}
 
 
-@action("approve", [enums.BotState.under_review])
+@action("approve", [enums.BotState.under_review], action_log=enums.UserBotAction.approve)
 async def approve(request: Request, data: ActionWithReason):
     # Get approximate guild count
     async with aiohttp.ClientSession() as sess:
@@ -729,10 +730,10 @@ async def approve(request: Request, data: ActionWithReason):
     for owner in data.owners:
         asyncio.create_task(add_role(main_server, owner["owner"], bot_developer, "Bot Approved"))
 
-    return {"detail": "Successfully approved bot", "guild_id": str(main_server)}
+    return {"detail": "Successfully approved bot", "guild_id": str(main_server), "bot_id": str(data.bot_id)}
 
 
-@action("deny", [enums.BotState.under_review])
+@action("deny", [enums.BotState.under_review], action_log=enums.UserBotAction.deny)
 async def deny(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.denied,
                                request.state.user_id, data.bot_id)
@@ -752,7 +753,7 @@ async def deny(request: Request, data: ActionWithReason):
     return {"detail": "Successfully denied bot"}
 
 
-@action("ban", [enums.BotState.approved], min_perm=4)
+@action("ban", [enums.BotState.approved], min_perm=4, action_log=enums.UserBotAction.ban)
 async def ban(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.banned,
                                request.state.user_id, data.bot_id)
@@ -774,7 +775,7 @@ async def ban(request: Request, data: ActionWithReason):
     return {"detail": "Successfully banned bot"}
 
 
-@action("unban", [enums.BotState.banned], min_perm=4)
+@action("unban", [enums.BotState.banned], min_perm=4, action_log=enums.UserBotAction.unban)
 async def unban(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.approved,
                                request.state.user_id, data.bot_id)
@@ -796,7 +797,7 @@ async def unban(request: Request, data: ActionWithReason):
     return {"detail": "Successfully unbanned bot"}
 
 
-@action("certify", [enums.BotState.approved], min_perm=5)
+@action("certify", [enums.BotState.approved], min_perm=5, action_log=enums.UserBotAction.certify)
 async def certify(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.certified,
                                request.state.user_id, data.bot_id)
@@ -823,7 +824,7 @@ async def certify(request: Request, data: ActionWithReason):
     return {"detail": "Successfully certified bot"}
 
 
-@action("uncertify", [enums.BotState.certified], min_perm=5)
+@action("uncertify", [enums.BotState.certified], min_perm=5, action_log=enums.UserBotAction.uncertify)
 async def uncertify(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1 WHERE bot_id = $2", enums.BotState.approved, data.bot_id)
 
@@ -849,7 +850,7 @@ async def uncertify(request: Request, data: ActionWithReason):
     return {"detail": "Successfully uncertified bot"}
 
 
-@action("unverify", [enums.BotState.approved], min_perm=3)
+@action("unverify", [enums.BotState.approved], min_perm=3, action_log=enums.UserBotAction.unverify)
 async def unverify(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.pending,
                                request.state.user_id, data.bot_id)
@@ -869,7 +870,7 @@ async def unverify(request: Request, data: ActionWithReason):
     return {"detail": "Successfully unverified bot"}
 
 
-@action("requeue", [enums.BotState.banned, enums.BotState.denied], min_perm=3)
+@action("requeue", [enums.BotState.banned, enums.BotState.denied], min_perm=3, action_log=enums.UserBotAction.requeue)
 async def requeue(request: Request, data: ActionWithReason):
     await app.state.db.execute("UPDATE bots SET state = $1, verifier = $2 WHERE bot_id = $3", enums.BotState.pending,
                                request.state.user_id, data.bot_id)
@@ -951,8 +952,8 @@ async def reset_all_votes(request: Request, data: ActionWithReason):
     return {"detail": "Successfully reset all bot votes"}
 
 
-@action("set-flags", [], min_perm=3)
-async def set_flags(request: Request, data: ActionWithReason):
+@action("set-flag", [], min_perm=3)
+async def set_flag(request: Request, data: ActionWithReason):
     if not isinstance(data.context, int):
         return {"detail": "Flag must be an integer"}
     try:
@@ -990,7 +991,7 @@ async def set_flags(request: Request, data: ActionWithReason):
 
 
 @action("unset-flag", [], min_perm=3)
-async def unset_flags(request: Request, data: ActionWithReason):
+async def unset_flag(request: Request, data: ActionWithReason):
     if not isinstance(data.context, int):
         return {"detail": "Flag must be an integer"}
     try:
@@ -1173,6 +1174,78 @@ class ConnectionManager:
             """
         })
 
+    
+    async def send_survey_list(self, ws: WebSocket):
+        surveys = await app.state.db.fetch("SELECT id, title, questions FROM lynx_surveys")
+        surveys_html = ""
+        for survey in surveys:
+            questions = orjson.loads(survey["questions"])
+
+            if not isinstance(questions, list):
+                continue
+
+            questions_html = ''
+            question_ids = []
+            for question in questions:
+                if not question.get("question") or not question.get("type") or not question.get("id") or not question.get("textarea"):
+                    continue
+                questions_html += f"""
+<div class="form-group">
+<label id="{question["id"]}-label">{question["question"]}</label>
+<{"input" if not question["textarea"] else "textarea"} class="form-control" placeholder="Minimum of 6 characters" minlength="6" required="true" aria-required="true" id="{question["id"]}" type="{question["type"]}" name="{question["id"]}"></{"input" if not question["textarea"] else "textarea"}>
+</div>
+                """
+                question_ids.append(str(question["id"]))
+
+            surveys_html += f"""
+::: survey
+
+### {survey["title"]}
+
+{questions_html}
+
+<button onclick="submitSurvey('{str(survey["id"])}', {question_ids})">Submit</button>
+
+:::
+        """
+
+        md = (
+            MarkdownIt()
+                .use(front_matter_plugin)
+                .use(footnote_plugin)
+                .use(anchors_plugin, max_level=5, permalink=True)
+                .use(fieldlist_plugin)
+                .use(container_plugin, name="warning")
+                .use(container_plugin, name="info")
+                .use(container_plugin, name="aonly")
+                .use(container_plugin, name="guidelines")
+                .use(container_plugin, name="generic", validate=lambda *args: True)
+                .enable('table')
+                .enable('image')
+        )
+
+        return await ws.send_json({"resp": "survey_list", "title": "Survey List", "pre": "/links", "data": md.render(surveys_html), "ext_script": "/_static/surveys.js?v=5"})
+
+    async def submit_survey(self, ws: WebSocket, id: str, answers: dict):
+        questions = await app.state.db.fetchval("SELECT questions FROM lynx_surveys WHERE id = $1", id)
+        if not questions:
+            return await ws.send_json({"resp": "survey", "detail": "Survey not found"})
+        
+        questions = orjson.loads(questions)
+
+        if len(questions) != len(answers):
+            return await ws.send_json({"resp": "survey", "detail": "Invalid survey. Refresh and try again"})
+
+        await app.state.db.execute(
+            "INSERT INTO lynx_survey_responses (survey_id, questions, answers, user_id, username_cached) VALUES ($1, $2, $3, $4, $5)",
+            id,
+            orjson.dumps(questions).decode(),
+            orjson.dumps(answers).decode(),
+            int(ws.state.user["id"]) if ws.state.user else None,
+            ws.state.user["username"] if ws.state.user else "Anonymous"
+        )
+        return await ws.send_json({"resp": "survey", "detail": "Submitted survey"})
+
     async def send_notifs(self, ws: WebSocket):
         notifs = await app.state.db.fetch("SELECT id, acked_users, message, type, staff_only FROM lynx_notifications")
         _send_notifs = []
@@ -1197,7 +1270,7 @@ class ConnectionManager:
         elif not page or page == "/docs":
             page = "/index"
 
-        if not page.replace("-", "").replace("_", "").replace("/", "").isalnum():
+        if not page.replace("-", "").replace("_", "").replace("/", "").replace("!", "").isalnum():
             return await self.send_personal_message({"resp": "docs", "detail": "Invalid page"}, ws)
 
         try:
@@ -1721,7 +1794,7 @@ placeholder="Reason for resetting all votes. Defaults to 'Monthly Votes Reset'"
 <button onclick="setFlag()">Update</button>
 :::
 """),
-            "ext_script": "/_static/bot-actions.js?v=4",
+            "ext_script": "/_static/bot-actions.js?v=5",
             "script": f"""
         var csrfToken = "{csrf_token}"
         """}, ws)
@@ -2091,6 +2164,10 @@ In case, you haven't went through staff verification and you somehow didn't get 
                 asyncio.create_task(manager.verify_code(ws, data.get("code", "")))
             elif data.get("request") == "data_request":
                 asyncio.create_task(manager.data_request(ws, data.get("user", {})))
+            elif data.get("request") == "survey_list":
+                asyncio.create_task(manager.send_survey_list(ws))
+            elif data.get("request") == "survey":
+                asyncio.create_task(manager.submit_survey(ws, data.get("id", "0"), data.get("answers", {})))
 
     except WebSocketDisconnect:
         manager.disconnect(ws)
