@@ -53,8 +53,21 @@ A general rule of thumb when you're confused as to why something is a "Gateway T
 - Is it asynchronous?
 - Is it long-running?
 - Can it overwhelm the client or server if multiple calls to it or a "Gateway Task" is called?
+- Will the user want control over its execution (start, stop)
 
-You create a "Gateway Task" by just sending it as plaintext just like how you send ``PING``s.
+#### Why?
+
+In case anyones confused on why gateway tasks, it was added so large bots don’t struggle with websockets and to allow more control over sent data. 
+
+For example, you can now use ARCHIVE, wait for a specific message or set of messages and then exit with ENDGWTASK instead of needing to process every single event (previous implementations sent archived messages as a hacking chained blob, that has also been fixed meaning you can now choose parse exactly what you need instead of everything)
+
+#### Spawning a Gateway Task
+
+You spawn a "Gateway Task" by just sending it as plaintext just like how you send ``PING``s.
+
+You stop the ongoing "Gateway Task" by sending ``ENDGWTASK``.
+
+After a "Gateway Task" acks, the task itself will have stopped however **the gateway task is *still* considered as running until you explicitly call ``ENDGWTASK``**. This only applies to ackable "Gateway Tasks" as only they can ack.
 
 ### Authentication
 
