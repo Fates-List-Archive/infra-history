@@ -283,4 +283,3 @@ Status object (See https://docs.fateslist.xyz/basics/basic-structures#status for
 | :--- | :--- | :--- |
 | bot | bot |  |
 | server | server |  |
-

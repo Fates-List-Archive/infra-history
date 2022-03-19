@@ -27,7 +27,6 @@ import (
 
 	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	ginlogrus "github.com/toorop/gin-logrus"
 
@@ -96,9 +95,6 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 	r := gin.New()
 
 	r.Use(ginlogrus.Logger(logger), gin.Recovery())
-
-	document("PPROF", "/pprof", "pprof", "Golang pprof (debugging, may not always exist!)", nil, nil)
-	pprof.Register(r, "flamepaw/pprof")
 
 	r.NoRoute(func(c *gin.Context) {
 		apiReturn(c, 404, false, "Not Found", nil)

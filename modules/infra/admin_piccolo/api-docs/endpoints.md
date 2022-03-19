@@ -2445,7 +2445,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "42954125-ba55-43ce-8113-51663da52a85",
+    "id": "3e0d1d00-04a5-42dc-813e-d460bdc4a64b",
     "reply": false,
     "star_rating": "0",
     "review_text": "",
@@ -2512,7 +2512,7 @@ set this a TargetType anyways so you might as well set it correctly.
 
 ```json
 {
-    "rid": "73643610-fa61-4a23-98e8-4c3a7f6085b3"
+    "rid": "a26c37ca-c668-4b19-8f80-4b90240510ec"
 }
 ```
 
@@ -2583,7 +2583,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 
 ```json
 {
-    "rid": "0f508817-d168-4ddc-8d2a-16f9bd9a298d"
+    "rid": "342a6fe4-e2e6-42a9-ac6e-b8e66c89c974"
 }
 ```
 
@@ -2777,7 +2777,7 @@ This is the ``target_type``
 
 ```json
 {
-    "id": "67faa927-11e8-46c6-90f8-81dcfb074d1a",
+    "id": "8b0cb697-2e4f-43e4-9ef6-fea9504c0a10",
     "target_type": 0
 }
 ```
@@ -2812,6 +2812,10 @@ The ``id`` here must be the bot id you wish to add the command for
 
 **This performs a *upsert* meaning it will either create or update 
 the command depending on its ``name``.**
+
+**Only post up to 10-20 commands at a time, otherwise requests may be truncated
+or otherwise fail with odd errors.  If you have more than this, then perform 
+multiple requests**
 
 
 **API v2 analogue:** None
