@@ -49,5 +49,4 @@ func SendIntegration(discord *discordgo.Session, userId string, botId string, we
 			},
 		},
 	})
-
 }

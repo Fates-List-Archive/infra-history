@@ -40,14 +40,20 @@ Fates List is rather annoying (without knowledge in python/golang/rust) to self 
 
 7. Restart nginx
 
-8. Run ``python3 pinger.py`` in ``flamepaw-pinger`` tmux session in the ``FatesList/modules/infra/flamepaw-pinger`` folder to start ``flamepaw-pinger`` which will then start ``flamepaw``
+### Starting actual site 
+
+- Do all steps below apart from ``make`` and ``git`` commands on server reboot/full site restart/``tmux`` server kill as well
+
+8. (optional) Run ``python3 pinger.py`` in ``flamepaw-pinger`` tmux session in the ``FatesList/modules/infra/flamepaw-pinger`` folder to start ``flamepaw-pinger`` which will then start ``flamepaw``
 
 9. Enter a tmux session called ``baypaw``. Download baypaw using ``git clone https://github.com/Fates-List/baypaw``, enter the folder, run ``make`` and then run ``target/release/baypaw`` to start baypaw which is a microservice for global API requests across Fates List services.
 
 10. Enter a tmux session called ``next-api``. Download api-v3 using ``git clone https://github.com/Fates-List/api-v3``, enter the folder, run ``make`` and then run ``target/release-lto/fates`` to start api v3.
 
-11. Enter a tmux session called ``widgets``. Run widget API by running ``flamepaw --cmd site.run``.
+11. Enter a tmux session called ``squirrelflight``. Download api-v3 using ``git clone https://github.com/Fates-List/squirrelflight``, enter the folder, run ``make`` and then run ``target/release-lto/squirrelflight`` to start squirrelflight.
 
-12. (optional, not done on Fates due to issues) Follow [this](https://stevescargall.com/2020/05/13/how-to-install-prometheus-and-grafana-on-fedora-server/) to set up Prometheus and Grafana for monitoring. Set Grafanas port to 5050. Use a firewall or the digital ocean firewall to block other ports. Do not open prometheus's port in the firewall, only open Grafana's.
+12. Enter a tmux session called ``widgets``. Run widget API by running ``flamepaw --cmd site.run``.
+
+13. (optional, not done on Fates due to issues) Follow [this](https://stevescargall.com/2020/05/13/how-to-install-prometheus-and-grafana-on-fedora-server/) to set up Prometheus and Grafana for monitoring. Set Grafanas port to 5050. Use a firewall or the digital ocean firewall to block other ports. Do not open prometheus's port in the firewall, only open Grafana's.
 
 Fates List probihits the monetization or resale of coins or any part of Fates List for real money.

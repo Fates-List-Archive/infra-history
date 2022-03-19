@@ -7,7 +7,6 @@ import (
 	"flamepaw/ipc"
 	"flamepaw/serverlist"
 	"flamepaw/slashbot"
-	"flamepaw/squirrelflight"
 	"flamepaw/supportsystem"
 	"flamepaw/tests"
 	"flamepaw/types"
@@ -354,12 +353,6 @@ func Server() {
 		prefixSupport(s, m, 1)
 	})
 
-	common.DiscordSquirrelflight.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i.Interaction, 2) })
-	common.DiscordSquirrelflight.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		log.Info("Am here")
-		prefixSupport(s, m, 2)
-	})
-
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i.Interaction, 0) })
 	discordServerBot.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i.Interaction, 1) })
 	discordServerBot.AddHandler(func(s *discordgo.Session, gc *discordgo.GuildCreate) {
@@ -416,12 +409,6 @@ func Server() {
 	if !common.IPCOnly {
 		os.Remove("/home/meow/fatesws.sock")
 	}
-
-	// Start VR and squirrelflight CmdInit
-	go squirrelflight.StartVR(ctx, db, rdb)
-	slashbot.SetupSlash(common.DiscordSquirrelflight, squirrelflight.CmdInit)
-
-	squirrelflight.SendStats()
 
 	// Channel for signal handling
 	sigs := make(chan os.Signal, 1)

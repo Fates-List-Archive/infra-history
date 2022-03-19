@@ -1,15 +1,12 @@
 package admin
 
 import (
-	"context"
 	"flamepaw/common"
 	"flamepaw/supportsystem"
 	"flamepaw/types"
 
 	"github.com/Fates-List/discordgo"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/jackc/pgx/v4/pgxpool"
-	log "github.com/sirupsen/logrus"
 )
 
 const embedColorGood = 0x00ff00
@@ -21,13 +18,6 @@ var (
 	commandNameCache = make(map[string]string)
 	staffOnlyFlags   = []types.BotFlag{types.BotFlagStatsLocked, types.BotFlagVoteLocked, types.BotFlagSystem, types.BotFlagStaffLocked}
 )
-
-func UpdateBotLogs(ctx context.Context, postgres *pgxpool.Pool, userId string, botId string, action types.UserBotAuditLog) {
-	_, err := postgres.Exec(ctx, "INSERT INTO user_bot_logs (user_id, bot_id, action) VALUES ($1, $2, $3)", userId, botId, action)
-	if err != nil {
-		log.Error(err)
-	}
-}
 
 // Admin OP Getter
 func CmdInit() map[string]types.SlashCommand {

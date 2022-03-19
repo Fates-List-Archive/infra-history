@@ -187,6 +187,7 @@ CREATE TABLE users (
     js_allowed BOOLEAN DEFAULT false,
     vote_reminders bigint[] not null default '{}',
     vote_reminder_channel bigint,
+    vote_reminders_last_acked timestamptz not null default now(),
     staff_verify_code text
 );
 
