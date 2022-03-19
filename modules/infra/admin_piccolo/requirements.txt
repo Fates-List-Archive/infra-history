@@ -1,1 +1,1 @@
-pip install git+https://github.com/nikordaris/starlette@request-body-cache
+git+https://github.com/nikordaris/starlette@request-body-cache
