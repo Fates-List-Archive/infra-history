@@ -1,10 +1,9 @@
-from fastapi.responses import PlainTextResponse, StreamingResponse, ORJSONResponse
+from fastapi.responses import StreamingResponse, ORJSONResponse
 from PIL import Image, ImageDraw, ImageFont
-import io, textwrap, aiofiles
-from starlette.concurrency import run_in_threadpool
+import io, textwrap
 from math import floor
 from jinja2 import Environment, BaseLoader, select_autoescape
-from fastapi import APIRouter, HTTPException, Request, Response, BackgroundTasks
+from fastapi import HTTPException, Request, Response, BackgroundTasks
 from typing import Optional
 import orjson
 import aiohttp
@@ -14,11 +13,55 @@ from modules.core.ipc import redis_ipc_new
 from modules.models import enums
 import os
 from fastapi.responses import HTMLResponse
+import aioredis
+import asyncpg
+from fastapi import FastAPI
 
-router = APIRouter(
-    include_in_schema = True,
+app = FastAPI(
+    title="Fates List",
+    version="W1",
+    terms_of_service="https://fateslist.xyz/frostpaw/tos",
+    license_info={
+        "name": "MIT",
+        "url": "https://github.com/Fates-List/FatesList/blob/main/LICENSE",
+    },
+    default_response_class=ORJSONResponse,
+    redoc_url=f"/docs/redoc",
+    swagger_url=None,
+    openapi_url=f"/docs/openapi",
+    servers=[
+        {
+            "url": "https://widgets.fateslist.xyz",
+            "description": "Fates List Widgets API"
+        }, 
+    ]
 )
 
+# Load in static assets for bot widgets
+static_assets = {}
+with open("data/static/botlisticon.webp", mode="rb") as res:
+    static_assets["fates_img"] = io.BytesIO(res.read())
+
+with open("data/static/votes.png", mode="rb") as res:
+    static_assets["votes_img"] = io.BytesIO(res.read())
+
+with open("data/static/server.png", mode="rb") as res:
+    static_assets["server_img"] = io.BytesIO(res.read())
+
+static_assets["fates_pil"] = Image.open(static_assets["fates_img"]).resize(
+    (10, 10))
+static_assets["votes_pil"] = Image.open(static_assets["votes_img"]).resize(
+    (15, 15))
+static_assets["server_pil"] = Image.open(
+    static_assets["server_img"]).resize((15, 15))
+
+app.state.static = static_assets
+
+@app.on_event("startup")
+async def init_fates_worker():
+    app.state.postgres = await asyncpg.create_pool()
+    app.state.redis = await aioredis.from_url('redis://localhost:1001', db=1)
+               
 from colour import Color
 
 def human_format(num: int) -> str:
@@ -84,15 +127,12 @@ def is_color_like(c):
 # User fetcher
 async def _user_fetch(
     user_id: str,
-    *, 
-    worker_session
 ) -> Optional[dict]:
     """
     Internal function to fetch a user. 
-    If worker_session is not explicitly specified, this will error
     """
-    db = worker_session.postgres
-    redis = worker_session.redis
+    db = app.state.postgres
+    redis = app.state.redis
     
     if len(user_id) not in (17, 18, 19, 20): # Snowflake can be 17 - 20
         logger.debug(f"Ignoring blatantly wrong User ID: {user_id}")
@@ -106,7 +146,7 @@ async def _user_fetch(
 
     logger.debug(f"Making API call to get user {user_id}")
     cmd_id = uuid.uuid4()
-    data = await redis_ipc_new(redis, "GETCH", args=[str(user_id)], worker_session=worker_session)
+    data = await redis_ipc_new(redis, "GETCH", args=[str(user_id)])
     if data is None:
         return None
     else:
@@ -125,7 +165,7 @@ async def _user_fetch(
         ex=60*60*8
     ) 
 
-@router.get("/{target_id}", operation_id="get_widget")
+@app.get("/{target_id}", operation_id="get_widget")
 async def get_widget(
     request: Request, 
     response: Response,
@@ -184,9 +224,8 @@ async def get_widget(
     cache_key = f"widget-{target_id}-{target_type}-{format.name}-{textcolor}-{bgcolor}-{desc_length}"
     response.headers["ETag"] = f"W/{cache_key}"
 
-    worker_session = request.app.state.worker_session
-    db = worker_session.postgres
-    redis = worker_session.redis
+    db = app.state.postgres
+    redis = app.state.redis
    
     if target_type == enums.WidgetType.bot:
         col = "bot_id"
@@ -207,7 +246,7 @@ async def get_widget(
     
     #bt.add_task(add_ws_event, redis, target_id, {"m": {"e": event}, "ctx": {"user": request.session.get('user_id'), "widget": True}}, type=_type)
     if target_type == enums.WidgetType.bot:
-        data = {"bot": bot, "user": await _user_fetch(str(target_id), worker_session = request.app.state.worker_session)}
+        data = {"bot": bot, "user": await _user_fetch(str(target_id))}
     else:
         data = {"bot": bot, "user": await db.fetchrow("SELECT name_cached AS username, avatar_cached AS avatar FROM servers WHERE guild_id = $1", target_id)}
     bot_obj = data["user"]
@@ -318,7 +357,7 @@ async def get_widget(
         d.text(
             (
                 the_area(
-                    d.textsize(str(bot_obj['username']))[0],
+                    d.textsize(str(bot_obj['username'].encode('latin-1', 'replace').decode('latin-1')))[0],
                     widget_img.size[0]
                 ),
             5), 

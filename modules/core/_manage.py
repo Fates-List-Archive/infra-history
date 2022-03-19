@@ -3,20 +3,15 @@
 import asyncio
 import datetime
 import importlib
-import io
-import multiprocessing
 import os
 import secrets
 import shutil
-import signal
 import sys
 import time
 import uuid
-import warnings
 from getpass import getpass
 from pathlib import Path
 from subprocess import DEVNULL, Popen
-from typing import Any, Callable, Dict
 
 def error(msg: str, code: int = 1):
     print(msg)
@@ -34,76 +29,12 @@ def confirm(msg, abort: bool = True):
             return False
 
 
-def _fappgen(session_id, workers, static_assets):
-    """Make the FastAPI app for gunicorn"""
-    from fastapi import FastAPI
-    from fastapi.responses import ORJSONResponse
-
-    from modules.core.system import init_fates_worker
-
-    _app = FastAPI(
-        title="Fates List",
-        version="W1",
-        terms_of_service="https://fateslist.xyz/frostpaw/tos",
-        license_info={
-            "name": "MIT",
-            "url": "https://github.com/Fates-List/FatesList/blob/main/LICENSE",
-        },
-        default_response_class=ORJSONResponse,
-        redoc_url=f"/docs/redoc",
-        swagger_url=None,
-        openapi_url=f"/docs/openapi",
-        servers=[
-            {
-                "url": "https://widgets.fateslist.xyz",
-                "description": "Fates List Widgets API"
-            }, 
-        ]
-    )
-    
-    _app.state.static = static_assets
-
-    @_app.on_event("startup")
-    async def startup():
-        await init_fates_worker(_app, session_id, workers)
-
-    return _app
-
-
-default_workers_num = (multiprocessing.cpu_count() * 2) + 1
-
-
 def site_run():
     """Runs the Fates List site"""
-    workers = os.environ.get("WORKERS") or default_workers_num
-    workers = int(workers)
-
     import uvicorn
-    from PIL import Image
+    from modules.infra.widgets.widgets import app
 
-    session_id = uuid.uuid4()
-
-    # Load in static assets for bot widgets
-    static_assets = {}
-    with open("data/static/botlisticon.webp", mode="rb") as res:
-        static_assets["fates_img"] = io.BytesIO(res.read())
-
-    with open("data/static/votes.png", mode="rb") as res:
-        static_assets["votes_img"] = io.BytesIO(res.read())
-
-    with open("data/static/server.png", mode="rb") as res:
-        static_assets["server_img"] = io.BytesIO(res.read())
-
-    static_assets["fates_pil"] = Image.open(static_assets["fates_img"]).resize(
-        (10, 10))
-    static_assets["votes_pil"] = Image.open(static_assets["votes_img"]).resize(
-        (15, 15))
-    static_assets["server_pil"] = Image.open(
-        static_assets["server_img"]).resize((15, 15))
-
-    _app = _fappgen(str(session_id), workers, static_assets)
-
-    uvicorn.run(_app, host="127.0.0.1", port=9999, log_level="info")
+    uvicorn.run(app, host="127.0.0.1", port=9999, log_level="info")
 
 def site_enum2html():
     """Converts the enums in modules/models/enums.py into markdown. Mainly for apidocs creation"""
@@ -224,57 +155,6 @@ def site_compilestatic():
 
             with Popen(cmd, env=os.environ) as proc:
                 proc.wait()
-
-def db_getuser():
-    """Gdpr get user data"""
-    async def get(user_id):
-        import asyncpg
-        from fastapi.encoders import jsonable_encoder
-
-        db = await asyncpg.create_pool()
-        user = await db.fetchrow("select * from users where user_id = $1", user_id)
-        owners = await db.fetch("SELECT * FROM bot_owner WHERE owner = $1", user_id)
-        bot_voters = await db.fetch("SELECT * FROM bot_voters WHERE user_id = $1", user_id)
-        user_vote_table = await db.fetch("SELECT * FROM user_vote_table WHERE user_id = $1", user_id)
-        reviews = await db.fetch("SELECT * FROM reviews WHERE user_id = $1", user_id)
-        review_votes = await db.fetch("SELECT * FROM review_votes WHERE user_id = $1", user_id)
-        user_bot_logs = await db.fetch("SELECT * FROM user_bot_logs WHERE user_id = $1", user_id)
-        user_reminders = await db.fetch("SELECT * FROM user_reminders WHERE user_id = $1", user_id)
-        user_payments = await db.fetch("SELECT * FROM user_payments WHERE user_id = $1", user_id)
-        servers = await db.fetch("SELECT * FROM servers WHERE owner_id = $1", user_id)
-        lynx_apps = await db.fetch("SELECT * FROM lynx_apps WHERE user_id = $1", user_id)
-        lynx_logs = await db.fetch("SELECT * FROM lynx_logs WHERE user_id = $1", user_id)
-        lynx_notifications = await db.fetch("SELECT * FROM lynx_notifications, unnest(acked_users) AS user_id WHERE user_id = $1", user_id)
-        lynx_ratings = await db.fetch("SELECT * FROM lynx_ratings WHERE user_id = $1", user_id)
-
-        data = {
-            "user": user, 
-            "owners": owners, 
-            "bot_voters": bot_voters, 
-            "user_vote_table": user_vote_table, 
-            "reviews": reviews, 
-            "review_votes": review_votes, 
-            "user_bot_logs": user_bot_logs,
-            "user_reminders": user_reminders,
-            "user_payments": user_payments,
-            "servers": servers,
-            "lynx_apps": lynx_apps,
-            "lynx_logs": lynx_logs,
-            "lynx_notifications": lynx_notifications,
-            "lynx_ratings": lynx_ratings,
-            "owned_bots": []
-        }
-        
-        data["privacy"] = "Fates list does not profile users or use third party cookies for tracking other than what is used by cloudflare for its required DDOS protection"
-
-        for bot in data["owners"]:
-            data["owned_bots"].append(await db.fetch("SELECT * FROM bots WHERE bot_id = $1", bot["bot_id"]))
-
-        print(jsonable_encoder(data))
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(get(int(os.environ.get("USER_ID"))))
 
 def db_backup():
     """Backs up the Fates List database"""

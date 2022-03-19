@@ -37,7 +37,7 @@ from tables import Bot, Reviews, ReviewVotes, BotTag, User, Vanity, BotListTags,
     LeaveOfAbsence, UserBotLogs, BotVotes, Notifications, LynxRatings, LynxSurveys, LynxSurveyResponses
 import orjson
 import aioredis
-from modules.core import redis_ipc_new
+from modules.core.ipc import redis_ipc_new
 from modules.models import enums
 from discord import Embed
 from piccolo.apps.user.tables import BaseUser
