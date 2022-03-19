@@ -2,11 +2,9 @@ package admin
 
 import (
 	"flamepaw/common"
-	"flamepaw/supportsystem"
 	"flamepaw/types"
 
 	"github.com/Fates-List/discordgo"
-	"github.com/davecgh/go-spew/spew"
 )
 
 const embedColorGood = 0x00ff00
@@ -38,27 +36,9 @@ func CmdInit() map[string]types.SlashCommand {
 		Server: common.StaffServer,
 	}
 
-	commands["SENDROLEMSG"] = AdminOp{
-		InternalName: "sendrolemsg",
-		Cooldown:     types.CooldownNone,
-		Description:  "Send role message",
-		MinimumPerm:  5,
-		Event:        types.EventNone,
-		Server:       common.StaffServer,
-		SlashRaw:     true,
-		Handler: func(context types.SlashContext) string {
-			supportsystem.SendRolesMessage(common.DiscordMain, true)
-			return "Done"
-		},
-	}
-
 	// Load command name cache to map internal name to the command
 	for cmdName, v := range commands {
 		commandNameCache[v.InternalName] = cmdName
 	}
 	return slashIr()
-}
-
-func GetCommandSpew() string {
-	return spew.Sdump("Admin commands loaded: ", commands)
 }

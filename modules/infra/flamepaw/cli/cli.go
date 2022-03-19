@@ -4,7 +4,6 @@ import (
 	"context"
 	"flamepaw/admin"
 	"flamepaw/common"
-	"flamepaw/ipc"
 	"flamepaw/serverlist"
 	"flamepaw/slashbot"
 	"flamepaw/supportsystem"
@@ -16,7 +15,6 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -94,7 +92,7 @@ func Server() {
 
 	common.DiscordMain = discord
 
-	discord.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildPresences | discordgo.IntentsGuildMembers | discordgo.IntentsDirectMessages | discordgo.IntentsGuildMessages
+	discord.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildPresences | discordgo.IntentsGuildMembers
 	discordServerBot, err = discordgo.New("Bot " + common.ServerBotToken)
 	if err != nil {
 		panic(err)
@@ -104,16 +102,7 @@ func Server() {
 	common.DiscordServerList = discordServerBot
 
 	// For now, if we don't get the guild members intent in the future, this will be replaced with approx guild count
-	discordServerBot.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages
-
-	// Squirrelflight
-	common.DiscordSquirrelflight, err = discordgo.New("Bot " + common.SquirrelflightToken)
-	if err != nil {
-		panic(err)
-	}
-	common.DiscordSquirrelflight.SyncEvents = false
-
-	common.DiscordSquirrelflight.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages
+	discordServerBot.Identify.Intents = discordgo.IntentsGuilds
 
 	// Be prepared to remove this handler if we don't get priv intents
 	memberHandler := func(s *discordgo.Session, m *discordgo.Member) {
@@ -224,19 +213,6 @@ func Server() {
 			}
 			s.GuildMemberDeleteWithReason(common.TestServer, m.Member.User.ID, "Done testing and invited to main server")
 		}
-
-		if m.Member.GuildID == common.StaffServer && m.Member.User.Bot {
-			ts, err := m.Member.JoinedAt.Parse()
-			if err != nil {
-				log.Error(err)
-				ts = time.Now()
-			}
-			log.Info(time.Now().UnixMicro(), ts.UnixMicro(), time.Now().UnixMicro()-ts.UnixMicro())
-			if time.Now().UnixMicro()-ts.UnixMicro() >= 3000000 {
-				return
-			}
-			admin.SilverpeltStaffServerProtect(s, m.Member.User.ID)
-		}
 	})
 
 	discord.AddHandler(onReady)
@@ -267,91 +243,6 @@ func Server() {
 			i,
 		)
 	}
-
-	prefixSupport := func(s *discordgo.Session, m *discordgo.MessageCreate, n int) {
-		// We handle a messageCreate as a interaction
-		if m.Message.Member == nil {
-			return
-		}
-		m.Member.User = m.Author
-		for _, roleID := range m.Member.Roles {
-			role, err := s.State.Role(m.Message.GuildID, roleID)
-			if err != nil {
-				continue
-			}
-			m.Member.Permissions |= role.Permissions
-		}
-
-		// Parse the interaction
-		var name string
-		var options []*discordgo.ApplicationCommandInteractionDataOption
-
-		prefix := "%"
-		if n == 2 {
-			prefix = "+"
-		}
-
-		if strings.HasPrefix(m.Message.Content, prefix) {
-			m.Message.Content = strings.ReplaceAll(m.Message.Content, " :", ":")
-			m.Message.Content = strings.ReplaceAll(m.Message.Content, ": ", ":")
-			m.Message.Content = strings.ReplaceAll(m.Message.Content, "  ", " ")
-			cmdList := strings.Split(m.Message.Content, " ")
-			name = cmdList[0][1:]
-			for i, v := range cmdList {
-				// Ignore first
-				if i == 0 {
-					continue
-				}
-				argDat := strings.SplitN(v, ":", 2)
-				if len(argDat) != 2 {
-					continue
-				}
-
-				options = append(options, &discordgo.ApplicationCommandInteractionDataOption{
-					Name:  argDat[0],
-					Type:  discordgo.ApplicationCommandOptionString,
-					Value: argDat[1],
-				})
-			}
-		} else {
-			// Not for us
-			return
-		}
-
-		users := map[string]*discordgo.User{}
-
-		for _, member := range m.Message.Mentions {
-			users[member.ID] = member
-		}
-
-		spoofInteraction := &discordgo.Interaction{
-			Type: discordgo.InteractionApplicationCommand,
-			Data: discordgo.ApplicationCommandInteractionData{
-				ID:   m.Message.ID,
-				Name: name,
-				Resolved: &discordgo.ApplicationCommandInteractionDataResolved{
-					Users: users,
-				}, // empty for now
-				TargetID: m.Message.ID,
-				Options:  options,
-			},
-			ID:        m.Message.ID,
-			Message:   m.Message,
-			GuildID:   m.Message.GuildID,
-			ChannelID: m.Message.ChannelID,
-			Member:    m.Message.Member,
-			User:      m.Message.Member.User,
-			Token:     "prefixCmd",
-		}
-		iHandle(s, spoofInteraction, 0)
-	}
-
-	discord.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		prefixSupport(s, m, 0)
-	})
-	discordServerBot.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		prefixSupport(s, m, 1)
-	})
 
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i.Interaction, 0) })
 	discordServerBot.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i.Interaction, 1) })
@@ -391,11 +282,6 @@ func Server() {
 		panic(err)
 	}
 
-	err = common.DiscordSquirrelflight.Open()
-	if err != nil {
-		panic(err)
-	}
-
 	slashbot.SetupSlash(discord, admin.CmdInit)
 	slashbot.SetupSlash(discordServerBot, serverlist.CmdInit)
 
@@ -418,16 +304,12 @@ func Server() {
 
 	// Start IPC code
 	if !common.RegisterCommands {
-		go ipc.StartIPC(db, rdb)
 		if !common.IPCOnly {
 			go webserver.StartWebserver(db, rdb)
 		}
 	}
 	s := <-sigs
 	log.Info("Going to exit gracefully due to signal", s, "\n")
-	if !common.RegisterCommands {
-		ipc.SignalHandle(s, rdb)
-	}
 
 	// Close all connections
 	db.Close()

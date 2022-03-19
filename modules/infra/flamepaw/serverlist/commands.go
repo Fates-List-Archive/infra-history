@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"flamepaw/common"
-	"flamepaw/ipc"
 	"flamepaw/slashbot"
 	"flamepaw/types"
 	"fmt"
@@ -30,6 +29,15 @@ var (
 	numericRegex  *regexp.Regexp
 	sanityRegex   *regexp.Regexp
 )
+
+func elementInSlice[T comparable](slice []T, elem T) bool {
+	for i := range slice {
+		if slice[i] == elem {
+			return true
+		}
+	}
+	return false
+}
 
 func tagCheck(tag string) bool {
 	allowed := `abcdefghijklmnopqrstuvwxyz `
@@ -1105,7 +1113,7 @@ func CmdInit() map[string]types.SlashCommand {
 				var check pgtype.TextArray
 				context.Postgres.QueryRow(context.Context, "SELECT "+field+" FROM servers WHERE guild_id = $1", context.Interaction.GuildID).Scan(&check)
 				if check.Status == pgtype.Present && len(check.Elements) > 0 {
-					if ipc.ElementInSlice(check.Elements, pgtype.Text{Status: pgtype.Present, String: user.ID}) {
+					if elementInSlice(check.Elements, pgtype.Text{Status: pgtype.Present, String: user.ID}) {
 						return "This user is already on " + field
 					}
 				}

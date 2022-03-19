@@ -30,27 +30,12 @@ async def redis_ipc_new(
         async with aiohttp.ClientSession() as sess:
             async with sess.post(f"http://localhost:1234/messages", json=msg) as res:
                 return await res.text()
-
-    args = args if args else []
-    cmd_id = str(uuid.uuid4())
-    if msg:
-        msg_id = str(uuid.uuid4())
-        await redis.set(msg_id, orjson.dumps(msg), ex=30)
-        args.append(msg_id)
-    args = " ".join(args)
-    if args:
-        await redis.publish("_worker_fates", f"{cmd} {cmd_id} {args}")
-    else:
-        await redis.publish("_worker_fates", f"{cmd} {cmd_id}")
-    
-    async def wait(id):
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            await asyncio.sleep(0)
-            data = await redis.get(id)
-            if data is not None:
-                return data
-
-    if timeout:
-        return await wait(cmd_id)
+    elif cmd == "ROLES":
+        async with aiohttp.ClientSession() as sess:
+            async with sess.get(f"https://api.fateslist.xyz/flamepaw/_roles?user_id={args[0]}", json=msg) as res:
+                return await res.text()
+    elif cmd == "GETPERM":
+        async with aiohttp.ClientSession() as sess:
+            async with sess.get(f"https://api.fateslist.xyz/flamepaw/_getperm?user_id={args[0]}", json=msg) as res:
+                return await res.text()
     return None

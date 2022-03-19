@@ -12,16 +12,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"flamepaw/common"
+	"flamepaw/supportsystem"
 	"flamepaw/types"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
-
-	docencoder "encoding/json"
 
 	jsoniter "github.com/json-iterator/go"
 
@@ -36,37 +32,9 @@ import (
 )
 
 var (
-	json          = jsoniter.ConfigCompatibleWithStandardLibrary
-	logger        = log.New()
-	Docs   string = "# Flamepaw\nFlamepaw is internally used by the bot to provide a RESTful API for tasks requiring high concurrency. The base url is ``https://api.fateslist.xyz/flamepaw``\n\n"
-	mutex  sync.Mutex
+	json   = jsoniter.ConfigCompatibleWithStandardLibrary
+	logger = log.New()
 )
-
-// Given name and docs,
-func document(method, route, name, docs string, reqBody interface{}, resBody interface{}) {
-	Docs += "## " + strings.Title(strings.ReplaceAll(name, "_", " ")) + "\n\n"
-	Docs += "#### " + strings.ToUpper(method) + " " + route + "\n"
-	Docs += "**Description:** " + docs + "\n\n"
-	var body, err = docencoder.MarshalIndent(resBody, "", "\t")
-	if err != nil {
-		body = []byte("No documentation available")
-	}
-	var ibody, err2 = docencoder.MarshalIndent(reqBody, "", "\t")
-	if err2 != nil {
-		body = []byte("No documentation available")
-	}
-	Docs += "**Request Body:**\n```json\n" + string(ibody) + "\n```\n\n"
-	Docs += "**Response Body:**\n```json\n" + string(body) + "\n```\n\n"
-}
-
-// Introduce random delay
-const min = 1
-const max = 60
-
-func randomDelay() {
-	rand.Seed(time.Now().UnixNano())
-	time.Sleep(time.Duration(rand.Intn(max-min+1)+min) * time.Millisecond)
-}
 
 // API return
 func apiReturn(c *gin.Context, statusCode int, done bool, reason interface{}, context interface{}) {
@@ -101,12 +69,45 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 	})
 	router := r.Group("/flamepaw")
 
-	document("GET", "/ping", "ping_server", "Ping the server", nil, types.APIResponse{})
 	router.GET("/ping", func(c *gin.Context) {
 		apiReturn(c, 200, true, nil, nil)
 	})
 
-	document("POST", "/github", "github_webhook", "Post to github webhook. Needs authorization", types.GithubWebhook{}, types.APIResponse{})
+	router.GET("/_sendrolesmsg", func(c *gin.Context) {
+		if c.GetHeader("X-Forwarded-For") != "" {
+			apiReturn(c, 403, false, "Forbidden", nil)
+			return
+		}
+		supportsystem.SendRolesMessage(common.DiscordMain, true)
+		apiReturn(c, 200, true, nil, nil)
+	})
+
+	router.GET("/_roles", func(c *gin.Context) {
+		userId := c.Query("user_id")
+
+		member, err := common.DiscordMain.State.Member(common.MainServer, userId)
+		var res string
+		if err != nil {
+			log.Warn(err)
+		} else {
+			res = strings.Join(member.Roles, " ")
+		}
+
+		c.Data(200, "application/fates-roles", []byte(res))
+	})
+
+	router.GET("/_getperm", func(c *gin.Context) {
+		userId := c.Query("user_id")
+
+		perms, _, _ := common.GetPerms(common.DiscordMain, userId, 0)
+		res, err := json.Marshal(perms)
+		if err != nil {
+			log.Warn(err)
+			res = []byte("-1")
+		}
+		c.Data(200, "application/fates-gp", res)
+	})
+
 	router.POST("/github", func(c *gin.Context) {
 		var bodyBytes []byte
 		if c.Request.Body != nil {
