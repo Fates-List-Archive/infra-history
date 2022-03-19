@@ -88,6 +88,8 @@ We've been seeing a lot of this lately, please *dont* just ping ``Rootspring#670
 
 If a bot is in need of verification, it *may* also be tested on its support server. This also goes for regular bots as well. Be sure to still test the bot though!
 
+Also, having the bots owner in main server is not at all required. Please do not deny for this
+
 </blockquote>
 
 <blockquote class="quote">
