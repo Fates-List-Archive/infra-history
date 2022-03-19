@@ -179,6 +179,16 @@ main server.
 
 <blockquote class="quote">
 
+### Important Notes
+
+1. Bot owner does not need to be in main server for bot to be approved
+2. Commands not shown in the bot page is perfectly OK as long as the bot responds to either its specified prefix or slash commands
+3. I might add a way for bot owners to give notes to reviewers. This *isn't* there yet though
+
+</blockquote>
+
+<blockquote class="quote">
+
 ### Lynx Admin
 
 - Lynx Admin is our admin panel giving you complete control of the database. Access will be monitored and access logs are *public*. You will be removed for abuse. 

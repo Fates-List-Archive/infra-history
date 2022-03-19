@@ -658,41 +658,34 @@ func CmdInit() map[string]types.SlashCommand {
 
 				eventId := common.CreateUUID()
 
-				voteEvent := map[string]interface{}{
-					"votes": votes,
-					"id":    userId,
-					"ctx": map[string]interface{}{
-						"user":  userId,
+				voteEvent := map[string]any{
+					eventId: map[string]any{
 						"votes": votes,
-						"test":  test,
+						"id":    userId,
+						"ctx": map[string]interface{}{
+							"user":  userId,
+							"votes": votes,
+							"test":  test,
+						},
+						"m": map[string]interface{}{
+							"e":    types.EventServerVote,
+							"user": userId,
+							"ts":   float64(time.Now().Unix()) + 0.001, // Make sure its a float by adding 0.001
+							"eid":  eventId,
+						},
 					},
-					"m": map[string]interface{}{
-						"e":    types.EventServerVote,
-						"user": userId,
-						"t":    -1,
-						"ts":   float64(time.Now().Unix()) + 0.001, // Make sure its a float by adding 0.001
-						"eid":  eventId,
-					},
-				}
-
-				vote_b, err := json.Marshal(voteEvent)
-				if err != nil {
-					return dbError(err)
 				}
 
 				go func() {
 					common.AddWsEvent(context.Context, context.Redis, "server-"+context.Interaction.GuildID, eventId, voteEvent)
 
-					voteStr := string(vote_b)
+					_, err = context.Postgres.Exec(context.Context, "INSERT INTO events (id, type, event) VALUES ($1, $2, $3)", context.Interaction.GuildID, "server", voteEvent)
 
-					ok, webhookType, secret, webhookURL := common.GetWebhook(context.Context, "servers", context.Interaction.GuildID, context.Postgres)
-					if !ok {
-						voteMsg = "You have successfully voted for this server (note: this server does not support vote rewards if you were expecting a reward)"
-					} else {
-						voteMsg = "You have successfully voted for this server"
-						common.WebhookReq(context.Context, context.Redis, context.Postgres, eventId, webhookURL, secret, voteStr, userId, context.Interaction.GuildID, 0)
-						log.Debug("Got webhook type of " + strconv.Itoa(int(webhookType)))
+					if err != nil {
+						log.Error(err)
 					}
+
+					voteMsg = "You have successfully voted for this server (note: you should ask the server owner before complaining if you do not recieve vote rewards)"
 				}()
 
 				// Handle vote autoroles
@@ -743,64 +736,7 @@ func CmdInit() map[string]types.SlashCommand {
 		Description:  "More information on how to use Fates List Server Listing",
 		SlashOptions: []*discordgo.ApplicationCommandOption{},
 		Handler: func(context types.SlashContext) string {
-			intro := "**Welcome to Fates List**\n" +
-				"If you're reading this, you probably already know what server listing (and slash commands) are. This guide will not go over that"
-
-			syntax := "**Slash command syntax**\n" +
-				"This guide will use the following syntax for slash commands: `/command option:foo anotheroption:bar`. " +
-				"To specify a list of values (where supported), use |. Currently only Vote Roles supports this"
-
-			faqBasics := "**How do I add my server?**+\n" +
-				"Good question. Your server should usually be automatically added for you once you add the bot to your server. " +
-				"Just set a description using `/set field:descriotion value:My lovely description`. If you do not do so, the description " +
-				"will be randomly set for you and it will likely not be what you want. You **should** set a long description using " +
-				"`/set field:long_description value:My really really long description`. **For really long descriptions, you can also create " +
-				"a paste on pastebin and provide the pastebin link as the value**"
-
-			faqState := "**What is the 'State' option?**\n" +
-				"Long story short, state allows you to configure the privacy of your server and in the future may do other things as well. " +
-				"*What is this privacy, you ask?* Well, if you are being raided and you wish to stop people from joining your server during a " +
-				"raid, then you can simply set the state of your server to `private_viewable` or `8`. This will stop it from being indexed " +
-				"and will *also* block users from joining your server until you're ready to set the state to `public` or `0`."
-
-			faqVoteRewards := "**Vote Rewards**\n" +
-				"You can reward users for voting for your server using vote rewards. This can be things like custom roles or extra perks! " +
-				"In order to use vote rewards, you will either need to get your API Token (or your Webhook Secret if you have one set and " +
-				"wish to use webhooks) or you will need to use our websocket API to listen for events. Once you have gotten a server vote " +
-				"event, you can then give rewards for voting. The event number for server votes is `71`"
-
-			faqAllowlist := "**Server Allow List**\n" +
-				"For invite-only servers, you can/should use a **user whitelist** to prevent users outside the user whitelist from " +
-				"joining your server. If you do not have any users on your user whitelist, anyone may join your server. User blacklists allow " +
-				"you to blacklist bad users from getting an invite to your server via Fates List. Use `/allowlist` to configure the allow list"
-
-			faqTags := "**Server Tags**\n" +
-				"Server Tags on Fates List are a great way to allow similar users to find your server! The first server to make a tag is given " +
-				"ownership over that tag. **Tag owners can control the iconify emoji of the tag however they *cannot* remove the tag from their " +
-				"server without transferring it to another server.** The Fates List Staff Server is the default server a tag will transfer to. " +
-				"Tags should be compelling and quickly describe the server. **Creating a new similar tag just to gain ownership of it may result " +
-				"in a ban**. Tags shoild also be short and **a maximum of 20 characters in length**. Some keywords are not allowed/reserved as " +
-				"well"
-
-			helpPages := []string{
-				strings.Join([]string{intro, syntax, faqBasics, faqState}, "\n\n"),
-				strings.Join([]string{faqVoteRewards, faqAllowlist, faqTags}, "\n\n"),
-			}
-
-			var sender func(discord *discordgo.Session, i *discordgo.Interaction, content string, clean bool, largeContent ...string)
-			if context.Interaction.Token == "prefixCmd" {
-				sender = slashbot.SendIResponse
-			} else {
-				sender = slashbot.SendIResponseEphemeral
-			}
-
-			for i, v := range helpPages {
-				if i == 0 {
-					sender(common.DiscordServerList, context.Interaction, "Start of message", false)
-				}
-				sender(common.DiscordServerList, context.Interaction, v, false)
-			}
-			return ""
+			return "Please see https://lynx.fateslist.xyz/docs/server-list for documentation on how to use Fates List Server Listing"
 		},
 	}
 
