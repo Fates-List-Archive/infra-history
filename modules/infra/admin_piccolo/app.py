@@ -1182,6 +1182,60 @@ class ConnectionManager:
             "data": jsonable_encoder(data)
         })
 
+    async def data_deletion(self, ws: WebSocket, user_id: str):
+        if not ws.state.user:
+            return await ws.send_json({
+                "resp": "data_deletion",
+                "detail": "You must be logged in first!"
+            })
+
+        if ws.state.member.perm < 7 and ws.state.user["id"] != user_id:
+            return await ws.send_json({
+                "resp": "data_deletion",
+                "detail": "You must either have permission level 6 or greater or the user id requested must be the same as your logged in user id."
+            })
+
+        try:
+            user_id = int(user_id)
+        except:
+            return await ws.send_json({
+                "resp": "data_deletion",
+                "detail": "Invalid User ID"
+            })
+
+        print("[LYNX] Wiping user info in db")
+        await app.state.db.execute("DELETE FROM users WHERE user_id = $1", user_id)
+
+        bots = await app.state.db.fetch(
+            """SELECT DISTINCT bots.bot_id FROM bots 
+            INNER JOIN bot_owner ON bot_owner.bot_id = bots.bot_id 
+            WHERE bot_owner.owner = $1 AND bot_owner.main = true""",
+            user_id,
+        )
+        for bot in bots:
+            await app.state.db.execute("DELETE FROM bots WHERE bot_id = $1",
+                             bot["bot_id"])
+
+        votes = await app.state.db.fetch(
+            "SELECT bot_id from bot_voters WHERE user_id = $1", user_id)
+        for vote in votes:
+            await app.state.db.execute(
+                "UPDATE bots SET votes = votes - 1 WHERE bot_id = $1",
+                vote["bot_id"])
+
+        await app.state.db.execute("DELETE FROM bot_voters WHERE user_id = $1", user_id)
+
+        print("[LYNX] Clearing redis info on user...")
+        await app.state.redis.hdel(str(user_id), "cache")
+        await app.state.redis.hdel(str(user_id), "ws")
+
+        await app.state.redis.close()
+
+        await ws.send_json({
+            "resp": "data_deletion",
+            "detail": "All found user data deleted"
+        })
+
     async def verify_code(self, ws: WebSocket, code: str):
         if not ws.state.user:
             return
@@ -2230,6 +2284,8 @@ In case, you haven't went through staff verification and you somehow didn't get 
                 asyncio.create_task(manager.verify_code(ws, data.get("code", "")))
             elif data.get("request") == "data_request":
                 asyncio.create_task(manager.data_request(ws, data.get("user", {})))
+            elif data.get("request") == "data_deletion":
+                asyncio.create_task(manager.data_deletion(ws, data.get("user", {})))
             elif data.get("request") == "survey_list":
                 asyncio.create_task(manager.send_survey_list(ws))
             elif data.get("request") == "survey":

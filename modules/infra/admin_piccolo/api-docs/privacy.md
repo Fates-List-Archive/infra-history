@@ -257,7 +257,7 @@ This section was made to handle GDPR requirements such as data requests and dele
 
 ::: info
 
-**This can only be done for your *own* user id for security purposes unless you are a Overseer (which is our version of a owner)**
+**These actions can only be done for your *own* user id for security purposes unless you are a Overseer (which is our version of a owner)**
 
 :::
 
@@ -279,4 +279,25 @@ This section was made to handle GDPR requirements such as data requests and dele
 
 :::
 
-<div id="request-data-area"></div>
+::: action-gdpr-delete
+
+### Data Deletion Request
+
+- This is irreversible
+- This will delete *all* bots you are a main owner of *without warning*
+- There is no way to readd deleted bots unless you manually fill out all bot information again
+- **All votes you have ever made will be wiped. In the future, this *may* also trigger a 'data deletion webhook' to all voted bots**. This may lead to chargebacks or revoking of vote rewards from such bots.
+
+<div class="form-group">
+    <label for='user-id-del'>User ID</label>
+    <input 
+        class="form-control"
+        name='user-id-del' 
+        id='user-id-del'
+        type="number"
+        placeholder="User ID. See note above"
+    />
+    <button id="request-btn" onclick="dataDelete()">Delete</button>
+</div>
+
+:::

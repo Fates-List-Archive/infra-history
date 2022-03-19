@@ -155,63 +155,6 @@ def db_apply():
     asyncio.set_event_loop(loop)
     loop.run_until_complete(_migrator())
 
-
-def db_wipeuser():
-    """Wipes a user account (e.g. Data Deletion Request)"""
-    import uvloop
-
-    from loguru import logger
-
-    uvloop.install()
-
-    import aioredis
-    import asyncpg
-
-    try:
-        user_id = int(os.environ.get("USER"))
-    except:
-        user_id = None
-
-    if not user_id:
-        raise RuntimeError("Set USER envvar to user id to wipe")
-
-    async def _wipeuser():
-        logger.info("Wiping user info in db")
-        db = await asyncpg.create_pool()
-        await db.execute("DELETE FROM users WHERE user_id = $1", user_id)
-
-        bots = await db.fetch(
-            """SELECT DISTINCT bots.bot_id FROM bots 
-            INNER JOIN bot_owner ON bot_owner.bot_id = bots.bot_id 
-            WHERE bot_owner.owner = $1 AND bot_owner.main = true""",
-            user_id,
-        )
-        for bot in bots:
-            await db.execute("DELETE FROM bots WHERE bot_id = $1",
-                             bot["bot_id"])
-
-        votes = await db.fetch(
-            "SELECT bot_id from bot_voters WHERE user_id = $1", user_id)
-        for vote in votes:
-            await db.execute(
-                "UPDATE bots SET votes = votes - 1 WHERE bot_id = $1",
-                vote["bot_id"])
-
-        await db.execute("DELETE FROM bot_voters WHERE user_id = $1", user_id)
-
-        logger.info("Clearing redis info on user...")
-        redis = aioredis.from_url("redis://localhost:1001", db=1)
-        await redis.hdel(str(user_id), "cache")
-        await redis.hdel(str(user_id), "ws")
-
-        await redis.close()
-        logger.success("Done wiping user")
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(_wipeuser())
-
-
 def db_setup():
     """Setup Snowfall (the Fates List database system)"""
     from loguru import logger

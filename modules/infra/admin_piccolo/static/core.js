@@ -156,7 +156,7 @@ async function wsStart() {
         } else if(wsContentResp.has(data.resp)) {
             console.log(`WS: Got ${data.resp}`)   
             setData(data)
-        } else if(data.resp == "user_action" || data.resp == "bot_action" || data.resp == "eternatus" || data.resp == "survey") {
+        } else if(data.resp == "user_action" || data.resp == "bot_action" || data.resp == "eternatus" || data.resp == "survey" || data.resp == "data_deletion") {
             alert(data.detail)
             if(data.resp == "bot_action" && data.guild_id) {
                 // Now put the invite to the bot

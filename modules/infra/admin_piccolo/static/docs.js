@@ -65,3 +65,13 @@ async function dataRequest() {
     ws.send(JSON.stringify({request: "data_request", user: userId}))
     document.querySelector("#request-btn").innerText = "Requesting..."
 }
+
+async function dataDelete() {
+    let confirm = prompt("Are you sure you want to delete all data? This cannot be undone. Please read all warnings carefully. This may in the future trigger a webhook to all bots you have voted for.\n\nType 'DELETE-POPPYPAW' to confirm.")
+    if(confirm !== "DELETE-POPPYPAW") {
+        alert("Aborted")
+        return
+    }
+    userId = document.querySelector("#user-id-del").value
+    ws.send(JSON.stringify({request: "data_deletion", user: userId}))
+}

@@ -284,20 +284,6 @@ func SendRolesMessage(s *discordgo.Session, delAndSend bool) {
 		})
 
 		s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
-			Content: "Click the button below to request a data deletion request!\n**This action is irreversible, you will loose all perks you have and all your bots will be deleted permanently**.\nYour vote epoch (when you last voted) will stay as it is temporary (expires after 8 hours) and is needed for anti-vote abuse (to prevent vote spam and vote scams etc.)\n\n*This process is manual and can take up to 24 hours to complete.*",
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.Button{
-							CustomID: "ddr",
-							Label:    "Data Deletion Request",
-						},
-					},
-				},
-			},
-		})
-
-		s.ChannelMessageSendComplex(common.RolesChannel, &discordgo.MessageSend{
 			Content: "Click the button below to start a staff application",
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{
@@ -564,30 +550,5 @@ func MessageHandler(
 			}
 		}
 		slashbot.SendIResponseEphemeral(common.DiscordMain, i, fmt.Sprintf("**Roles gotten**\nBot developer: %t (%v)\nCertified developer: %t (%v)", botDev, botDevBots, certDev, certDevBots), false)
-	} else if data.CustomID == "ddr" {
-		check := rdb.Exists(ctx, "ddr:"+i.Member.User.ID).Val()
-		if check != 0 {
-			slashbot.SendIResponseEphemeral(common.DiscordMain, i, "You have already requested a data deletion request!", false)
-			return
-		}
-
-		g, err := common.DiscordMain.State.Guild(i.GuildID)
-
-		if err != nil {
-			slashbot.SendIResponseEphemeral(common.DiscordMain, i, err.Error(), false)
-		}
-
-		owner, err := common.DiscordMain.State.Member(i.GuildID, g.OwnerID)
-
-		if err != nil {
-			slashbot.SendIResponseEphemeral(common.DiscordMain, i, err.Error(), false)
-		}
-
-		common.DiscordMain.ChannelMessageSendComplex(common.AppealsChannel, &discordgo.MessageSend{
-			Content: fmt.Sprintf("%s\n\n %s has requested a data deletion request. Please wait for a owner to handle your request.\nIf this was accidental, please immediately ping a staff member!", owner.Mention(), i.Member.User.Mention()),
-		})
-
-		rdb.Set(ctx, "ddr:"+i.Member.User.ID, "1", time.Hour*24)
-		slashbot.SendIResponseEphemeral(common.DiscordMain, i, "You have requested a data deletion request!\n\n**This process is manual and can take up to 24 hours to complete.**\nIf this was accidental, please immediately ping a staff member!", false)
 	}
 }
