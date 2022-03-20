@@ -103,51 +103,6 @@ The base URL for api v3 websockets is ``wss://api.fateslist.xyz/ws/{id}?mode={mo
 - id is a ``i64`` (int64) that is either your Bot ID or your Server ID you wish to connect to websocket API for. **For all practical cases and purposes, id can also be treated as a Discord Snowflake**
 - mode is either ``Bot`` or ``Server`` (case-sensitive)
 
-### Example Program
-
-Here's a example on the above:
-
-```py
-#!/usr/bin/env python
-
-import asyncio
-import websockets
-import asyncio
-
-async def ping(ws):
-    while True:
-        await ws.send("PING")
-
-        # Wait 20 more seconds
-        await asyncio.sleep(20)
-
-async def mock_unsub(ws):
-    await asyncio.sleep(60)
-    print("Ending GWTASK")
-    await ws.send("ENDGWTASK")
-
-async def hello():
-    async with websockets.connect("wss://api.fateslist.xyz/ws/519850436899897346?mode=Bot") as websocket:
-        # Start ping
-        asyncio.create_task(ping(websocket))
-
-        # Subscribe to the pubsub channel
-        await websocket.send("SUB")
-
-        # After 60 seconds, this will close the subscription task
-        asyncio.create_task(mock_unsub(websocket))
-
-        # Handle messages as well as PING responses by just printing them
-        async for msg in websocket:
-            if(msg.isdigit()):
-                print("GOT PING:", msg)
-                continue
-
-            print(msg)
-
-asyncio.run(hello())
-```
-
 ### Event Wrapping
 
 Unless specified otherwise, all events sent over websocket will be JSON just like all other events
@@ -177,4 +132,158 @@ Events sent over API v3 websockets are considered to be *wrapped*. That is, the 
     }
 }
 
+```
+
+### A sample python library
+
+```py
+from contextlib import asynccontextmanager
+import enum
+import websockets
+import json
+import asyncio
+
+class WsMode(enum.Enum):
+    bot = "Bot"
+    server = "Server"
+
+class FatesHeader:
+    """Represents a command header from WS"""
+    def __init__(self, msg: str):
+        self.msg = msg
+    
+    def __str__(self):
+        return f"CmdHeader<{self.msg}>"
+    
+    def __repr__(self):
+        return f"<FatesHeader msg={self.msg}>"
+
+class FatesWsConn:
+    def __init__(self, ws):
+        self.ws = ws
+        self.up = True
+        self._is_pinging = False
+        self.gw_task = None
+        self._ping_task = asyncio.create_task(self._ping())
+    
+    async def _ping(self):
+        if self._is_pinging:
+            raise RuntimeError("Cannot ping when already pinging!")
+
+        self._is_pinging = True
+        while self.up:
+            await self.ws.send("PING")
+            await asyncio.sleep(20)
+
+    async def end_gw_task(self):
+        """Ends a gateway task"""
+        await self.ws.send("ENDGWTASK")
+        await asyncio.sleep(0.1)
+        self.gw_task = None
+    
+    async def sub(self):
+        if self.gw_task:
+            raise RuntimeError("GWTask cannot already be running")
+        class _Sub():
+            def __init__(self, parent):
+                self.parent = parent
+            def __aiter__(self):
+                return self
+            async def __anext__(self):
+                while True:
+                    msg = await self.parent.ws.recv()
+                    if msg.isdigit():
+                        continue # Is ping, ignore
+                    try:
+                        return json.loads(msg)
+                    except:
+                        return FatesHeader(msg)
+
+        self.gw_task = "SUB"
+        await self.ws.send("SUB")
+        return _Sub(self)
+
+    async def archive(self):
+        if self.gw_task:
+            raise RuntimeError("GWTask cannot already be running")
+        class _Sub():
+            def __init__(self, parent):
+                self.parent = parent
+            def __aiter__(self):
+                return self
+            async def __anext__(self):
+                while True:
+                    msg = await self.parent.ws.recv()
+
+                    if msg.isdigit():
+                        continue # Is ping, ignore
+
+                    # Handle the final ack
+                    if msg == "GWTASKACK ARCHIVE":
+                        await self.parent.end_gw_task()
+                        raise StopAsyncIteration
+
+                    try:
+                        return json.loads(msg)
+                    except:
+                        return FatesHeader(msg)
+
+        self.gw_task = "ARCHIVE"
+        await self.ws.send("ARCHIVE")
+        return _Sub(self)
+
+@asynccontextmanager
+async def fates_ws(id: int, mode: WsMode):
+    async with websockets.connect(f"wss://api.fateslist.xyz/ws/{id}?mode={mode.value}") as websocket:
+        conn = FatesWsConn(websocket)
+        yield conn
+        conn.up = False
+```
+
+**Usage Example**
+
+1. Bot subscription example
+
+```py
+import test
+import asyncio
+
+async def main():
+    async with test.fates_ws(519850436899897346, test.WsMode.bot) as bot:
+        sub = await bot.sub()
+        async for v in sub:
+            print(v)
+asyncio.run(main())
+```
+
+2. Bot archive example
+
+```py
+import test
+import asyncio
+
+async def main():
+    async with test.fates_ws(519850436899897346, test.WsMode.bot) as bot:
+        archive = await bot.archive()
+        async for v in archive:
+            print(v)
+asyncio.run(main())
+```
+
+3. Bot archive then subscription example
+
+```py
+import test
+import asyncio
+
+async def main():
+    async with test.fates_ws(519850436899897346, test.WsMode.bot) as bot:
+        archive = await bot.archive()
+        async for v in archive:
+            print(v)
+        sub = await bot.sub()
+        async for v in sub:
+            print(v)
+
+asyncio.run(main())
 ```

@@ -160,16 +160,26 @@ CREATE TABLE bot_stats_votes_pm (
 );
 
 CREATE TABLE bot_voters (
-    bot_id bigint,
-    user_id bigint,
-    timestamps timestamptz[] DEFAULT '{}',
-    CONSTRAINT bots_fk FOREIGN KEY (bot_id) REFERENCES bots(bot_id) ON DELETE CASCADE ON UPDATE CASCADE,
-    primary key(user_id, bot_id)
+    bot_id bigint not null,
+    user_id bigint not null,
+    timestamps timestamptz[] DEFAULT '{NOW()}'
+);
+
+CREATE TABLE server_voters (
+    guild_id bigint not null,
+    user_id bigint not null,
+    timestamps timestamptz[] DEFAULT '{NOW()}'
 );
 
 CREATE TABLE user_vote_table (
 	user_id bigint PRIMARY KEY,
 	bot_id bigint NOT NULL,
+	expires_on timestamptz DEFAULT NOW() + '8 hours'
+);
+
+CREATE TABLE user_server_vote_table (
+	user_id bigint PRIMARY KEY,
+	guild_id bigint NOT NULL,
 	expires_on timestamptz DEFAULT NOW() + '8 hours'
 );
 

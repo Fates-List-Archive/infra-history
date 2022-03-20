@@ -8,12 +8,15 @@ import (
 	"os"
 	"runtime"
 
+	jsoniter "github.com/json-iterator/go"
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fastjson"
 )
 
 // Put all env variables here
 const version = "2"
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Staff Verification Code (sigh, people don't read staff info anymore)
 func VerificationCode(userId string, code string) bool {

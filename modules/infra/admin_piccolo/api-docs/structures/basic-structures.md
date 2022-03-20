@@ -19,15 +19,15 @@ A BaseUser represents a user on Fates List (See [https://github.com/Fates-List/F
 
 ### Status
 
-Fates List also records the users status as well. This is internally an integer to save space and to decrease API response time, we use the same internal values in our API too.
+Fates List also records the users status as well. With API v3, this is now a string, Usually ``Unknown`` at least until Baypaw is updated with proper status detection
 
-| Status Number | Corresponding Status |
-| :--- | :--- |
-| 0 | Unknown Status |
-| 1 | Online |
-| 2 | Offline/Invisible |
-| 3 | Idle |
-| 4 | Do Not Disturb |
+| Status |
+| :--- |
+| Unknown |
+| Online |
+| Offline |
+| Idle |
+| DoNotDisturb |
 
 ### Bot State
 

@@ -1619,9 +1619,7 @@ Now that we're all caught up with the staff guide, here are the list of actions 
 :::
             """),
             "ext_script": "/_static/user-actions.js?v=5",
-            "script": f"""
-            var csrfToken = "{csrf_token}"
-            """
+            "script": f"var csrfToken = '{csrf_token}'"
         }, ws)
 
     async def bot_actions(self, ws: WebSocket):
@@ -1915,9 +1913,8 @@ placeholder="Reason for resetting all votes. Defaults to 'Monthly Votes Reset'"
 :::
 """),
             "ext_script": "/_static/bot-actions.js?v=5",
-            "script": f"""
-        var csrfToken = "{csrf_token}"
-        """}, ws)
+            "script": f'var csrfToken = "{csrf_token}"'
+        }, ws)
 
     async def staff_apps(self, ws: WebSocket, open: str):
         # Get staff application list
@@ -1987,9 +1984,7 @@ placeholder="Reason for resetting all votes. Defaults to 'Monthly Votes Reset'"
             <br/>
             """,
             "ext_script": "/_static/user-actions.js?v=2",
-            "script": f"""
-            var csrfToken = "{csrf_token}"
-            """
+            "script": f"var csrfToken = '{csrf_token}'"
         }, ws)
 
     async def staff_verify(self, ws: WebSocket):
