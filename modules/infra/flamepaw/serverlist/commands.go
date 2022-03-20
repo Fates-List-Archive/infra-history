@@ -6,7 +6,7 @@ import (
 	"flamepaw/common"
 	"flamepaw/slashbot"
 	"flamepaw/types"
-	"fmt"
+	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -208,6 +208,10 @@ func CmdInit() map[string]types.SlashCommand {
 						Value: "webhook",
 					},
 					{
+						Name:  "Webhook Type",
+						Value: "webhook_type",
+					},
+					{
 						Name:  "Requires Login",
 						Value: "login_required",
 					},
@@ -249,6 +253,12 @@ func CmdInit() map[string]types.SlashCommand {
 					value = ""
 				} else {
 					return "A value must be provided for this field"
+				}
+			}
+
+			if field == "webhook_type" {
+				if value != "0" && value != "1" {
+					return "Webhook type must be 0 (vote) or 1 (discord integration, doesn't work yet)."
 				}
 			}
 
@@ -632,94 +642,55 @@ func CmdInit() map[string]types.SlashCommand {
 				return slashbot.ServerPermsString(3, true)
 			}
 
-			key := "vote_lock+server:" + context.Interaction.Member.User.ID
-			check := context.Redis.PTTL(context.Context, key).Val()
-			debug := "**DEBUG (for nerds)**\nRedis TTL: " + strconv.FormatInt(check.Milliseconds(), 10) + "\nKey: " + key + "\nTest: " + strconv.FormatBool(test)
-			var voteMsg string // The message that will be shown to the use on a successful vote
-
-			if check.Milliseconds() == 0 || test {
-				var userId string = context.Interaction.Member.User.ID
-				if test {
-					// TODO: Check if test votes are currently enabled. For now use perm 2
-					if context.ServerPerm < 2 {
-						return slashbot.ServerPermsString(2, true)
-					}
-				}
-
-				var votesDb pgtype.Int8
-
-				err := context.Postgres.QueryRow(context.Context, "SELECT votes FROM servers WHERE guild_id = $1", context.Interaction.GuildID).Scan(&votesDb)
-
-				if err != nil {
-					return dbError(err)
-				}
-
-				votes := votesDb.Int + 1
-
-				eventId := common.CreateUUID()
-
-				voteEvent := map[string]any{
-					eventId: map[string]any{
-						"votes": votes,
-						"id":    userId,
-						"ctx": map[string]interface{}{
-							"user":  userId,
-							"votes": votes,
-							"test":  test,
-						},
-						"m": map[string]interface{}{
-							"e":    types.EventServerVote,
-							"user": userId,
-							"ts":   float64(time.Now().Unix()) + 0.001, // Make sure its a float by adding 0.001
-							"eid":  eventId,
-						},
-					},
-				}
-
-				go func() {
-					common.AddWsEvent(context.Context, context.Redis, "server-"+context.Interaction.GuildID, eventId, voteEvent)
-
-					_, err = context.Postgres.Exec(context.Context, "INSERT INTO events (id, type, event) VALUES ($1, $2, $3)", context.Interaction.GuildID, "server", voteEvent)
-
-					if err != nil {
-						log.Error(err)
-					}
-
-					voteMsg = "You have successfully voted for this server (note: you should ask the server owner before complaining if you do not recieve vote rewards)"
-				}()
-
-				// Handle vote autoroles
-				var roles pgtype.Int8Array
-
-				verr := context.Postgres.QueryRow(context.Context, "SELECT autorole_votes FROM servers WHERE guild_id = $1", context.Interaction.GuildID).Scan(&roles)
-
-				if verr != nil {
-					voteMsg += "\nVote role error: " + dbError(err)
-				}
-
-				if roles.Status == pgtype.Present {
-					for _, role := range roles.Elements {
-						roleID := strconv.FormatInt(role.Int, 10)
-						err := common.DiscordServerList.GuildMemberRoleAddWithReason(context.Interaction.GuildID, userId, roleID, "Autorole for user "+userId)
-						if err != nil {
-							voteMsg += "\nVote role error when giving role " + roleID + ": " + err.Error()
-						}
-					}
-				}
-
-				if !test {
-					voteMsg = "You have successfully voted for this server"
-					context.Postgres.Exec(context.Context, "UPDATE servers SET votes = votes + 1, total_votes = total_votes + 1 WHERE guild_id = $1", context.Interaction.GuildID)
-					context.Redis.Set(context.Context, key, 0, 8*time.Hour)
-				}
-			} else {
-				hours := check / time.Hour
-				mins := (check - (hours * time.Hour)) / time.Minute
-				secs := (check - (hours*time.Hour + mins*time.Minute)) / time.Second
-				voteMsg = fmt.Sprintf("Please wait %02d hours, %02d minutes %02d seconds", hours, mins, secs)
+			client := http.Client{
+				Timeout: time.Second * 10,
 			}
 
-			return voteMsg + "\n\n" + debug
+			var userToken pgtype.Text
+
+			context.Postgres.QueryRow(context.Context, "SELECT api_token FROM users WHERE user_id = $1", context.User.ID).Scan(&userToken)
+
+			if userToken.Status != pgtype.Present {
+				return "API token fetch failed, try regenerating it in your profile!"
+			}
+
+			req, err := http.NewRequest("PATCH", "https://api.fateslist.xyz/users/"+context.User.ID+"/servers/"+context.Interaction.GuildID+"/votes?test="+strconv.FormatBool(test), nil)
+
+			req.Header.Add("Authorization", userToken.String)
+
+			if err != nil {
+				return err.Error()
+			}
+
+			res, err := client.Do(req)
+
+			if err != nil {
+				return err.Error()
+			}
+
+			defer res.Body.Close()
+
+			body, err := ioutil.ReadAll(res.Body)
+
+			if err != nil {
+				return err.Error()
+			}
+
+			var jsonData map[string]any
+
+			err = json.Unmarshal(body, &jsonData)
+
+			if err != nil {
+				return err.Error()
+			}
+
+			var reason, okReason = jsonData["reason"].(string)
+
+			if !okReason {
+				reason = "Something happened!"
+			}
+
+			return strings.ReplaceAll(strings.ReplaceAll(reason, "<em>", "*"), "</em>", "*") + "\n\n"
 		},
 	}
 

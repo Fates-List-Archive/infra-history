@@ -8,7 +8,6 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/Fates-List/discordgo"
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fastjson"
 )
@@ -112,7 +111,6 @@ func init() {
 	ClientSecret = fastjson.GetString(secretsJson, "client_secret")
 	ServerBotToken = fastjson.GetString(secretsJson, "token_server")
 	SquirrelflightToken = fastjson.GetString(secretsJson, "token_squirrelflight")
-	fetchBot1Token = fastjson.GetString(secretsJson, "token_fetch_bot_1")
 	JAPIKey = fastjson.GetString(secretsJson, "japi_key")
 	GHWebhookSecret = fastjson.GetString(secretsJson, "gh_webhook_secret")
 	VoteTokenAccessKey = fastjson.GetString(secretsJson, "vote_token_access_key")
@@ -158,12 +156,4 @@ func init() {
 	permInit()
 
 	log.Info("Environment setup successfully!")
-}
-
-func init() {
-	var err error
-	fetchBot1, err = discordgo.New("Bot " + fetchBot1Token)
-	if err != nil {
-		panic(err)
-	}
 }

@@ -2,8 +2,5 @@ package common
 
 import "github.com/Fates-List/discordgo"
 
-var DiscordMain *discordgo.Session           // Main bot
-var DiscordServerList *discordgo.Session     // Server listing bot
-var DiscordSquirrelflight *discordgo.Session // Squirrelflight bot
-
-var fetchBot1 *discordgo.Session // Fetch bot 1
+var DiscordMain *discordgo.Session       // Main bot
+var DiscordServerList *discordgo.Session // Server listing bot
