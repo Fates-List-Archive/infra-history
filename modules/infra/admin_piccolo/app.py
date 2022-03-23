@@ -1619,7 +1619,7 @@ Now that we're all caught up with the staff guide, here are the list of actions 
 :::
             """),
             "ext_script": "/_static/user-actions.js?v=5",
-            "script": f"var csrfToken = '{csrf_token}'"
+            "script": f'var csrfToken = "{csrf_token}"'
         }, ws)
 
     async def bot_actions(self, ws: WebSocket):

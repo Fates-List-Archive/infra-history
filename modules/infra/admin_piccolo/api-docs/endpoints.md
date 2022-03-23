@@ -2445,7 +2445,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "3e0d1d00-04a5-42dc-813e-d460bdc4a64b",
+    "id": "141b0486-bd76-4e57-81ca-f3e5f79bcd58",
     "reply": false,
     "star_rating": "0",
     "review_text": "",
@@ -2512,7 +2512,7 @@ set this a TargetType anyways so you might as well set it correctly.
 
 ```json
 {
-    "rid": "a26c37ca-c668-4b19-8f80-4b90240510ec"
+    "rid": "7882bf61-ec45-498f-86d1-e3ed699f7b3e"
 }
 ```
 
@@ -2583,7 +2583,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 
 ```json
 {
-    "rid": "342a6fe4-e2e6-42a9-ac6e-b8e66c89c974"
+    "rid": "6ff25b89-2db6-4e34-b326-5e298d1f3369"
 }
 ```
 
@@ -2777,7 +2777,7 @@ This is the ``target_type``
 
 ```json
 {
-    "id": "8b0cb697-2e4f-43e4-9ef6-fea9504c0a10",
+    "id": "4d5d73e2-5f33-4ea8-8bc3-23e55cbdb23b",
     "target_type": 0
 }
 ```

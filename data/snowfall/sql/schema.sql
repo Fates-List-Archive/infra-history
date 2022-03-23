@@ -196,8 +196,10 @@ CREATE TABLE users (
     coins INTEGER DEFAULT 0,
     js_allowed BOOLEAN DEFAULT false,
     vote_reminders bigint[] not null default '{}',
+    vote_reminders_servers bigint[] not null default '{}',
     vote_reminder_channel bigint,
     vote_reminders_last_acked timestamptz not null default now(),
+    vote_reminders_servers_last_acked timestamptz not null default now(),
     staff_verify_code text
 );
 
@@ -313,7 +315,7 @@ CREATE TABLE servers (
     created_at timestamptz not null default now(),
     invite_amount integer DEFAULT 0,
     invite_url text,
-    invite_channel text,
+    invite_channel bigint,
     state int not null default 0,
     nsfw boolean default false,
     banner_card text,
