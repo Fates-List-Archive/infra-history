@@ -305,7 +305,6 @@ CREATE TABLE servers (
     user_whitelist text[] default '{}',
     whitelist_only boolean default false,
     whitelist_form text,
-    audit_logs jsonb[] default '{}',
     long_description text default 'No long description set! Set one with /settings longdesc Long description',
     long_description_type integer default 0,
     css text default '',
@@ -326,6 +325,18 @@ CREATE TABLE servers (
     deleted boolean default false,
     flags integer[] default '{}',
     autorole_votes bigint[] default '{}'
+);
+
+CREATE TABLE server_audit_logs (
+    guild_id bigint not null,
+    user_id bigint not null,
+    username text not null,
+    user_guild_perms text not null, -- use text, u64 may overflow
+    field text not null,
+    value text not null,
+    action_time timestamptz not null default now(),
+    action_id uuid primary key default uuid_generate_v4(),
+    CONSTRAINT servers_fk FOREIGN KEY (guild_id) REFERENCES servers(guild_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- In server tags, owner_guild is the first guild a tag was given to
