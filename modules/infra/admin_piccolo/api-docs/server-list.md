@@ -4,11 +4,11 @@ If you're reading this, you probably already know what server listing (and slash
 
 ### Slash command syntax
 
-This guide will use the following syntax for slash commands: ``/command option:foo anotheroption:bar``. To specify a list of values (where supported), use ``|``. Currently only Vote Roles supports this
+This guide will use the following syntax for slash commands: ``/command option:foo anotheroption:bar``. To specify a list of values (where supported), use ``|``. Currently only Autovote Roles supports this
 
 ### How do I add my server?
 
-Good question. Your server should usually be automatically added for you once you add the bot to your server. Just set a description using ``/set field:descriotion value:My lovely description``. If you do not do so, the description will be randomly set for you and it will likely not be what you want. You should set a long description using ``/set field:long_description`` value:My really really long description. For really long descriptions, you can also create a paste on **pastebin** and provide the pastebin link as the value
+Good question. Your server should usually be automatically added for you once you add the bot to your server. Just set a description using ``/set field:Description value:My lovely description``. If you do not do so, the description will be randomly set for you and it will likely not be what you want. You should set a long description using ``/set field:Long Description`` value:My really really long description. For really long descriptions, you can also create a paste on **pastebin** and provide the pastebin link as the value
 
 ### What is the 'State' option?
 
@@ -27,6 +27,8 @@ For invite-only servers, you can/should use a user whitelist to prevent users ou
 ### Server Tags
 
 Server Tags on Fates List are a great way to allow similar users to find your server! The first server to make a tag is given ownership over that tag. **Tag owners can control the iconify emoji of the tag however they cannot remove the tag from their server without transferring it to another server**. *Flamepaw (staff server) is the default server a tag will transfer to during a transfer unless a server is explicitly mentioned*. Tags should be compelling and quickly describe the server. Creating a new similar tag just to gain ownership of it may result in a ban from server listing. Tags shoild also be short and a maximum of 20 characters in length. Some keywords are not allowed/reserved as well.
+
+The default tag is ``fluent:animal-cat-28-regular``.
 
 ### Updates from previous versions
 

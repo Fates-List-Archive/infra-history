@@ -2,11 +2,7 @@ package cli
 
 import (
 	"context"
-	"flamepaw/admin"
 	"flamepaw/common"
-	"flamepaw/serverlist"
-	"flamepaw/slashbot"
-	"flamepaw/supportsystem"
 	"flamepaw/tests"
 	"flamepaw/types"
 	"flamepaw/webserver"
@@ -19,7 +15,6 @@ import (
 	"time"
 
 	"github.com/Fates-List/discordgo"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -93,35 +88,6 @@ func Server() {
 	common.DiscordMain = discord
 
 	discord.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildPresences | discordgo.IntentsGuildMembers
-	discordServerBot, err = discordgo.New("Bot " + common.ServerBotToken)
-	if err != nil {
-		panic(err)
-	}
-	discordServerBot.SyncEvents = false
-
-	common.DiscordServerList = discordServerBot
-
-	// For now, if we don't get the guild members intent in the future, this will be replaced with approx guild count
-	discordServerBot.Identify.Intents = discordgo.IntentsGuilds
-
-	// Be prepared to remove this handler if we don't get priv intents
-	memberHandler := func(s *discordgo.Session, m *discordgo.Member) {
-		if common.IPCOnly {
-			return
-		}
-		g, err := discordServerBot.State.Guild(m.GuildID)
-		if err != nil {
-			log.Error(err)
-		}
-		err2 := serverlist.AddRecacheGuild(ctx, db, g)
-		if err2 != "" {
-			log.Error(err2)
-		}
-	}
-
-	discordServerBot.AddHandler(func(s *discordgo.Session, m *discordgo.GuildMemberAdd) { memberHandler(s, m.Member) })
-	discordServerBot.AddHandler(func(s *discordgo.Session, m *discordgo.GuildMemberRemove) { memberHandler(s, m.Member) })
-	// End of potentially dangerous (priv code)
 
 	// https://gist.github.com/ryanfitz/4191392
 	doEvery := func(d time.Duration, f func(time.Time)) {
@@ -216,74 +182,35 @@ func Server() {
 	})
 
 	discord.AddHandler(onReady)
-	discord.AddHandler(func(s *discordgo.Session, m *discordgo.Ready) {
-		supportsystem.SendRolesMessage(s, false)
-	})
-	discordServerBot.AddHandler(onReady)
 
-	// Slash command handling
-	iHandle := func(s *discordgo.Session, i *discordgo.Interaction, bot int) {
-		// Support System check
-		if i.Type == discordgo.InteractionMessageComponent {
-			supportsystem.MessageHandler(ctx, discord, rdb, db, i)
-			return
-		}
-
-		if i.Type == discordgo.InteractionApplicationCommand {
-			log.WithFields(log.Fields{
-				"i":   spew.Sdump(i),
-				"bot": bot,
-			}).Info("Going to handle interaction")
-		}
-		slashbot.SlashHandler(
-			ctx,
-			s,
-			rdb,
-			db,
-			i,
-		)
-	}
-
-	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i.Interaction, 0) })
-	discordServerBot.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) { iHandle(s, i.Interaction, 1) })
-	discordServerBot.AddHandler(func(s *discordgo.Session, gc *discordgo.GuildCreate) {
-		defer func() { recover() }()
-		if common.IPCOnly {
-			return
-		}
-		log.Info("Adding guild " + gc.Guild.ID + " (" + gc.Guild.Name + ")")
-		err := serverlist.AddRecacheGuild(ctx, db, gc.Guild)
-		if err != "" {
-			log.Error(err)
-		}
-		rdb.Del(ctx, "pendingdel-"+gc.Guild.ID)
-		db.Exec(ctx, "UPDATE servers SET state = $1, deleted = false WHERE guild_id = $2 AND deleted = true AND state = $3", types.BotStateApproved.Int(), gc.Guild.ID, types.BotStatePrivateViewable.Int())
-	})
-	discordServerBot.AddHandler(func(s *discordgo.Session, gc *discordgo.GuildDelete) {
-		if common.IPCOnly {
-			return
-		}
-		log.Info("Left guild " + gc.Guild.ID + "(" + gc.Guild.Name + ")")
-		rdb.Set(ctx, "pendingdel-"+gc.Guild.ID, 0, 0)
-
-		time.AfterFunc(1*time.Minute, func() {
-			if rdb.Exists(ctx, "pendingdel-"+gc.Guild.ID).Val() != 0 {
-				db.Exec(ctx, "UPDATE servers SET state = $1, deleted = true WHERE guild_id = $1", types.BotStatePrivateViewable.Int(), gc.Guild.ID)
+	/*
+		discordServerBot.AddHandler(func(s *discordgo.Session, gc *discordgo.GuildCreate) {
+			defer func() { recover() }()
+			if common.IPCOnly {
+				return
 			}
+			log.Info("Adding guild " + gc.Guild.ID + " (" + gc.Guild.Name + ")")
+			rdb.Del(ctx, "pendingdel-"+gc.Guild.ID)
+			db.Exec(ctx, "UPDATE servers SET state = $1, deleted = false WHERE guild_id = $2 AND deleted = true AND state = $3", types.BotStateApproved.Int(), gc.Guild.ID, types.BotStatePrivateViewable.Int())
 		})
-	})
+		discordServerBot.AddHandler(func(s *discordgo.Session, gc *discordgo.GuildDelete) {
+			if common.IPCOnly {
+				return
+			}
+			log.Info("Left guild " + gc.Guild.ID + "(" + gc.Guild.Name + ")")
+			rdb.Set(ctx, "pendingdel-"+gc.Guild.ID, 0, 0)
+
+			time.AfterFunc(1*time.Minute, func() {
+				if rdb.Exists(ctx, "pendingdel-"+gc.Guild.ID).Val() != 0 {
+					db.Exec(ctx, "UPDATE servers SET state = $1, deleted = true WHERE guild_id = $1", types.BotStatePrivateViewable.Int(), gc.Guild.ID)
+				}
+			})
+		}) */
 
 	err = discord.Open()
 	if err != nil {
 		panic(err)
 	}
-	err = discordServerBot.Open()
-	if err != nil {
-		panic(err)
-	}
-
-	slashbot.SetupSlash(discord, admin.CmdInit)
-	slashbot.SetupSlash(discordServerBot, serverlist.CmdInit)
 
 	rdb = redis.NewClient(&redis.Options{
 		Addr:     "localhost:1001",

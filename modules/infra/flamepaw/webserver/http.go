@@ -12,7 +12,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"flamepaw/common"
-	"flamepaw/supportsystem"
 	"flamepaw/types"
 	"fmt"
 	"io/ioutil"
@@ -70,15 +69,6 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 	router := r.Group("/flamepaw")
 
 	router.GET("/ping", func(c *gin.Context) {
-		apiReturn(c, 200, true, nil, nil)
-	})
-
-	router.GET("/_sendrolesmsg", func(c *gin.Context) {
-		if c.GetHeader("X-Forwarded-For") != "" {
-			apiReturn(c, 403, false, "Forbidden", nil)
-			return
-		}
-		supportsystem.SendRolesMessage(common.DiscordMain, true)
 		apiReturn(c, 200, true, nil, nil)
 	})
 

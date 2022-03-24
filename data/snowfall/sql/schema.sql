@@ -308,7 +308,7 @@ CREATE TABLE servers (
     long_description text default 'No long description set! Set one with /settings longdesc Long description',
     long_description_type integer default 0,
     css text default '',
-    api_token text unique,
+    api_token text not null unique,
     website text,
     login_required boolean default false,
     created_at timestamptz not null default now(),
