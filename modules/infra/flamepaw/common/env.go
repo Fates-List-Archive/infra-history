@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"runtime"
 
@@ -18,19 +17,6 @@ const version = "2"
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-// Staff Verification Code (sigh, people don't read staff info anymore)
-func VerificationCode(userId string, code string) bool {
-	res, err := http.Get("https://lynx.fateslist.xyz/_admin_code_check?user_id=" + userId + "&code=" + code)
-	if err != nil {
-		log.Error(err)
-		return false
-	}
-	if res.StatusCode == 204 {
-		return true
-	}
-	return false
-}
-
 var (
 	secretsJsonFile string
 	discordJsonFile string
@@ -38,7 +24,6 @@ var (
 
 var (
 	MainBotToken            string
-	ServerBotToken          string
 	SquirrelflightToken     string
 	fetchBot1Token          string // Used for fetching
 	ClientSecret            string
@@ -112,7 +97,6 @@ func init() {
 
 	MainBotToken = fastjson.GetString(secretsJson, "token_main")
 	ClientSecret = fastjson.GetString(secretsJson, "client_secret")
-	ServerBotToken = fastjson.GetString(secretsJson, "token_server")
 	SquirrelflightToken = fastjson.GetString(secretsJson, "token_squirrelflight")
 	JAPIKey = fastjson.GetString(secretsJson, "japi_key")
 	GHWebhookSecret = fastjson.GetString(secretsJson, "gh_webhook_secret")

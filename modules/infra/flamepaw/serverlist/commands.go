@@ -200,9 +200,4 @@ func CmdInit() map[string]types.SlashCommand {
 		},
 	}
 }
-
-func GetCommandSpew() string {
-	return spew.Sdump(commands)
-}
-
 */
