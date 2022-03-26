@@ -22,15 +22,14 @@ import (
 )
 
 var (
-	db               *pgxpool.Pool
-	discord          *discordgo.Session
-	discordServerBot *discordgo.Session
-	rdb              *redis.Client
-	ctx              context.Context = context.Background()
-	uptimeFirstRun   bool
-	errBots          []string = []string{} // List of bots that actually don't exist on main server
-	errBotOffline    []string = []string{} // List of bots that are offline
-	uptimeRunning    bool
+	db             *pgxpool.Pool
+	discord        *discordgo.Session
+	rdb            *redis.Client
+	ctx            context.Context = context.Background()
+	uptimeFirstRun bool
+	errBots        []string = []string{} // List of bots that actually don't exist on main server
+	errBotOffline  []string = []string{} // List of bots that are offline
+	uptimeRunning  bool
 )
 
 func Test() {
@@ -242,7 +241,6 @@ func Server() {
 	db.Close()
 	rdb.Close()
 	discord.Close()
-	discordServerBot.Close()
 
 	os.Exit(0)
 }
