@@ -1933,6 +1933,91 @@ You **must** be main owner to use this endpoint.
 **Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
 
 
+### Get Import Sources
+#### GET /import-sources
+
+
+Returns a array of sources that a bot can be imported from.
+
+
+**API v2 analogue:** None
+
+**Request Body**
+
+```json
+{}
+```
+
+**Response Body**
+
+```json
+{
+    "sources": [
+        {
+            "id": "Rdl",
+            "name": "Rovel Bot List"
+        }
+    ]
+}
+```
+**Authorization Needed** | 
+
+
+### Import Bot
+#### POST /users/{user_id}/bots/{bot_id}/import?src={source}
+
+
+Imports a bot from a source listed in ``Get Import Sources``.
+
+
+**API v2 analogue:** None
+
+**Path parameters**
+
+- **user_id** [i64 (type info may be incomplete, see example)]
+- **bot_id** [i64 (type info may be incomplete, see example)]
+
+
+**Example**
+
+```json
+{
+    "user_id": 0,
+    "bot_id": 0
+}
+```
+
+**Query parameters**
+
+- **src** [fates::models::ImportSource (type info may be incomplete, see example)]
+
+
+**Example**
+
+```json
+{
+    "src": "Rdl"
+}
+```
+
+**Request Body**
+
+```json
+{}
+```
+
+**Response Body**
+
+```json
+{
+    "done": true,
+    "reason": null,
+    "context": null
+}
+```
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+
+
 ## Appeal
 
 ### New Appeal
@@ -2445,7 +2530,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "49415c8f-06c3-4867-9872-16c97f5c4984",
+    "id": "ff1fcbdb-8b32-451c-a1fb-44e23fd4429e",
     "reply": false,
     "star_rating": "0",
     "review_text": "",
@@ -2512,7 +2597,7 @@ set this a TargetType anyways so you might as well set it correctly.
 
 ```json
 {
-    "rid": "b1ef220b-1ad3-4cb7-ac78-9e6da3f6f370"
+    "rid": "99acaaeb-39fb-4bee-8fb2-18a89029888e"
 }
 ```
 
@@ -2583,7 +2668,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 
 ```json
 {
-    "rid": "c5c2be48-d3f4-4d82-b679-f6b9a54ed8f7"
+    "rid": "e93d46a8-7d13-4dd6-af4a-4469e7c3f390"
 }
 ```
 
@@ -2777,7 +2862,7 @@ This is the ``target_type``
 
 ```json
 {
-    "id": "1d38dcb2-ac11-426f-afc8-9d34b27dd784",
+    "id": "dbebe0f1-5a09-4f05-b4d8-6247711fd201",
     "target_type": 0
 }
 ```
