@@ -135,6 +135,7 @@ main server.
 - The fourth part of the verification code is +Mew. 
 - If you are not in FL Kremlin, DM any partnership requests to a Head Admin+.
 - Redirect users wishing to become staff to [`#ashfur-sys`](https://discord.com/channels/789934742128558080/848605596936437791) channel
+- The staff verification code is the first four parts concatenated and SHA3-384 hashed
 
 </blockquote>
 

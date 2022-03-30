@@ -992,8 +992,7 @@ this however, it is prone to change *anytime* in the future**.
     "votes": 10,
     "voted": true,
     "vote_right_now": false,
-    "vote_epoch": 101,
-    "time_to_vote": 0,
+    "expiry": 101,
     "timestamps": [
         "1970-01-01T00:00:00Z"
     ]
@@ -1293,7 +1292,7 @@ Due to massive changes, this API cannot be mapped onto any v2 API
 ### Get OAuth2 Link
 #### GET /oauth2
 
-Returns the oauth2 link used to login with
+Returns the oauth2 link used to login with. ``reason`` contains the state UUID
 
 **API v2 analogue:** (no longer working) [Get OAuth2 Link](https://legacy.fateslist.xyz/docs/redoc#operation/get_oauth2_link)
 
@@ -2530,7 +2529,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "ff1fcbdb-8b32-451c-a1fb-44e23fd4429e",
+    "id": "087c4448-e548-49de-948d-db4b457b6d88",
     "reply": false,
     "star_rating": "0",
     "review_text": "",
@@ -2597,7 +2596,7 @@ set this a TargetType anyways so you might as well set it correctly.
 
 ```json
 {
-    "rid": "99acaaeb-39fb-4bee-8fb2-18a89029888e"
+    "rid": "cc147604-353a-4b83-8ed6-bdbb4d3255a1"
 }
 ```
 
@@ -2668,7 +2667,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 
 ```json
 {
-    "rid": "e93d46a8-7d13-4dd6-af4a-4469e7c3f390"
+    "rid": "6f213bb5-e3c2-4906-94e4-f2352501480d"
 }
 ```
 
@@ -2862,7 +2861,7 @@ This is the ``target_type``
 
 ```json
 {
-    "id": "dbebe0f1-5a09-4f05-b4d8-6247711fd201",
+    "id": "d0c9e076-ed90-45e5-88cc-9d96d23ac578",
     "target_type": 0
 }
 ```
