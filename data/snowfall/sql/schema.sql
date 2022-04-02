@@ -342,6 +342,14 @@ CREATE TABLE server_audit_logs (
 -- In server tags, owner_guild is the first guild a tag was given to
 create table server_tags (id TEXT NOT NULL UNIQUE, name TEXT NOT NULL UNIQUE, iconify_data TEXT NOT NULL, owner_guild BIGINT NOT NULL);
 
+CREATE TABLE leave_of_absence (
+    id serial primary key,
+    user_id bigint not null,
+    reason text not null,
+    estimated_time interval not null,
+    start_date timestamptz not null default now()
+);
+
 CREATE TABLE lynx_apps (
     user_id bigint,
     app_id uuid primary key DEFAULT uuid_generate_v4(),

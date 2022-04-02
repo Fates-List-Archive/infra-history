@@ -18,6 +18,8 @@ import bleach
 import time
 import requests
 import staffapps
+from dateutil import parser
+import datetime
 
 sys.path.append(".")
 sys.path.append("modules/infra/admin_piccolo")
@@ -1256,10 +1258,7 @@ We're always open, don't worry!
 
 {questions}
         """),
-        "script": f"""
-var staffAppQuestion = JSON.parse(`{orjson.dumps(jsonable_encoder(staffapps.questions)).decode()}`);
-        """,
-        "ext_script": "/_static/apply.js?v=105",
+        "ext_script": "/_static/apply.js?v=107",
     }, ws)
 
 
@@ -1268,12 +1267,63 @@ async def loa(ws: WebSocket, _):
     if ws.state.member.perm < 2:
         return await manager.send_personal_message(
             {"resp": "loa", "detail": "You do not have permission to view this page", "wait_for_upg": True}, ws)
+
+    md = (
+        MarkdownIt()
+            .use(front_matter_plugin)
+            .use(footnote_plugin)
+            .use(anchors_plugin, max_level=5, permalink=True)
+            .use(fieldlist_plugin)
+            .use(container_plugin, name="warning")
+            .use(container_plugin, name="info")
+            .use(container_plugin, name="aonly")
+            .use(container_plugin, name="guidelines")
+            .use(container_plugin, name="generic", validate=lambda *args: True)
+            .enable('table')
+            .enable('image')
+    )
+
     return await manager.send_personal_message({
         "resp": "loa",
         "title": "Leave Of Absense",
         "pre": "/links",
-        "data": f"""
-Just a tip for those new to lynx (for now)
+        "data": md.render(f"""
+::: warning
+
+Please don't abuse this by spamming LOA's non-stop or you **will** be demoted!
+
+:::
+
+There are *two* ways of creating a LOA.
+
+### Simple Form
+
+<form class="needs-validation" novalidate>
+    <div class="form-group">
+        <label for="reason">Reason</label>
+        <textarea class="form-control question" id="reason" name="reason" placeholder="Reason for LOA" required aria-required="true"></textarea>
+        <div class="valid-feedback">
+            Looks good!
+        </div>
+        <div class="invalid-feedback">
+            Reason is either missing or too long!
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="duration">Duration</label>
+        <input type="datetime-local" class="form-control question" id="duration" name="duration" placeholder="Duration of LOA" required aria-required="true"/>
+        <div class="valid-feedback">
+            Looks good!
+        </div>
+        <div class="invalid-feedback">
+            Duration is either missing or too long!
+        </div>
+    </div>
+    <button type="submit" id="loa-btn">Submit</button>
+</form>
+
+### Piccolo Admin
+
 <ol>
     <li>Login to Lynx Admin</li>
     <li>Click Leave Of Absense</li>
@@ -1281,9 +1331,44 @@ Just a tip for those new to lynx (for now)
     <li>Fill out the nessesary fields</li>
     <li>Click 'Save'</li>
 </ol>
-<strong>A way to actually create LOA's from this page is coming soon :)</strong>
-            """
-        }, ws)
+    """),
+    "ext_script": "/_static/apply.js?v=107",    
+    }, ws)
+
+@ws_action("send_loa")
+async def send_loa(ws: WebSocket, data: dict):
+    if ws.state.member.perm < 2:
+        return await manager.send_personal_message(
+            {"resp": "staff_apps", "detail": "You do not have permission to view this page", "wait_for_upg": True},
+            ws)
+    if not data.get("answers"):
+        return await manager.send_personal_message(
+            {"resp": "send_loa", "detail": "You did not fill out the form correctly"}, ws)
+    if not data["answers"]["reason"]:
+        return await manager.send_personal_message(
+            {"resp": "send_loa", "detail": "You did not fill out the form correctly"}, ws)
+    if not data["answers"]["duration"]:
+        return await manager.send_personal_message(
+            {"resp": "send_loa", "detail": "You did not fill out the form correctly"}, ws)
+    try:
+        date = parser.parse(data["answers"]["duration"])
+    except:
+        return await manager.send_personal_message(
+            {"resp": "send_loa", "detail": "You did not fill out the form correctly"}, ws)
+    if date.year - datetime.datetime.now().year not in (0, 1):
+        return await manager.send_personal_message(
+            {"resp": "send_loa", "detail": "Duration must be in within this year"}, ws)
+
+    await app.state.db.execute(
+        "INSERT INTO leave_of_absence (user_id, reason, estimated_time, start_date) VALUES ($1, $2, $3, $4)",
+        int(ws.state.user["id"]),
+        data["answers"]["reason"],
+        date - datetime.datetime.now(),
+        datetime.datetime.now(),
+    )
+
+    return await manager.send_personal_message(
+        {"resp": "send_loa", "detail": "Submitted LOA successfully"}, ws)
 
 @ws_action("staff_apps")
 async def staff_apps(ws: WebSocket, data: dict):

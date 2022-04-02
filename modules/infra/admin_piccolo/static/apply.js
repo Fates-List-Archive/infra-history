@@ -1,3 +1,5 @@
+// A set of form validators for lynx (apply.js because its *applying* validation)
+
 async function applyForStaff() {
     let answers = {}
 
@@ -11,7 +13,21 @@ async function applyForStaff() {
         request: "apply_staff", 
         answers: answers
     }))
-    alert("WIP")
+}
+
+async function loaSend() {
+  let answers = {}
+
+  let questions = document.querySelectorAll(".question")
+
+  questions.forEach(question => {
+      answers[question.id] = question.value
+  })
+
+  ws.send(JSON.stringify({
+      request: "send_loa", 
+      answers: answers
+  }))
 }
 
 // Example starter JavaScript for disabling form submissions if there are invalid fields
@@ -29,7 +45,11 @@ async function applyForStaff() {
             event.preventDefault()
             event.stopPropagation()
           } else {
-              applyForStaff()
+              if(window.location.pathname.startsWith("/apply")) {
+                applyForStaff()
+              } else if (window.location.pathname.startsWith("/loa")) {
+                loaSend()
+              }
               event.preventDefault()
               event.stopPropagation()
           }

@@ -30,7 +30,7 @@ var user = {id: "0", username: "Please wait for websocket to finish loading"}
 
 const wsContentResp = new Set(['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions"])
 
-const wsContentSpecial = new Set(['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff'])
+const wsContentSpecial = new Set(['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa'])
 
 function downloadTextFile(text, name) {
     const a = document.createElement('a');
