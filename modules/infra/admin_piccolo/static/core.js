@@ -13,6 +13,8 @@ var pushedMessages = [];
 var wsUp = false
 var ws = null
 var startingWs = false;
+var wsFatal = false
+var forcedStaffVerify = false
 
 var addedDocTree = false
 var havePerm = false
@@ -65,6 +67,16 @@ async function wsStart() {
     }
 
     ws.onclose = function (event) {
+        if(event.code == 4008) {
+            // Token error
+            console.log("Token error, requesting a login")
+            wsUp = true;
+            startingWs = true;
+            wsFatal = true;
+            $("#ws-info").html("Invalid token, login again using Login button in sidebar")
+            return
+        }
+
         $("#ws-info").html("Websocket unexpectedly closed, likely server maintenance")
         console.log(event, "WS: Closed due to an error")
         wsUp = false
@@ -122,6 +134,7 @@ async function wsStart() {
             })
         } else if(data.resp == "staff_verify_forced") {
             console.log("WS: Got request to enforce staff verify")
+            forcedStaffVerify = true
             loadContent("/staff-verify")
             return
         } else if(data.resp == "perms") {
@@ -254,6 +267,9 @@ async function getNotifications() {
     if(ws.readyState === ws.OPEN) {
         ws.send(JSON.stringify({request: "notifs"}))
     } else {
+        if(wsFatal) {
+            return
+        }
         console.log("WS is not open, restarting ws")
         wsUp = false
         startingWs = false
@@ -279,48 +295,30 @@ async function extraCode() {
     loadDocs()
 
     var currentURL = window.location.pathname
-    console.log('Chnaging Breadcrumb Paths')
+    console.log('Running extra code')
 
     var pathSplit = currentURL.split('/')
 
-    var breadURL = ''
-
-    pathSplit.forEach(el => {
-        if(!el) {
-            return
-        }
-        console.log(el)
-        if(currentURL.startsWith("/docs/")) {
-            breadURL += `#`
-        } else {
-            breadURL += `/${el}`
-        }
-        var currentBreadPath = title(el.replace('-', ' '))
-        $('#currentBreadPath').append(`<li class="breadcrumb-item breadcrumb-temp active"><a href="${breadURL}">${currentBreadPath}</a></li>`)
-    })
-
     currentURL = currentURL.replace('/', '') // Replace first
 
-    currentURLID = '#' + currentURL.replaceAll('/', '-') + "-nav"
+    var currentURLID = '#' + currentURL.replaceAll('/', '-') + "-nav"
     if(currentURL == "") {
         currentURLID = "#home-nav"
     }
 
     if(currentURL == 'bot-actions') {
         document.querySelector("#admin-panel-nav").classList.add("menu-open")
-    } else if(currentURL== 'user-actions') {
+    } else if(currentURL == 'user-actions') {
         document.querySelector("#admin-panel-nav").classList.add("menu-open")
     } 
 
     if(currentURLID.includes('docs')) {
-        if(!alreadyUp) {
-            $('#docs-main-nav').toggleClass('menu-open')
-        }
+        $('#docs-main-nav').addClass('menu-open')
 
         // Find the subnavs
         var tree = pathSplit[2]
         var navID = `#docs-${tree}-nav`
-        $(navID).toggleClass('menu-open')
+        $(navID).addClass('menu-open')
         console.log(navID)
     }
 
@@ -378,19 +376,29 @@ function waitForWsAndLoad(data, f) {
 }
 
 myPermsInterval = -1
-inStaffVerify = false
+inStaffVerify = 0
 
 async function loadContent(loc) {
-    if(loc.startsWith("/staff-verify") && inStaffVerify) {
+    if(wsFatal) {
+        document.title = "Token Error"
+        document.querySelector("#verify-screen").innerHTML = ""
+        return
+    } else if(forcedStaffVerify && inStaffVerify < 1) {
+        clearRefresh()
+        return
+    }
+
+    inStaffVerify++
+
+    if(loc.startsWith("/staff-verify") && inStaffVerify > 3) {
         console.log("Ignoring fake alarm for force staff verify")
+        clearRefresh()
         return
     }
 
     locSplit = loc.split("/")
 
     document.title = title(locSplit[locSplit.length - 1])
-
-    inStaffVerify = false
 
     clearInterval(myPermsInterval)
 
@@ -507,7 +515,7 @@ async function loadContent(loc) {
         })
         return
     } else if(loc.startsWith("/staff-verify")) {
-        inStaffVerify = true
+        inStaffVerify += 1
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for staff-verify")
             ws.send(JSON.stringify({request: "staff_verify"}))
@@ -549,7 +557,6 @@ async function linkMod() {
                 window.history.pushState(window.location.pathname, 'Loading...', link.href);
                 handler = async () => {
                     $(".active").toggleClass("active")
-                    $(".breadcrumb-temp").remove()
                     await loadContent(link.href)
                 }
 
@@ -574,7 +581,6 @@ function refreshPage() {
     document.querySelector(".refresh-btn").classList.add("disabled")
     refresh = true
     $(".active").toggleClass("active")
-    $(".breadcrumb-temp").remove()
     loadContent(window.location.pathname)
 }
 

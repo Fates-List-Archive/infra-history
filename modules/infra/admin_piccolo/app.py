@@ -1125,7 +1125,10 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
     async def send_personal_message(self, message: dict | list, websocket: WebSocket):
-        await websocket.send_json(message)
+        try:
+            await websocket.send_json(message)
+        except RuntimeError:
+            await websocket.close(1008)
 
     async def broadcast(self, message: str):
         for connection in self.active_connections:
