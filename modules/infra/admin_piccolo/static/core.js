@@ -26,7 +26,9 @@ var perms = {name: "Please wait for websocket to finish loading", perm: 0}
 
 var user = {id: "0", username: "Please wait for websocket to finish loading"}
 
-const wsContentResp = new Set(['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list"])
+const wsContentResp = new Set(['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions"])
+
+const wsContentSpecial = new Set(['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff'])
 
 function downloadTextFile(text, name) {
     const a = document.createElement('a');
@@ -155,8 +157,11 @@ async function wsStart() {
             document.querySelector("#verify-screen").innerHTML = "Credential reset successful!"
         } else if(wsContentResp.has(data.resp)) {
             console.log(`WS: Got ${data.resp}`)   
+            if(data.detail) {
+                alert(data.detail)
+            }
             setData(data)
-        } else if(data.resp == "user_action" || data.resp == "bot_action" || data.resp == "eternatus" || data.resp == "survey" || data.resp == "data_deletion") {
+        } else if(wsContentSpecial.has(data.resp)) {
             alert(data.detail)
             if(data.resp == "bot_action" && data.guild_id) {
                 // Now put the invite to the bot
@@ -221,7 +226,7 @@ function setData(data, noExtraCode=false) {
     }
 
     if(window.location.hash) {
-        document.querySelector(`${window.location.hash}`).scrollIntoView()
+	setTimeout(() => document.querySelector(`${window.location.hash}`).scrollIntoView(), 300)
     }    
 
     if(!noExtraCode) {
@@ -510,6 +515,12 @@ async function loadContent(loc) {
         return
     } else if(loc.startsWith("/admin")) {
         window.location.href = loc
+    } else if(loc.startsWith("/apply")) { 
+        waitForWsAndLoad({loc: loc}, (data) => {
+            console.log("WS: Requested for apply")
+            ws.send(JSON.stringify({request: "get_sa_questions"}))
+        })
+        return
     } else {
         document.querySelector("#verify-screen").innerHTML = "Animus magic is broken today!"
         document.querySelectorAll(".content")[0].innerHTML = `<h4>404<h4><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a></h4>`

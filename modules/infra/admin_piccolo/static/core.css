@@ -144,3 +144,26 @@ h3:hover > .header-anchor {
     from {transform:rotate(0deg);}
     to {transform:rotate(360deg);}
 }
+
+a {
+    color: yellowgreen;
+    font-weight: bolder;
+}
+
+pre {
+    color: white;
+}
+
+#top-nav {
+    z-index: 1000;
+}
+
+.invalid-feedback {
+    font-size: 18px;
+    font-weight: bolder;
+}
+
+.valid-feedback {
+    font-size: 18px;
+    font-weight: bolder;
+}

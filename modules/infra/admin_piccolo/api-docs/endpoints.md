@@ -948,10 +948,8 @@ Endpoint to check amount of votes a user has.
 
 - votes | The amount of votes the bot has.
 - voted | Whether or not the user has *ever* voted for the bot.
-- vote_epoch | The redis TTL of the users vote lock. This is not time_to_vote which is the
-elapsed time the user has waited since their last vote.
 - timestamps | A list of timestamps that the user has voted for the bot on that has been recorded.
-- time_to_vote | The time the user has waited since they last voted.
+- expiry | The time when the user can next vote.
 - vote_right_now | Whether a user can vote right now. Currently equivalent to `vote_epoch < 0`.
 
 Differences from API v2:
@@ -2529,7 +2527,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "087c4448-e548-49de-948d-db4b457b6d88",
+    "id": "5a13edfb-3a2c-4836-86ea-1a3563394a8c",
     "reply": false,
     "star_rating": "0",
     "review_text": "",
@@ -2596,7 +2594,7 @@ set this a TargetType anyways so you might as well set it correctly.
 
 ```json
 {
-    "rid": "cc147604-353a-4b83-8ed6-bdbb4d3255a1"
+    "rid": "d0ff738b-25f1-4940-b91f-c313f1ab74e0"
 }
 ```
 
@@ -2667,7 +2665,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 
 ```json
 {
-    "rid": "6f213bb5-e3c2-4906-94e4-f2352501480d"
+    "rid": "df42e9d1-7a23-4b67-be53-13e122d057dd"
 }
 ```
 
@@ -2861,7 +2859,7 @@ This is the ``target_type``
 
 ```json
 {
-    "id": "d0c9e076-ed90-45e5-88cc-9d96d23ac578",
+    "id": "702f5909-057b-47db-8c3f-ef1fb99c8def",
     "target_type": 0
 }
 ```

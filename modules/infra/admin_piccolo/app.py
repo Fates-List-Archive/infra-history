@@ -3,6 +3,9 @@ from os import abort
 import pathlib
 from pickletools import int4
 import sys
+
+sys.path.append("modules/infra/admin_piccolo")
+
 import asyncpg
 import asyncio
 
@@ -14,6 +17,7 @@ import hashlib
 import bleach
 import time
 import requests
+import staffapps
 
 sys.path.append(".")
 sys.path.append("modules/infra/admin_piccolo")
@@ -621,7 +625,7 @@ def bot_select(id: str, bot_list: list[str], reason: bool = False):
     # Add a input for bot id instead of select
     select += f"""
 <label for="{id}-alt">Or enter a Bot ID</label><br/>
-<input type="number" id="{id}-alt" name="{id}-alt" />
+<input type="number" id="{id}-alt" name="{id}-alt"/>
 <br/>
     """
 
@@ -1138,6 +1142,124 @@ def ws_action(name: str):
         return func
     return decorator
 
+@ws_action("apply_staff")
+async def apply_staff(ws: WebSocket, data: dict):
+    if ws.state.member.perm == -1:
+        return await manager.send_personal_message(
+            {"resp": "apply_staff", "detail": "You must be logged in to create staff applications!"},
+            ws)
+
+    for pane in staffapps.questions:
+        for question in pane.questions:
+            answer = data["answers"].get(question.id)
+            if not answer:
+                return await manager.send_personal_message(
+                    {"resp": "apply_staff", "detail": f"Missing answer for question {question.id}"},
+                    ws)
+            elif len(answer) < question.min_length:
+                return await manager.send_personal_message(
+                    {"resp": "apply_staff", "detail": f"Answer for question {question.id} is too short"},
+                    ws)
+            elif len(answer) > question.max_length:
+                return await manager.send_personal_message(
+                    {"resp": "apply_staff", "detail": f"Answer for question {question.id} is too long"},
+                    ws)
+    
+    await app.state.db.execute(
+        "INSERT INTO lynx_apps (user_id, questions, answers, app_version) VALUES ($1, $2, $3, $4)",
+        int(ws.state.user["id"]),
+        orjson.dumps(jsonable_encoder(staffapps.questions)).decode(),
+        orjson.dumps(data["answers"]).decode(),
+        3
+    )
+
+    return await manager.send_personal_message(
+        {"resp": "apply_staff", "detail": "Successfully applied for staff!"},
+        ws)
+
+@ws_action("get_sa_questions")
+async def get_sa_questions(ws: WebSocket, _):
+    """Get staff app questions"""
+    questions = '<form class="needs-validation" novalidate><div class="form-group">'
+
+    for pane in staffapps.questions:
+        questions += f"""
+
+### {pane.title}
+
+{pane.description}
+        """
+        for question in pane.questions:
+            questions += f"""
+#### {question.title}
+
+<div class="form-group">
+
+<label for="{question.id}">{question.question} ({question.min_length} - {question.max_length} characters)</label>
+
+{question.description}. 
+
+"""
+            if question.paragraph:
+                questions += f"""
+<textarea class="form-control question" id="{question.id}" name="{question.id}" placeholder="{question.description}" minlength="{question.min_length}" maxlength="{question.max_length}" required aria-required="true"></textarea>
+"""
+            else:
+                questions += f"""
+<input type="{question.type}" class="form-control question" id="{question.id}" name="{question.id}" placeholder="{question.description}" minlength="{question.min_length}" maxlength="{question.max_length}" required aria-required="true"/>
+"""
+            questions += f"""
+<div class="valid-feedback">
+    Looks good!
+</div>
+<div class="invalid-feedback">
+    {question.title} is either missing, too long or too short!
+</div>
+
+**Write a minimum of {question.min_length} characters and a maximum of {question.max_length} characters.**
+
+<br/>
+</div>
+            """
+
+        questions += "</div>"
+
+    questions += """
+</div>
+<button type="submit" id="apply-btn">Apply</button>
+</form>
+    """
+
+    md = (
+        MarkdownIt()
+            .use(front_matter_plugin)
+            .use(footnote_plugin)
+            .use(anchors_plugin, max_level=5, permalink=True)
+            .use(fieldlist_plugin)
+            .use(container_plugin, name="warning")
+            .use(container_plugin, name="info")
+            .use(container_plugin, name="aonly")
+            .use(container_plugin, name="guidelines")
+            .use(container_plugin, name="generic", validate=lambda *args: True)
+            .enable('table')
+            .enable('image')
+    )
+
+    return await manager.send_personal_message({
+        "resp": "get_sa_questions",
+        "title": "Apply For Staff",
+        "data": md.render(f"""
+We're always open, don't worry!
+
+{questions}
+        """),
+        "script": f"""
+var staffAppQuestion = JSON.parse(`{orjson.dumps(jsonable_encoder(staffapps.questions)).decode()}`);
+        """,
+        "ext_script": "/_static/apply.js?v=105",
+    }, ws)
+
+
 @ws_action("loa")
 async def loa(ws: WebSocket, _):
     if ws.state.member.perm < 2:
@@ -1192,7 +1314,7 @@ async def staff_apps(ws: WebSocket, data: dict):
         questions_html = ""
 
         for pane in questions:
-            questions_html += f"<h3>{pane['title']}</h3><strong>Prelude</strong>: {pane['pre'] or 'No prelude for this section'}<br/>"
+            questions_html += f"<h3>{pane['title']}</h3><strong>Prelude</strong>: {pane['description']}<br/>"
             for question in pane["questions"]:
                 questions_html += f"""
                     <h4>{question['title']}</h4>
@@ -2208,7 +2330,7 @@ async def ws(ws: WebSocket):
         return
 
     ws.state.user = None
-    ws.state.member = StaffMember(name="Unknown", id=0, perm=1, staff_id=0)
+    ws.state.member = StaffMember(name="Unknown", id=0, perm=-1, staff_id=0)
     ws.state.token = "Unknown"
 
     await manager.connect(ws)
