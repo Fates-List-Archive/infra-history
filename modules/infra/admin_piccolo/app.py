@@ -41,7 +41,6 @@ from tables import Bot, Reviews, ReviewVotes, BotTag, User, Vanity, BotListTags,
     LeaveOfAbsence, UserBotLogs, BotVotes, Notifications, LynxRatings, LynxSurveys, LynxSurveyResponses
 import orjson
 import aioredis
-from modules.core.ipc import redis_ipc_new
 from modules.models import enums
 from discord import Embed
 from piccolo.apps.user.tables import BaseUser
@@ -71,6 +70,20 @@ async def fetch_user(user_id: int):
                     "disc": "0000"
                 }
             return await resp.json()
+
+async def send_message(msg: dict):
+    msg["channel_id"] = int(msg["channel_id"])
+    msg["embed"] = msg["embed"].to_dict()
+    if not msg.get("mention_roles"):
+        msg["mention_roles"] = []
+    async with aiohttp.ClientSession() as sess:
+        async with sess.post(f"http://localhost:1234/messages", json=msg) as res:
+            return res
+
+async def get_perms(user_id: int):
+    async with aiohttp.ClientSession() as sess:
+        async with sess.get(f"https://api.fateslist.xyz/flamepaw/_getperm?user_id={user_id}") as res:
+            return await res.text()
 
 def site_enum2html():
     """Converts the enums in modules/models/enums.py into markdown. Mainly for apidocs creation"""
@@ -253,17 +266,11 @@ async def is_staff_unlocked(bot_id: int, user_id: int, redis: aioredis.Connectio
     return await redis.exists(f"fl_staff_access-{user_id}:{bot_id}")
 
 
-async def is_staff(staff_json: dict | None, user_id: int, base_perm: int, json: bool = False, *, worker_session=None,
-                   redis: aioredis.Connection = None) -> Union[bool, int, StaffMember]:
-    if worker_session:
-        redis = worker_session.redis
-    elif not redis:
-        raise ValueError("No redis connection or worker_session provided")
-
+async def is_staff(user_id: int, base_perm: int) -> Union[bool, int, StaffMember]:
     if user_id < 0:
         staff_perm = None
     else:
-        staff_perm = await redis_ipc_new(redis, "GETPERM", args=[str(user_id)], worker_session=worker_session)
+        staff_perm = await get_perms(user_id)
     if not staff_perm:
         staff_perm = {"fname": "Unknown", "id": "0", "staff_id": "0", "perm": 0}
     else:
@@ -271,8 +278,6 @@ async def is_staff(staff_json: dict | None, user_id: int, base_perm: int, json: 
     sm = StaffMember(name=staff_perm["fname"], id=staff_perm["id"], staff_id=staff_perm["staff_id"],
                      perm=staff_perm["perm"])  # Initially
     rc = sm.perm >= base_perm
-    if json:
-        return rc, sm.perm, sm.dict()
     return rc, sm.perm, sm
 
 
@@ -409,7 +414,7 @@ async def auth_user_cookies(request: Request):
             del request.scope["sunbeam_user"]
             return
 
-        _, _, member = await is_staff(None, int(request.scope["sunbeam_user"]["user"]["id"]), 2, redis=app.state.redis)
+        _, _, member = await is_staff(int(request.scope["sunbeam_user"]["user"]["id"]), 2)
 
         request.state.member = member
     else:
@@ -580,8 +585,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                 color=0x00ff00,
                 url=f"https://fateslist.xyz/bot/{bot_id}"
             )
-            await redis_ipc_new(app.state.redis, "SENDMSG",
-                                msg={"content": f"<@{owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+            await send_message({"content": f"<@{owner}>", "embed": embed, "channel_id": bot_logs})
 
         return response
 
@@ -747,8 +751,7 @@ async def claim(request: Request, data: ActionWithReason):
         description=f"<@{request.state.user_id}> has claimed <@{data.bot_id}> and this bot is now under review.\n**If all goes well, this bot should be approved (or denied) soon!**\n\nThank you for using Fates List :heart:",
     )
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
     return {"detail": "Successfully claimed bot!"}
 
 
@@ -765,8 +768,7 @@ async def unclaim(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully unclaimed bot"}
 
@@ -796,8 +798,7 @@ async def approve(request: Request, data: ActionWithReason):
     embed.add_field(name="Reason", value=data.reason)
     embed.add_field(name="Guild Count (approx)", value=str(approx_guild_count))
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     for owner in data.owners:
         asyncio.create_task(add_role(main_server, owner["owner"], bot_developer, "Bot Approved"))
@@ -819,8 +820,7 @@ async def deny(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully denied bot"}
 
@@ -841,8 +841,7 @@ async def ban(request: Request, data: ActionWithReason):
 
     asyncio.create_task(ban_user(main_server, data.bot_id, data.reason))
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully banned bot"}
 
@@ -863,8 +862,7 @@ async def unban(request: Request, data: ActionWithReason):
 
     asyncio.create_task(unban_user(main_server, data.bot_id, data.reason))
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully unbanned bot"}
 
@@ -890,8 +888,7 @@ async def certify(request: Request, data: ActionWithReason):
     # Add certified bot role to bot
     asyncio.create_task(add_role(main_server, data.bot_id, certified_bot, "Bot certified - add bots role"))
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully certified bot"}
 
@@ -916,8 +913,7 @@ async def uncertify(request: Request, data: ActionWithReason):
     # Add certified bot role to bot
     asyncio.create_task(del_role(main_server, data.bot_id, certified_bot, "Bot uncertified - Bots Role"))
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully uncertified bot"}
 
@@ -936,8 +932,7 @@ async def unverify(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully unverified bot"}
 
@@ -956,8 +951,7 @@ async def requeue(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully requeued bot"}
 
@@ -975,8 +969,7 @@ async def reset_votes(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully reset bot votes"}
 
@@ -1018,8 +1011,7 @@ async def reset_all_votes(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Top Voted", value=top_voted_str)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": "", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": "", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully reset all bot votes"}
 
@@ -1056,8 +1048,7 @@ async def set_flag(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully set flag"}
 
@@ -1097,8 +1088,7 @@ async def unset_flag(request: Request, data: ActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.main_owner}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully unset flag"}
 
@@ -2444,7 +2434,7 @@ async def ws(ws: WebSocket):
 
             ws.state.user = await fetch_user(int(sunbeam_user["user"]["id"]))
 
-            _, _, ws.state.member = await is_staff(None, int(sunbeam_user["user"]["id"]), 2, redis=app.state.redis)
+            _, _, ws.state.member = await is_staff(int(sunbeam_user["user"]["id"]), 2)
             await manager.send_personal_message({"resp": "perms", "data": ws.state.member.dict()}, ws)
             await manager.send_personal_message({"resp": "user_info", "user": ws.state.user}, ws)
             ws.state.verified = True
@@ -2485,7 +2475,7 @@ async def ws(ws: WebSocket):
                     await ws.close(code=1008)
                     return
 
-                _, _, member = await is_staff(None, int(ws.state.user["id"]), 2, redis=app.state.redis)
+                _, _, member = await is_staff(int(ws.state.user["id"]), 2)
 
                 if ws.state.member.perm != member.perm:
                     ws.state.member = member
@@ -2612,23 +2602,20 @@ async def add_staff(data: UserActionWithReason):
             description=f"You have been accepted into the Fates List Staff Team!",
         )
 
-        async with sess.post(
-                f"https://discord.com/api/v10/channels/{channel_id}/messages",
-                json={
-                    "content": """
+        res = await send_message({
+            "channel_id": channel_id,
+            "embed": embed,
+            "content": """
 Please join our staff server first of all: https://fateslist.xyz/banappeal/invite
 
 Then head on over to https://lynx.fateslist.xyz to read our staff guide and get started!
-                """,
-                    "embeds": [embed.to_dict()],
-                },
-                headers={"Authorization": f"Bot {main_bot_token}"}
-        ) as resp:
-            if resp.status != 200:
-                json = await resp.json()
-                return {
-                    "detail": f"Failed to send DM to user {json}"
-                }
+            """
+        })
+
+        if not res.ok:
+            return {
+                "detail": f"Failed to send message (possibly blocked): {res.status}"
+            }
 
     return {"detail": "Successfully added staff member"}
 
@@ -2661,8 +2648,7 @@ async def set_user_state(data: UserActionWithReason):
 
     embed.add_field(name="Reason", value=data.reason)
 
-    await redis_ipc_new(app.state.redis, "SENDMSG",
-                        msg={"content": f"<@{data.user_id}>", "embed": embed.to_dict(), "channel_id": str(bot_logs)})
+    await send_message({"content": f"<@{data.user_id}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully set user state"}
 
