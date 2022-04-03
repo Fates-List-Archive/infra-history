@@ -9,13 +9,24 @@ import orjson
 import aiohttp
 from loguru import logger 
 import uuid
-from modules.core.ipc import redis_ipc_new
 from modules.models import enums
 import os
 from fastapi.responses import HTMLResponse
 import aioredis
 import asyncpg
 from fastapi import FastAPI
+
+async def fetch_user(user_id: int):
+    async with aiohttp.ClientSession() as sess:
+        async with sess.get(f"http://localhost:1234/getch/{user_id}") as resp:
+            if resp.status == 404:
+                return {
+                    "id": "",
+                    "username": "Unknown User",
+                    "avatar": "https://cdn.discordapp.com/embed/avatars/0.png",
+                    "disc": "0000"
+                }
+            return await resp.json()
 
 app = FastAPI(
     title="Fates List",
@@ -145,8 +156,7 @@ async def _user_fetch(
         return cache
 
     logger.debug(f"Making API call to get user {user_id}")
-    cmd_id = uuid.uuid4()
-    data = await redis_ipc_new(redis, "GETCH", args=[str(user_id)])
+    data = await fetch_user(user_id)
     if data is None:
         return None
     else:
@@ -180,18 +190,18 @@ async def get_widget(
     desc_length: int = 25
 ):
     """
-    Returns a widget
+Returns a widget
 
-    **For colors (bgcolor, textcolor), use H for html hex instead of #.\nExample: H123456**
+**For colors (bgcolor, textcolor), use H for html hex instead of #.\nExample: H123456**
 
-    - cd - A custom description you wish to set for the widget
+- cd - A custom description you wish to set for the widget
 
-    - desc_length - Set this to anything less than 0 to try and use full length (may 500), otherwise this sets the length of description to use.
+- desc_length - Set this to anything less than 0 to try and use full length (may 500), otherwise this sets the length of description to use.
 
-    **Using 0 for desc_length will disable description**
+**Using 0 for desc_length will disable description**
 
-    no_cache - If this is set to true, cache will not be used but will still be updated. If using cd, set this option to true and cache the image yourself
-    Note that no_cache is slow and may lead to ratelimits and/or your got being banned if used excessively
+no_cache - If this is set to true, cache will not be used but will still be updated. If using cd, set this option to true and cache the image yourself
+Note that no_cache is slow and may lead to ratelimits and/or your got being banned if used excessively
     """
     if not bgcolor:
         bgcolor = "black"
