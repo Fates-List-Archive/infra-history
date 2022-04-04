@@ -78,6 +78,7 @@ Some things that should be checked for. Note that *all of the below is changeabl
 - Is the bot offline? If so, take a screenshot of the bot being offline. Once you have taken a screenshot, 
 post the media link in the reason for denial. The second half of the staff verification code is /Sunbeam/
 - Quality of the bot. Does it provide *any* unique and interesting features? What is its use case? Is it a copy/fork of another bot? Be careful when dealing with these
+- Does the bot have a proper avatar (and a proper application avatar)? If not, *the bot should be denied*
 - **Is the bot well-known and known to be high-quality?**
 - **Is the bots owner correct (validate using other bot lists or Head Admins+ if needed), report violations to a Admin+ ASAP**
 - **Quality of bot descriptions and long description**

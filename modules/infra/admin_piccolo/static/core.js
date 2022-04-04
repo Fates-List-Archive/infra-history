@@ -404,14 +404,14 @@ async function loadContent(loc) {
 
     loc = loc.replace('https://lynx.fateslist.xyz', '')
 
-    if(loc.includes("/docs-src")) {
+    if(loc.startsWith("/docs-src")) {
         // Create request for docs
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for docs")
             ws.send(JSON.stringify({request: "docs", path: data.loc.replace("/docs-src/", ""), source: true}))
         })
         return
-    } else if(loc.includes("/docs")) {
+    } else if(loc.startsWith("/docs")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for docs-src")
             ws.send(JSON.stringify({request: "docs", path: data.loc.replace("/docs/", ""), source: false}))
