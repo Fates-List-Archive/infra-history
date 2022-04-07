@@ -27,7 +27,7 @@ async function loadDocs() {
 
 async function rateDoc() {
     feedback = document.querySelector("#doc-feedback").value
-    ws.send(JSON.stringify({request: "eternatus", feedback: feedback, page: window.location.pathname}))
+    wsSend({request: "eternatus", feedback: feedback, page: window.location.pathname})
 }
 
 async function genClientWhitelist() {
@@ -62,7 +62,7 @@ async function genClientWhitelist() {
 
 async function dataRequest() {
     userId = document.querySelector("#user-id").value
-    ws.send(JSON.stringify({request: "data_request", user: userId}))
+    wsSend({request: "data_request", user: userId})
     document.querySelector("#request-btn").innerText = "Requesting..."
 }
 
@@ -73,5 +73,5 @@ async function dataDelete() {
         return
     }
     userId = document.querySelector("#user-id-del").value
-    ws.send(JSON.stringify({request: "data_deletion", user: userId}))
+    wsSend({request: "data_deletion", user: userId})
 }

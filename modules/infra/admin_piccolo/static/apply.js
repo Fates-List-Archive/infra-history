@@ -9,10 +9,10 @@ async function applyForStaff() {
         answers[question.id] = question.value
     })
 
-    ws.send(JSON.stringify({
+    wsSend({
         request: "apply_staff", 
         answers: answers
-    }))
+    })
 }
 
 async function loaSend() {
@@ -24,10 +24,10 @@ async function loaSend() {
       answers[question.id] = question.value
   })
 
-  ws.send(JSON.stringify({
+  wsSend({
       request: "send_loa", 
       answers: answers
-  }))
+  })
 }
 
 // Example starter JavaScript for disabling form submissions if there are invalid fields

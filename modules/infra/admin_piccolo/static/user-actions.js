@@ -1,5 +1,5 @@
 function sendUserAction(name, userId, reason, context="") {
-    ws.send(JSON.stringify({
+    wsSend({
         request: "user_action", 
         action: name, 
         action_data: {
@@ -7,7 +7,7 @@ function sendUserAction(name, userId, reason, context="") {
             reason: reason, 
             context: context,
         }
-    }))
+    })
 }
 
 async function addStaff() {

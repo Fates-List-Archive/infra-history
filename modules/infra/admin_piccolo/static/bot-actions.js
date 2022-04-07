@@ -3,7 +3,7 @@ function getBotId(id) {
 }
 
 function sendBotAction(name, botId, reason, context=null) {
-    ws.send(JSON.stringify({
+    wsSend({
         request: "bot_action", 
         action: name, 
         action_data: {
@@ -11,7 +11,7 @@ function sendBotAction(name, botId, reason, context=null) {
             reason: reason, 
             context: context
         }
-    }))
+    })
 }
 
 async function claim() {

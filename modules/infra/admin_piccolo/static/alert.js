@@ -25,7 +25,7 @@ function alert(id, title, content) {
     <section>
     <header id="${id}-title">
         <strong>
-        <h2>${title}</h2>
+        <h2 class="alert-title">${title}</h2>
         </strong>
     </header>
 
@@ -81,7 +81,7 @@ section {
     top: 0 !important;
     bottom: 0 !important;
 }
-h2 {
+.alert-title {
     color: black !important;
 }
 

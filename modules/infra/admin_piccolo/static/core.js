@@ -24,6 +24,8 @@ var staffPerm = 1
 var alreadyUp = false
 var refresh = false
 
+var debug = false
+
 var hasLoadedAdminScript = false
 
 var perms = {name: "Please wait for websocket to finish loading", perm: 0}
@@ -42,9 +44,46 @@ function downloadTextFile(text, name) {
     a.href = URL.createObjectURL( new Blob([text], { type:`text/${type === "txt" ? "plain" : type}` }) );
     a.download = name;
     a.click();
-  }  
+}  
+
+async function wsSend(data) {
+    if(!wsUp) {
+        console.log("Waiting for ws to come up to start recieveing notification")
+        wsStart()
+        return
+    }
+
+    if(ws.readyState === ws.OPEN) {
+        if(debug) {
+            ws.send(JSON.stringify(data))
+        } else {
+            ws.send(MessagePack.encode(data))
+        }
+    } else {
+        restartWs()
+    }
+}
+
+function restartWs() {
+    // Restarts websocket properly
+    if(wsFatal) {
+        return
+    }
+    console.log("WS is not open, restarting ws")
+    wsUp = false
+    startingWs = false
+    wsStart()
+    return
+}
+
+function setDebug(bool) {
+    // Sets debug mode
+    debug = bool
+    restartWs()
+}
 
 async function wsStart() {
+    // Starts a websocket connection
     if(startingWs) {
         console.log("NOTE: Not starting WS when already starting or critically aborted")
         return
@@ -54,7 +93,7 @@ async function wsStart() {
 
     startingWs = true
     
-    ws = new WebSocket("wss://lynx.fateslist.xyz/_ws")
+    ws = new WebSocket(`wss://lynx.fateslist.xyz/_ws?debug=${debug}`)
     ws.onopen = function (event) {
         console.log("WS connection opened. Started promise to send initial auth")
         if(ws.readyState === ws.CONNECTING) {
@@ -65,7 +104,7 @@ async function wsStart() {
         wsUp = true
         if(!addedDocTree) {
             $("#ws-info").html("Fetching doctree from websocket")
-            ws.send(JSON.stringify({request: "doctree"}))
+            wsSend({request: "doctree"})
         } 
         getNotifications() // Get initial notifications
     }
@@ -96,9 +135,14 @@ async function wsStart() {
         return
     }
 
-    ws.onmessage = function (event) {
-        console.log(event.data);
-        var data = JSON.parse(event.data)
+    ws.onmessage = async function (event) {
+        var data = null
+        if(debug) {
+            data = JSON.parse(event.data)
+        } else {
+            data = await MessagePack.decodeAsync(event.data.stream())
+        }
+        console.log(data)
         if(data.resp == "user_info") {
             $("#ws-info").html("Websocket auth success.")
             user = data.user
@@ -275,7 +319,7 @@ async function getNotifications() {
     }
 
     if(ws.readyState === ws.OPEN) {
-        ws.send(JSON.stringify({request: "notifs"}))
+        wsSend({request: "notifs"})
     } else {
         if(wsFatal) {
             return
@@ -420,50 +464,50 @@ async function loadContent(loc) {
         // Create request for docs
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for docs")
-            ws.send(JSON.stringify({request: "docs", path: data.loc.replace("/docs-src/", ""), source: true}))
+            wsSend({request: "docs", path: data.loc.replace("/docs-src/", ""), source: true})
         })
         return
     } else if(loc.startsWith("/docs")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for docs-src")
             inDocs = true
-            ws.send(JSON.stringify({request: "docs", path: data.loc.replace("/docs/", ""), source: false}))
+            wsSend({request: "docs", path: data.loc.replace("/docs/", ""), source: false})
         })
         return
     } else if(loc.startsWith("/links")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for links")
-            ws.send(JSON.stringify({request: "links"}))
+            wsSend({request: "links"})
         })
         return
     } else if(loc.startsWith("/staff-guide")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             inDocs = true
-            ws.send(JSON.stringify({request: "docs", "path": "staff-guide", source: false}))
-            return
+            wsSend({request: "docs", "path": "staff-guide", source: false})
         })
+        return
     } else if(loc.startsWith("/privacy")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             inDocs = true
-            ws.send(JSON.stringify({request: "docs", "path": "privacy", source: false}))
-            return
+            wsSend({request: "docs", "path": "privacy", source: false})
         })
+        return
     } else if(loc.startsWith("/status")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             inDocs = true
-            ws.send(JSON.stringify({request: "docs", "path": "status-page", source: false}))
-            return
+            wsSend({request: "docs", "path": "status-page", source: false})
         })
+        return
     } else if(loc.startsWith("/surveys")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for survey list")
-            ws.send(JSON.stringify({request: "survey_list"}))
+            wsSend({request: "survey_list"})
         })
         return
     } else if(loc == "/" || loc == "") {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for index")
-            ws.send(JSON.stringify({request: "index"}))
+            wsSend({request: "index"})
         })
         return
     } else if(loc.startsWith("/my-perms")) {
@@ -493,48 +537,48 @@ async function loadContent(loc) {
     } else if(loc.startsWith("/loa")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for loa")
-            ws.send(JSON.stringify({request: "loa"}))
+            wsSend({request: "loa"})
         })
         return
     } else if(loc.startsWith("/staff-apps")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for staff-apps")
             const urlParams = new URLSearchParams(window.location.search);
-            ws.send(JSON.stringify({request: "staff_apps", open: urlParams.get("open")}))
+            wsSend({request: "staff_apps", open: urlParams.get("open")})
         })
         return
     } else if(loc.startsWith("/user-actions")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for user-actions")
             const urlParams = new URLSearchParams(window.location.search);
-            ws.send(JSON.stringify({request: "user_actions", data: {
+            wsSend({request: "user_actions", data: {
                 add_staff_id: urlParams.get("add_staff_id"),
-            }}))
+            }})
         })
         return
     } else if(loc.startsWith("/requests")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for requests")
-            ws.send(JSON.stringify({request: "request_logs"}))
+            wsSend({request: "request_logs"})
         })
         return 
     } else if(loc.startsWith("/reset")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for reset_page")
-            ws.send(JSON.stringify({request: "reset_page"}))
+            wsSend({request: "reset_page"})
         })
         return 
     } else if(loc.startsWith("/bot-actions")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for bot-actions")
-            ws.send(JSON.stringify({request: "bot_actions"}))
+            wsSend({request: "bot_actions"})
         })
         return
     } else if(loc.startsWith("/staff-verify")) {
         inStaffVerify += 1
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for staff-verify")
-            ws.send(JSON.stringify({request: "staff_verify"}))
+            wsSend({request: "staff_verify"})
         })
         return
     } else if(loc.startsWith("/admin")) {
@@ -542,7 +586,7 @@ async function loadContent(loc) {
     } else if(loc.startsWith("/apply")) { 
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for apply")
-            ws.send(JSON.stringify({request: "get_sa_questions"}))
+            wsSend({request: "get_sa_questions"})
         })
         return
     } else {

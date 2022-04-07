@@ -55,6 +55,7 @@ from mdit_py_plugins.field_list import fieldlist_plugin
 from mdit_py_plugins.container import container_plugin
 from fastapi.staticfiles import StaticFiles
 import importlib
+import msgpack
 
 debug = False
 
@@ -672,25 +673,24 @@ def action(
 
     async def _core(ws: WebSocket, data: ActionWithReason):
         if ws.state.member.perm < min_perm:
-            return await ws.send_json({
+            return {
                 "resp": "bot_action",
                 "detail": f"PermError: {min_perm=}, {ws.state.member.perm=}"
-            })
+            }
 
         if not data.bot_id.isdigit():
-            await ws.send_json({
+            return {
                 "resp": "bot_action",
                 "detail": "Bot ID is invalid"
-            })
-            return
+            }
+
         data.bot_id = int(data.bot_id)
 
         if not await state_check(data.bot_id):
-            await ws.send_json({
+            return {
                 "resp": "bot_action",
                 "detail": f"Bot state check error: {states=}".replace("<", "&lt").replace(">", "&gt")
-            })
-            return
+            }
 
         data.owners = await app.state.db.fetch("SELECT owner, main FROM bot_owner WHERE bot_id = $1", data.bot_id)
 
@@ -698,17 +698,16 @@ def action(
             if owner["main"]:
                 data.main_owner = owner["owner"]
                 break
-        return True
 
     def decorator(function):
         async def wrapper(ws: WebSocket, data: ActionWithReason):
-            if not await _core(ws, data):
-                return  # Already sent ws message, ignore
+            if _data := await _core(ws, data):
+                return _data # Already sent ws message, ignore
             if len(data.reason) < 5:
-                return await ws.send_json({
+                return {
                     "resp": "bot_action",
                     "detail": "Reason must be more than 5 characters"
-                })
+                }
 
             ws.state.user_id = int(ws.state.user["id"])
 
@@ -718,8 +717,7 @@ def action(
 
             res = jsonable_encoder(res)
             res["resp"] = "bot_action"
-            await ws.send_json(res)
-            return
+            return res
 
         app.state.bot_actions[name] = wrapper
         return wrapper
@@ -1106,7 +1104,12 @@ class ConnectionManager:
 
     async def send_personal_message(self, message: dict | list, websocket: WebSocket):
         try:
-            await websocket.send_json(message)
+            if websocket.state.debug:
+                print(f"Sending message: {websocket.client.host=}, {message=}")
+                await asyncio.sleep(0.75) # Avoid large-scale attacks using debug and allow easier debugging
+                await websocket.send_json(message)
+            else:
+                await websocket.send_bytes(msgpack.packb(jsonable_encoder(message)))
         except RuntimeError:
             await websocket.close(1008)
 
@@ -1128,25 +1131,17 @@ def ws_action(name: str):
 @ws_action("apply_staff")
 async def apply_staff(ws: WebSocket, data: dict):
     if ws.state.member.perm == -1:
-        return await manager.send_personal_message(
-            {"resp": "apply_staff", "detail": "You must be logged in to create staff applications!"},
-            ws)
+        return {"resp": "apply_staff", "detail": "You must be logged in to create staff applications!"}
 
     for pane in staffapps.questions:
         for question in pane.questions:
             answer = data["answers"].get(question.id)
             if not answer:
-                return await manager.send_personal_message(
-                    {"resp": "apply_staff", "detail": f"Missing answer for question {question.id}"},
-                    ws)
+                return {"resp": "apply_staff", "detail": f"Missing answer for question {question.id}"}
             elif len(answer) < question.min_length:
-                return await manager.send_personal_message(
-                    {"resp": "apply_staff", "detail": f"Answer for question {question.id} is too short"},
-                    ws)
+                return {"resp": "apply_staff", "detail": f"Answer for question {question.id} is too short"}
             elif len(answer) > question.max_length:
-                return await manager.send_personal_message(
-                    {"resp": "apply_staff", "detail": f"Answer for question {question.id} is too long"},
-                    ws)
+                return {"resp": "apply_staff", "detail": f"Answer for question {question.id} is too long"}
     
     await app.state.db.execute(
         "INSERT INTO lynx_apps (user_id, questions, answers, app_version) VALUES ($1, $2, $3, $4)",
@@ -1156,9 +1151,7 @@ async def apply_staff(ws: WebSocket, data: dict):
         3
     )
 
-    return await manager.send_personal_message(
-        {"resp": "apply_staff", "detail": "Successfully applied for staff!"},
-        ws)
+    return {"resp": "apply_staff", "detail": "Successfully applied for staff!"}
 
 @ws_action("get_sa_questions")
 async def get_sa_questions(ws: WebSocket, _):
@@ -1228,7 +1221,7 @@ async def get_sa_questions(ws: WebSocket, _):
             .enable('image')
     )
 
-    return await manager.send_personal_message({
+    return {
         "resp": "get_sa_questions",
         "title": "Apply For Staff",
         "data": md.render(f"""
@@ -1237,14 +1230,13 @@ We're always open, don't worry!
 {questions}
         """),
         "ext_script": "apply",
-    }, ws)
+    }
 
 
 @ws_action("loa")
 async def loa(ws: WebSocket, _):
     if ws.state.member.perm < 2:
-        return await manager.send_personal_message(
-            {"resp": "loa", "detail": "You do not have permission to view this page", "wait_for_upg": True}, ws)
+        return {"resp": "loa", "detail": "You do not have permission to view this page", "wait_for_upg": True}
 
     md = (
         MarkdownIt()
@@ -1261,7 +1253,7 @@ async def loa(ws: WebSocket, _):
             .enable('image')
     )
 
-    return await manager.send_personal_message({
+    return {
         "resp": "loa",
         "title": "Leave Of Absense",
         "pre": "/links",
@@ -1311,31 +1303,24 @@ There are *two* ways of creating a LOA.
 </ol>
     """),
     "ext_script": "apply",    
-    }, ws)
+    }
 
 @ws_action("send_loa")
 async def send_loa(ws: WebSocket, data: dict):
     if ws.state.member.perm < 2:
-        return await manager.send_personal_message(
-            {"resp": "staff_apps", "detail": "You do not have permission to view this page", "wait_for_upg": True},
-            ws)
+        return {"resp": "staff_apps", "detail": "You do not have permission to view this page", "wait_for_upg": True}
     if not data.get("answers"):
-        return await manager.send_personal_message(
-            {"resp": "send_loa", "detail": "You did not fill out the form correctly"}, ws)
+        return {"resp": "send_loa", "detail": "You did not fill out the form correctly"}
     if not data["answers"]["reason"]:
-        return await manager.send_personal_message(
-            {"resp": "send_loa", "detail": "You did not fill out the form correctly"}, ws)
+        return {"resp": "send_loa", "detail": "You did not fill out the form correctly"}
     if not data["answers"]["duration"]:
-        return await manager.send_personal_message(
-            {"resp": "send_loa", "detail": "You did not fill out the form correctly"}, ws)
+        return {"resp": "send_loa", "detail": "You did not fill out the form correctly"}
     try:
         date = parser.parse(data["answers"]["duration"])
     except:
-        return await manager.send_personal_message(
-            {"resp": "send_loa", "detail": "You did not fill out the form correctly"}, ws)
+        return {"resp": "send_loa", "detail": "You did not fill out the form correctly"}
     if date.year - datetime.datetime.now().year not in (0, 1):
-        return await manager.send_personal_message(
-            {"resp": "send_loa", "detail": "Duration must be in within this year"}, ws)
+        return {"resp": "send_loa", "detail": "Duration must be in within this year"}
 
     await app.state.db.execute(
         "INSERT INTO leave_of_absence (user_id, reason, estimated_time, start_date) VALUES ($1, $2, $3, $4)",
@@ -1345,18 +1330,15 @@ async def send_loa(ws: WebSocket, data: dict):
         datetime.datetime.now(),
     )
 
-    return await manager.send_personal_message(
-        {"resp": "send_loa", "detail": "Submitted LOA successfully"}, ws)
+    return {"resp": "send_loa", "detail": "Submitted LOA successfully"}
 
 @ws_action("staff_apps")
 async def staff_apps(ws: WebSocket, data: dict):
     # Get staff application list
     if ws.state.member.perm < 2:
-        return await manager.send_personal_message(
-            {"resp": "staff_apps", "detail": "You do not have permission to view this page", "wait_for_upg": True},
-            ws)
+        return {"resp": "staff_apps", "detail": "You do not have permission to view this page", "wait_for_upg": True}
     elif not ws.state.verified:
-        return await manager.send_personal_message({"resp": "staff_verify_forced"}, ws)
+        return {"resp": "staff_verify_forced"}
 
     staff_apps = await app.state.db.fetch(
         "SELECT user_id, app_id, questions, answers, created_at FROM lynx_apps ORDER BY created_at DESC")
@@ -1403,7 +1385,7 @@ async def staff_apps(ws: WebSocket, data: dict):
         </details>
         """
 
-    return await manager.send_personal_message({
+    return {
         "resp": "staff_apps",
         "title": "Staff Application List",
         "pre": "/links",
@@ -1413,18 +1395,18 @@ async def staff_apps(ws: WebSocket, data: dict):
         <br/>
         """,
         "ext_script": "user-actions",
-    }, ws)
+    }
 
 @ws_action("user_actions")
 async def user_actions(ws: WebSocket, data: dict):
     data = data.get("data", {})
     # Easiest way to block cross origin is to just use a hidden input
     if ws.state.member.perm < 3:
-        return await manager.send_personal_message({"resp": "user_actions",
-                                                    "detail": "You do not have permission to view this page. Minimum perm needed is 3",
-                                                    "wait_for_upg": True}, ws)
+        return {"resp": "user_actions",
+                "detail": "You do not have permission to view this page. Minimum perm needed is 3",
+                "wait_for_upg": True}
     elif not ws.state.verified:
-        return await manager.send_personal_message({"resp": "staff_verify_forced"}, ws)
+        return {"resp": "staff_verify_forced"}
 
     user_state_select = """
 <label for='user_state_select'>New State</label><br/>
@@ -1452,7 +1434,7 @@ async def user_actions(ws: WebSocket, data: dict):
             .enable('image')
     )
 
-    return await manager.send_personal_message({
+    return {
         "resp": "user_actions",
         "title": "User Actions",
         "data": md.render(f"""
@@ -1502,16 +1484,16 @@ placeholder="Enter reason for state change here!"
 :::
         """),
         "ext_script": "user-actions",
-    }, ws)
+    }
 
 @ws_action("bot_actions")
 async def bot_actions(ws: WebSocket, _):
     if ws.state.member.perm < 2:
-        return await manager.send_personal_message({"resp": "bot_actions",
-                                                    "detail": "You do not have permission to view this page. Minimum perm needed is 3",
-                                                    "wait_for_upg": True}, ws)
+        return {"resp": "bot_actions",
+                "detail": "You do not have permission to view this page. Minimum perm needed is 3",
+                "wait_for_upg": True}
     elif not ws.state.verified:
-        return await manager.send_personal_message({"resp": "staff_verify_forced"}, ws)
+        return {"resp": "staff_verify_forced"}
 
     queue = await app.state.db.fetch(
         "SELECT bot_id, username_cached, description, prefix, created_at FROM bots WHERE state = $1 ORDER BY created_at ASC",
@@ -1593,7 +1575,7 @@ async def bot_actions(ws: WebSocket, _):
             .enable('image')
     )
 
-    return await manager.send_personal_message({
+    return {
         "resp": "bot_actions",
         "title": "Bot Actions",
         "pre": "/links",
@@ -1792,15 +1774,14 @@ placeholder="Reason for resetting all votes. Defaults to 'Monthly Votes Reset'"
 :::
 """),
         "ext_script": "bot-actions",
-    }, ws)
+    }
 
 @ws_action("staff_verify")
 async def staff_verify(ws: WebSocket, _):
     if ws.state.member.perm < 2:
-        return await manager.send_personal_message(
-            {"resp": "staff_verify", "detail": "You do not have permission to view this page",
-                "wait_for_upg": True}, ws)
-    return await manager.send_personal_message({
+        return {"resp": "staff_verify", "detail": "You do not have permission to view this page",
+                "wait_for_upg": True}
+    return {
         "resp": "staff_verify",
         "title": "Fates List Staff Verification",
         "data": """
@@ -1844,10 +1825,10 @@ async function verify() {
     document.querySelector("#verify-btn").innerText = "Verifying...";
     let code = document.querySelector("#staff-verify-code").value
 
-    ws.send(JSON.stringify({request: "cosmog", code: code}))
+    wsSend({request: "cosmog", code: code})
 }
 """
-    }, ws)
+    }
 
 @ws_action("notifs")
 async def notifs(ws: WebSocket, _):
@@ -1862,11 +1843,11 @@ async def notifs(ws: WebSocket, _):
                 _send_notifs.append(notif)
         else:
             _send_notifs.append(notif)
-    await manager.send_personal_message({"resp": "notifs", "data": jsonable_encoder(_send_notifs)}, ws)
+    return {"resp": "notifs", "data": jsonable_encoder(_send_notifs)}
 
 @ws_action("doctree")
 async def doctree(ws: WebSocket, _):
-    await manager.send_personal_message({"resp": "doctree", "data": doctree_gen().replace("\n", "")}, ws)
+    return {"resp": "doctree", "data": doctree_gen().replace("\n", "")}
 
 @ws_action("docs")
 async def docs(ws: WebSocket, data: dict):
@@ -1880,14 +1861,13 @@ async def docs(ws: WebSocket, data: dict):
         page = "/index"
 
     if not page.replace("-", "").replace("_", "").replace("/", "").replace("!", "").isalnum():
-        return await manager.send_personal_message({"resp": "docs", "detail": "Invalid page"}, ws)
+        return {"resp": "docs", "detail": "Invalid page"}
 
     try:
         with open(f"modules/infra/admin_piccolo/api-docs/{page}.md", "r") as f:
             md_data = f.read()
     except FileNotFoundError as exc:
-        return await manager.send_personal_message(
-            {"resp": "docs", "detail": f"api-docs/{page}.md not found -> {exc}"}, ws)
+        return {"resp": "docs", "detail": f"api-docs/{page}.md not found -> {exc}"}
 
     # Inject rating code
     md_data = f"""
@@ -1923,13 +1903,13 @@ placeholder='I feel like you could...'
     # If looking for source
     if source:
         print("Sending source")
-        return await manager.send_personal_message({
+        return {
             "resp": "docs",
             "title": page.split('/')[-1].replace('-', ' ').title() + " (Source)",
             "data": f"""
     <pre>{md_data.replace('<', '&lt').replace('>', '&gt')}</pre>
             """
-        }, ws)
+        }
 
     md = (
         MarkdownIt()
@@ -1946,17 +1926,16 @@ placeholder='I feel like you could...'
             .enable('image')
     )
 
-    return await manager.send_personal_message({
+    return {
         "resp": "docs",
         "title": page.split('/')[-1].replace('-', ' ').title(),
         "data": md.render(md_data).replace("<table", "<table class='table'").replace(".md", ""),
-    }, ws)
+    }
 
 @ws_action("eternatus")
 async def docs_feedback(ws: WebSocket, data: dict):
     if len(data.get("feedback", "")) < 5:
-        return await ws.send_json(
-            {"resp": "eternatus", "detail": "Feedback must be greater than 10 characters long!"})
+        return {"resp": "eternatus", "detail": "Feedback must be greater than 10 characters long!"}
 
     if ws.state.user:
         user_id = int(ws.state.user["id"])
@@ -1966,7 +1945,7 @@ async def docs_feedback(ws: WebSocket, data: dict):
         username = "Anonymous"
 
     if not data.get("page", "").startswith("/"):
-        return await ws.send_json({"resp": "eternatus", "detail": "Unexpected page!"})
+        return {"resp": "eternatus", "detail": "Unexpected page!"}
 
     await app.state.db.execute(
         "INSERT INTO lynx_ratings (feedback, page, username_cached, user_id) VALUES ($1, $2, $3, $4)",
@@ -1976,7 +1955,7 @@ async def docs_feedback(ws: WebSocket, data: dict):
         user_id
     )
 
-    return await ws.send_json({"resp": "eternatus", "detail": "Successfully rated"})
+    return {"resp": "eternatus", "detail": "Successfully rated"}
 
 @ws_action("cosmog")
 async def verify_code(ws: WebSocket, data: dict):
@@ -1986,13 +1965,13 @@ async def verify_code(ws: WebSocket, data: dict):
         return
 
     if ws.state.verified:
-        return await ws.send_json({
+        return {
             "resp": "cosmog",
             "detail": "You are already verified"
-        })
+        }
 
     if not code_check(code, int(ws.state.user["id"])):
-        return await ws.send_json({"resp": "cosmog", "detail": "Invalid code"})
+        return {"resp": "cosmog", "detail": "Invalid code"}
     else:
         username = ws.state.user["username"]
         password = get_token(96)
@@ -2007,8 +1986,7 @@ async def verify_code(ws: WebSocket, data: dict):
                 admin=True
             )
         except:
-            return await ws.send_json(
-                {"resp": "cosmog", "detail": "Failed to create user on lynx. Please contact Rootspring#6701"})
+            return {"resp": "cosmog", "detail": "Failed to create user on lynx. Please contact Rootspring#6701"}
 
         await app.state.db.execute(
             "UPDATE users SET staff_verify_code = $1 WHERE user_id = $2",
@@ -2019,12 +1997,14 @@ async def verify_code(ws: WebSocket, data: dict):
         await add_role(staff_server, ws.state.user["id"], access_granted_role, "Access granted to server")
         await add_role(staff_server, ws.state.user["id"], ws.state.member.staff_id, "Gets corresponding staff role")
 
-        return await ws.send_json(
-            {"resp": "cosmog", "detail": "Successfully verified staff member", "pass": password})
+        return {"resp": "cosmog", "detail": "Successfully verified staff member", "pass": password}
 
 @ws_action("index")
-async def index(ws: WebSocket, _):
-    await manager.send_personal_message({"resp": "index", "title": "Welcome To Lynx", "data": """
+async def index(_, __):
+    await {
+        "resp": "index", 
+        "title": "Welcome To Lynx", 
+        "data": """
 <h3>Homepage!</h3>
 By continuing, you agree to:
 <ul>
@@ -2045,14 +2025,14 @@ already in the staff guide, you will just be told to reread the staff guide!
 In case, you haven't went through staff verification and you somehow didn't get redirected to it, click <a href="/staff-verify">here</a> 
 <br/><br/>
 <a href="/links">Some Useful Links!</a>
-                """}, ws)
+                """}
 
 @ws_action("perms")
 async def perms(ws: WebSocket, _):
-    await manager.send_personal_message({"resp": "perms", "data": ws.state.member.dict()}, ws)
+    return {"resp": "perms", "data": ws.state.member.dict()}
 
 @ws_action("reset")
-async def resey(ws: WebSocket, _):
+async def reset(ws: WebSocket, _):
     # Remove from db
     if ws.state.user:
         await app.state.db.execute(
@@ -2064,11 +2044,11 @@ async def resey(ws: WebSocket, _):
             "DELETE FROM piccolo_user WHERE username = $1",
             ws.state.user["username"]
         )
-        await manager.send_personal_message({"resp": "reset", "data": None}, ws)
+        return {"resp": "reset", "data": None}
 
 @ws_action("reset_page")
-async def reset_page(ws: WebSocket, _):
-    await ws.send_json({
+async def reset_page(_, __):
+    return {
         "resp": "reset_page",
         "title": "Lynx Credentials Reset",
         "pre": "/links",
@@ -2084,15 +2064,15 @@ async def reset_page(ws: WebSocket, _):
             async function reset() {
                 document.querySelector("#verify-btn").innerText = "Resetting...";
 
-                ws.send(JSON.stringify({request: "reset"}))
+                wsSend({request: "reset"})
             }
         """
-    })
+    }
 
 @ws_action("links")
 async def links(ws: WebSocket, _):
     if ws.state.member.perm > 2:
-        return await manager.send_personal_message({
+        return {
             "resp": "links",
             "title": "Some Useful Links",
             "data": f"""
@@ -2116,9 +2096,9 @@ async def links(ws: WebSocket, _):
                 <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
                 </p>
             </blockquote>
-        """}, ws)
+        """}
     else:
-        return await manager.send_personal_message({
+        return {
             "resp": "links",
             "title": "Some Useful Links",
             "data": f"""
@@ -2136,20 +2116,18 @@ async def links(ws: WebSocket, _):
                 <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
                 </p>
             </blockquote>
-        """}, ws)
+        """}
 
 @ws_action("user_action")
 async def user_action(ws: WebSocket, data: dict):
     try:
         action = app.state.user_actions[data["action"]]
     except:
-        await manager.send_personal_message({"resp": "user_action", "detail": "Action does not exist!"}, ws)
-        return
+        return {"resp": "user_action", "detail": "Action does not exist!"}
     try:
         action_data = UserActionWithReason(**data["action_data"])
     except Exception as exc:
-        await manager.send_personal_message({"resp": "user_action", "detail": f"{type(exc)}: {str(exc)}"}, ws)
-        return
+        return {"resp": "user_action", "detail": f"{type(exc)}: {str(exc)}"}
     return await action(ws, action_data)
 
 @ws_action("bot_action")
@@ -2157,13 +2135,11 @@ async def bot_action(ws: WebSocket, data: dict):
     try:
         action = app.state.bot_actions[data["action"]]
     except:
-        await manager.send_personal_message({"resp": "bot_action", "detail": "Action does not exist!"}, ws)
-        return
+        return {"resp": "bot_action", "detail": "Action does not exist!"}
     try:
         action_data = ActionWithReason(**data["action_data"])
     except Exception as exc:
-        await manager.send_personal_message({"resp": "bot_action", "detail": f"{type(exc)}: {str(exc)}"}, ws)
-        return
+        return {"resp": "bot_action", "detail": f"{type(exc)}: {str(exc)}"}
     return await action(ws, action_data)
 
 @ws_action("request_logs")
@@ -2175,38 +2151,38 @@ async def request_logs(ws: WebSocket, _):
 <p>{request["user_id"]} - {request["method"]} - {request["url"]} - {request["status_code"]} - {request["request_time"]}</p>
         """
 
-    return await ws.send_json({
+    return {
         "resp": "request_logs",
         "title": "Lynx Request Logs",
         "pre": "/links",
         "data": f"""
         {requests_html}
         """
-    })
+    }
 
 @ws_action("data_request")
 async def data_request(ws: WebSocket, data: dict):
     user_id = data.get("user", None)
 
     if not ws.state.user:
-        return await ws.send_json({
+        return {
             "resp": "data_request",
             "detail": "You must be logged in first!"
-        })
+        }
 
     if ws.state.member.perm < 7 and ws.state.user["id"] != user_id:
-        return await ws.send_json({
+        return {
             "resp": "data_request",
             "detail": "You must either have permission level 6 or greater or the user id requested must be the same as your logged in user id."
-        })
+        }
 
     try:
         user_id = int(user_id)
     except:
-        return await ws.send_json({
+        return {
             "resp": "data_request",
             "detail": "Invalid User ID"
-        })
+        }
 
     user = await app.state.db.fetchrow("select * from users where user_id = $1", user_id)
     owners = await app.state.db.fetch("SELECT * FROM bot_owner WHERE owner = $1", user_id)
@@ -2235,35 +2211,35 @@ async def data_request(ws: WebSocket, data: dict):
     for bot in data["owners"]:
         data["owned_bots"].append(await app.state.db.fetch("SELECT * FROM bots WHERE bot_id = $1", bot["bot_id"]))
 
-    await ws.send_json({
+    return {
         "resp": "data_request",
         "user": str(user_id),
         "data": jsonable_encoder(data)
-    })
+    }
 
 @ws_action("data_deletion")
 async def data_deletion(ws: WebSocket, data: dict):
     user_id = data.get("user", None)
 
     if not ws.state.user:
-        return await ws.send_json({
+        return {
             "resp": "data_deletion",
             "detail": "You must be logged in first!"
-        })
+        }
 
     if ws.state.member.perm < 7 and ws.state.user["id"] != user_id:
-        return await ws.send_json({
+        return {
             "resp": "data_deletion",
             "detail": "You must either have permission level 6 or greater or the user id requested must be the same as your logged in user id."
-        })
+        }
 
     try:
         user_id = int(user_id)
     except:
-        return await ws.send_json({
+        return {
             "resp": "data_deletion",
             "detail": "Invalid User ID"
-        })
+        }
 
     print("[LYNX] Wiping user info in db")
     await app.state.db.execute("DELETE FROM users WHERE user_id = $1", user_id)
@@ -2293,10 +2269,10 @@ async def data_deletion(ws: WebSocket, data: dict):
 
     await app.state.redis.close()
 
-    await ws.send_json({
+    return {
         "resp": "data_deletion",
         "detail": "All found user data deleted"
-    })
+    }
 
 @ws_action("survey_list")
 async def survey(ws: WebSocket, _):
@@ -2348,7 +2324,7 @@ async def survey(ws: WebSocket, _):
             .enable('image')
     )
 
-    return await ws.send_json({"resp": "survey_list", "title": "Survey List", "pre": "/links", "data": md.render(surveys_html), "ext_script": "surveys"})
+    return {"resp": "survey_list", "title": "Survey List", "pre": "/links", "data": md.render(surveys_html), "ext_script": "surveys"}
 
 @ws_action("survey")
 async def submit_survey(ws: WebSocket, data: dict):
@@ -2357,12 +2333,12 @@ async def submit_survey(ws: WebSocket, data: dict):
 
     questions = await app.state.db.fetchval("SELECT questions FROM lynx_surveys WHERE id = $1", id)
     if not questions:
-        return await ws.send_json({"resp": "survey", "detail": "Survey not found"})
+        return {"resp": "survey", "detail": "Survey not found"}
     
     questions = orjson.loads(questions)
 
     if len(questions) != len(answers):
-        return await ws.send_json({"resp": "survey", "detail": "Invalid survey. Refresh and try again"})
+        return {"resp": "survey", "detail": "Invalid survey. Refresh and try again"}
 
     await app.state.db.execute(
         "INSERT INTO lynx_survey_responses (survey_id, questions, answers, user_id, username_cached) VALUES ($1, $2, $3, $4, $5)",
@@ -2372,15 +2348,29 @@ async def submit_survey(ws: WebSocket, data: dict):
         int(ws.state.user["id"]) if ws.state.user else None,
         ws.state.user["username"] if ws.state.user else "Anonymous"
     )
-    return await ws.send_json({"resp": "survey", "detail": "Submitted survey"})
+    return {"resp": "survey", "detail": "Submitted survey"}
 
 print(ws_action_dict)
 
+async def do_task_and_send(f, ws, data):
+    ret = await f(ws, data)
+    await manager.send_personal_message(ret, ws)
+
 @app.websocket("/_ws")
-async def ws(ws: WebSocket):
+async def ws(ws: WebSocket, debug: bool | None = None):
     if ws.headers.get("Origin") != "https://lynx.fateslist.xyz":
         print(f"Ignoring malicious websocket request with origin {ws.headers.get('Origin')}")
         return
+    if debug is None:
+        print("Out of date client")
+        ws.state.debug = True
+        await manager.connect(ws)
+        await manager.send_personal_message({"resp": "index", "detail": "Reload window now"}, ws)
+        await asyncio.sleep(0.3)
+        await ws.close(4008)
+        return
+
+    ws.state.debug = debug
 
     ws.state.user = None
     ws.state.member = StaffMember(name="Unknown", id=0, perm=-1, staff_id=0)
@@ -2389,10 +2379,10 @@ async def ws(ws: WebSocket):
     await manager.connect(ws)
 
     await manager.send_personal_message({"resp": "asset-list", "assets": {
-        "bot-actions": "/_static/bot-actions.js?v=73",
-        "user-actions": "/_static/user-actions.js?v=72",
-        "surveys": "/_static/surveys.js?v=71",
-        "apply": "/_static/apply.js?v=78",
+        "bot-actions": "/_static/bot-actions.js?v=74",
+        "user-actions": "/_static/user-actions.js?v=73",
+        "surveys": "/_static/surveys.js?v=72",
+        "apply": "/_static/apply.js?v=79",
     }}, ws)
 
     print(f"WS Cookies: {ws.cookies}")
@@ -2430,19 +2420,20 @@ async def ws(ws: WebSocket):
             print(exc)
             pass
 
-    await manager.send_personal_message({"detail": "connected"}, ws)
-
     try:
         while True:
             try:
-                data = await ws.receive_json()
+                if ws.state.debug:
+                    data = await ws.receive_json()
+                else:
+                    data = msgpack.unpackb(await ws.receive_bytes())
             except Exception as exc:
                 if isinstance(exc, RuntimeError):
                     return
                 print(f"{type(exc)}: {exc}")
                 continue
         
-            if data.get("request") not in ("notifs",):
+            if ws.state.debug or data.get("request") not in ("notifs",):
                 print(data)
 
             if ws.state.user is not None:
@@ -2473,14 +2464,17 @@ async def ws(ws: WebSocket):
                 if not f:
                     print(f"could not find {data}")
                 else:
-                    coro = f(ws, data)
-                    asyncio.create_task(coro)
+                    if ws.state.debug:
+                        ret = await f(ws, data)
+                        print(f"DEBUG: {ret=}")
+                        await manager.send_personal_message(ret, ws)
+                    else:
+                        asyncio.create_task(do_task_and_send(f, ws, data))
             except Exception as exc:
                 print(exc)
 
     except WebSocketDisconnect:
         manager.disconnect(ws)
-        await manager.broadcast(orjson.dumps({"detail": "Client left the chat"}).decode())
 
 
 class UserActionWithReason(BaseModel):
@@ -2504,44 +2498,40 @@ def user_action(
 
     async def _core(ws: WebSocket, data: UserActionWithReason):
         if ws.state.member.perm < min_perm:
-            await ws.send_json({
+            return {
                 "resp": "user_action",
                 "detail": f"PermError: {min_perm=}, {ws.state.member.perm=}"
-            })
-            return False
+            }
         
         data.initiator = int(ws.state.user["id"])
 
         if not data.user_id.isdigit():
-            await ws.send_json({
+            return {
                 "resp": "user_action",
                 "detail": "User ID is invalid"
-            })
-            return False
+            }
 
         data.user_id = int(data.user_id)
 
         if not await state_check(data.user_id):
-            await ws.send_json({
+            return {
                 "resp": "user_action",
                 "detail": f"User state check error: {states=}".replace("<", "&lt").replace(">", "&gt")
-            })
-            return False
-        return True
+            }
 
     def decorator(function):
         async def wrapper(ws, data: UserActionWithReason):
-            if not await _core(ws, data):
-                return  # Exit if true, we've already sent
+            if _data := await _core(ws, data):
+                return _data # Exit if true, we've already sent
             if len(data.reason) < 5:
-                return await ws.send_json({
+                return {
                     "resp": "user_action",
                     "detail": "Reason must be more than 5 characters"
-                })
+                }
             res = await function(data)
             res = jsonable_encoder(res)
             res["resp"] = "user_action"
-            return await ws.send_json(res)
+            return res
 
         app.state.user_actions[name] = wrapper
         return wrapper

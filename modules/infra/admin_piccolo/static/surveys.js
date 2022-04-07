@@ -17,5 +17,5 @@ function submitSurvey(id, questions) {
         return
     }
 
-    ws.send(JSON.stringify({request: "survey", id: id, answers: answers}))
+    wsSend({request: "survey", id: id, answers: answers})
 }
