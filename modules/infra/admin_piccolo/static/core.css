@@ -60,7 +60,7 @@ h3:hover > .header-anchor {
     content: "Info";
     font-size: 26px;
     font-weight: bold;
-    color: blue;
+    color: cyan;
 }
 
 .guidelines:before {
@@ -132,6 +132,14 @@ h3:hover > .header-anchor {
     height: 50px;
 }
 
+blockquote h3 {
+    color: cyan !important;
+}
+
+blockquote {
+    border-left: cyan !important;
+}
+
 .refresh-btn-active {
     /* The animation part: */
     animation-name: spin;
@@ -166,4 +174,8 @@ pre {
 .valid-feedback {
     font-size: 18px;
     font-weight: bolder;
+}
+
+h2 {
+    color: white !important;
 }

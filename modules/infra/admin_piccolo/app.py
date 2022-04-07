@@ -178,7 +178,7 @@ with open("config/data/staff_roles.json") as json:
 
 
 async def add_role(server, member, role, reason):
-    print(f"[LYNX] Giving role {role} to member {member} on server {server} for reason: {reason}")
+    print(f"[LYNX] AddRole: {role = }, {member = }, {server = }, {reason = }")
     url = f"https://discord.com/api/v10/guilds/{server}/members/{member}/roles/{role}"
     async with aiohttp.ClientSession() as sess:
         async with sess.put(url, headers={
@@ -191,7 +191,7 @@ async def add_role(server, member, role, reason):
 
 
 async def del_role(server, member, role, reason):
-    print(f"[LYNX] Removing role {role} to member {member} on server {server} for reason: {reason}")
+    print(f"[LYNX] RemoveRole: {role = }, {member = }, {server = }, {reason = }")
     url = f"https://discord.com/api/v10/guilds/{server}/members/{member}/roles/{role}"
     async with aiohttp.ClientSession() as sess:
         async with sess.delete(url, headers={
@@ -243,7 +243,7 @@ def code_check(code: str, user_id: int):
     )
     expected = expected.hexdigest()
     if code != expected:
-        print(f"Expected: {expected}, but got {code}")
+        print(f"[LYNX] CodeCheckMismatch {expected = }, {code = }")
         return False
     return True
 
@@ -303,7 +303,7 @@ def doctree_gen():
         proper_path = str(path).replace("modules/infra/admin_piccolo/api-docs/", "")
         if proper_path in to_hide:
             continue
-        print(f"DOCS: {proper_path}")
+        print(f"[LYNX] DoctreeGen: {proper_path=}")
         path_split = proper_path.split("/")
         _gen_doctree(path_split)
 
@@ -526,7 +526,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                 expire = await app.state.redis.ttl(key)
                 await app.state.db.execute("UPDATE users SET api_token = $1 WHERE user_id = $2", get_token(128),
                                            int(request.scope["sunbeam_user"]["user"]["id"]))
-                return ORJSONResponse({"detail": f"You have exceeded the rate limit {expire} is TTL. API_TOKEN_RESET"},
+                return ORJSONResponse({"detail": f"[LYNX] RatelimitError: {expire=}; API_TOKEN_RESET"},
                                       status_code=429)
 
         embed = Embed(
@@ -617,7 +617,7 @@ def code_check_route(request: Request):
 def bot_select(id: str, bot_list: list[str], reason: bool = False):
     select = f"""
 <label for='{id}'>Choose a bot</label><br/>
-<select name='{id}' id='{id}'> 
+<select name='{id}' {id=}> 
 <option value="" disabled selected>Select your option</option>
     """
 
@@ -649,14 +649,8 @@ def bot_select(id: str, bot_list: list[str], reason: bool = False):
 
     return select
 
-
-app.state.valid_csrf = {}
-app.state.valid_csrf_user = {}
-
-
 class ActionWithReason(BaseModel):
     bot_id: str
-    csrf_token: str
     owners: list[dict] | None = None  # This is filled in by action decorator
     main_owner: int | None = None  # This is filled in by action decorator
     context: Any | None = None
@@ -680,15 +674,9 @@ def action(
         if ws.state.member.perm < min_perm:
             return await ws.send_json({
                 "resp": "bot_action",
-                "detail": f"This operation has a minimum perm of {min_perm} but you have permission level {ws.state.member.perm}"
+                "detail": f"PermError: {min_perm=}, {ws.state.member.perm=}"
             })
 
-        if data.csrf_token not in app.state.valid_csrf:
-            await ws.send_json({
-                "resp": "bot_action",
-                "detail": "CSRF Token is invalid. Consider copy pasting reason and reloading your page"
-            })
-            return
         if not data.bot_id.isdigit():
             await ws.send_json({
                 "resp": "bot_action",
@@ -700,7 +688,7 @@ def action(
         if not await state_check(data.bot_id):
             await ws.send_json({
                 "resp": "bot_action",
-                "detail": f"Bot is not in acceptable states or doesn't exist: Acceptable states are {states}"
+                "detail": f"Bot state check error: {states=}".replace("<", "&lt").replace(">", "&gt")
             })
             return
 
@@ -1248,7 +1236,7 @@ We're always open, don't worry!
 
 {questions}
         """),
-        "ext_script": "/_static/apply.js?v=107",
+        "ext_script": "apply",
     }, ws)
 
 
@@ -1322,7 +1310,7 @@ There are *two* ways of creating a LOA.
     <li>Click 'Save'</li>
 </ol>
     """),
-    "ext_script": "/_static/apply.js?v=107",    
+    "ext_script": "apply",    
     }, ws)
 
 @ws_action("send_loa")
@@ -1374,10 +1362,6 @@ async def staff_apps(ws: WebSocket, data: dict):
         "SELECT user_id, app_id, questions, answers, created_at FROM lynx_apps ORDER BY created_at DESC")
     app_html = ""
 
-    # Easiest way to block cross origin is to just use a hidden input
-    csrf_token = get_token(132)
-    app.state.valid_csrf_user |= {csrf_token: time.time()}
-
     for staff_app in staff_apps:
         if str(staff_app["app_id"]) == data.get("open", ""):
             open_attr = "open"
@@ -1428,8 +1412,7 @@ async def staff_apps(ws: WebSocket, data: dict):
         {app_html}
         <br/>
         """,
-        "ext_script": "/_static/user-actions.js?v=2",
-        "script": f"var csrfToken = '{csrf_token}'"
+        "ext_script": "user-actions",
     }, ws)
 
 @ws_action("user_actions")
@@ -1442,8 +1425,6 @@ async def user_actions(ws: WebSocket, data: dict):
                                                     "wait_for_upg": True}, ws)
     elif not ws.state.verified:
         return await manager.send_personal_message({"resp": "staff_verify_forced"}, ws)
-    csrf_token = get_token(132)
-    app.state.valid_csrf_user |= {csrf_token: time.time()}
 
     user_state_select = """
 <label for='user_state_select'>New State</label><br/>
@@ -1520,8 +1501,7 @@ placeholder="Enter reason for state change here!"
 
 :::
         """),
-        "ext_script": "/_static/user-actions.js?v=5",
-        "script": f'var csrfToken = "{csrf_token}"'
+        "ext_script": "user-actions",
     }, ws)
 
 @ws_action("bot_actions")
@@ -1576,10 +1556,6 @@ async def bot_actions(ws: WebSocket, _):
 
     flags_bot_select = bot_select("set-flag", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots"),
                                     reason=True)
-
-    # Easiest way to block cross origin is to just use a hidden input
-    csrf_token = get_token(132)
-    app.state.valid_csrf |= {csrf_token: time.time()}
 
     queue_md = ""
 
@@ -1815,8 +1791,7 @@ placeholder="Reason for resetting all votes. Defaults to 'Monthly Votes Reset'"
 <button onclick="setFlag()">Update</button>
 :::
 """),
-        "ext_script": "/_static/bot-actions.js?v=5",
-        "script": f'var csrfToken = "{csrf_token}"'
+        "ext_script": "bot-actions",
     }, ws)
 
 @ws_action("staff_verify")
@@ -2373,7 +2348,7 @@ async def survey(ws: WebSocket, _):
             .enable('image')
     )
 
-    return await ws.send_json({"resp": "survey_list", "title": "Survey List", "pre": "/links", "data": md.render(surveys_html), "ext_script": "/_static/surveys.js?v=5"})
+    return await ws.send_json({"resp": "survey_list", "title": "Survey List", "pre": "/links", "data": md.render(surveys_html), "ext_script": "surveys"})
 
 @ws_action("survey")
 async def submit_survey(ws: WebSocket, data: dict):
@@ -2412,6 +2387,13 @@ async def ws(ws: WebSocket):
     ws.state.token = "Unknown"
 
     await manager.connect(ws)
+
+    await manager.send_personal_message({"resp": "asset-list", "assets": {
+        "bot-actions": "/_static/bot-actions.js?v=73",
+        "user-actions": "/_static/user-actions.js?v=72",
+        "surveys": "/_static/surveys.js?v=71",
+        "apply": "/_static/apply.js?v=78",
+    }}, ws)
 
     print(f"WS Cookies: {ws.cookies}")
 
@@ -2505,7 +2487,6 @@ class UserActionWithReason(BaseModel):
     user_id: str
     initiator: int | None = None
     reason: str
-    csrf_token: str
     context: Any | None = None
 
 
@@ -2525,18 +2506,11 @@ def user_action(
         if ws.state.member.perm < min_perm:
             await ws.send_json({
                 "resp": "user_action",
-                "detail": f"This operation has a minimum perm of {min_perm} but you have permission level {ws.state.member.perm}"
+                "detail": f"PermError: {min_perm=}, {ws.state.member.perm=}"
             })
             return False
         
         data.initiator = int(ws.state.user["id"])
-
-        if data.csrf_token not in app.state.valid_csrf_user:
-            await ws.send_json({
-                "resp": "user_action",
-                "detail": "CSRF Token is invalid. Consider copy pasting reason and going out and back to Staff Applications page"
-            })
-            return False
 
         if not data.user_id.isdigit():
             await ws.send_json({
@@ -2550,7 +2524,7 @@ def user_action(
         if not await state_check(data.user_id):
             await ws.send_json({
                 "resp": "user_action",
-                "detail": f"User is not in acceptable states or doesn't exist: Acceptable states are {states}"
+                "detail": f"User state check error: {states=}".replace("<", "&lt").replace(">", "&gt")
             })
             return False
         return True

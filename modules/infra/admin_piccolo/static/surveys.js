@@ -7,7 +7,7 @@ function submitSurvey(id, questions) {
         }
         let answer = document.querySelector(`#${question}`).value
         if(answer.length < 6) {
-            alert(`Please answer the question "${question}" with at least 6 characters`)
+            alert("submit-res", "Whoa there!", `Please answer the question "${question}" with at least 6 characters`)
             error = true
             return
         }

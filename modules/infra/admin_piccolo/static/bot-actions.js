@@ -9,7 +9,6 @@ function sendBotAction(name, botId, reason, context=null) {
         action_data: {
             bot_id: botId, 
             reason: reason, 
-            csrf_token: csrfToken,
             context: context
         }
     }))

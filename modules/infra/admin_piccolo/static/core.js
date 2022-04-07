@@ -16,6 +16,8 @@ var startingWs = false;
 var wsFatal = false
 var forcedStaffVerify = false
 
+var inDocs = false
+
 var addedDocTree = false
 var havePerm = false
 var staffPerm = 1
@@ -31,6 +33,8 @@ var user = {id: "0", username: "Please wait for websocket to finish loading"}
 const wsContentResp = new Set(['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions"])
 
 const wsContentSpecial = new Set(['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa'])
+
+var assetList = {};
 
 function downloadTextFile(text, name) {
     const a = document.createElement('a');
@@ -98,7 +102,10 @@ async function wsStart() {
         if(data.resp == "user_info") {
             $("#ws-info").html("Websocket auth success.")
             user = data.user
-        } if(data.resp == "doctree") {
+        } else if(data.resp == "asset-list") {
+            console.log("Got static asset list")
+            assetList = data.assets
+        } else if(data.resp == "doctree") {
             console.log("WS: Got doctree")
             addedDocTree = true
             $(data.data).insertBefore("#doctree")
@@ -127,12 +134,15 @@ async function wsStart() {
                 }
     
                 if(notif.type == 'alert') {
-                    alert(notif.message);
+                    alert(`notif-urgent`, "Urgent Notification", notif.message);
                     ackedMsg.push(notif.id)
                     localStorage.ackedMsg = JSON.stringify(ackedMsg);
                 }
             })
         } else if(data.resp == "staff_verify_forced") {
+            if(inDocs) {
+                return
+            }
             console.log("WS: Got request to enforce staff verify")
             forcedStaffVerify = true
             loadContent("/staff-verify")
@@ -171,28 +181,28 @@ async function wsStart() {
         } else if(wsContentResp.has(data.resp)) {
             console.log(`WS: Got ${data.resp}`)   
             if(data.detail) {
-                alert(data.detail)
+                alert("reset-ws", "Reset complete", data.detail)
             }
             setData(data)
         } else if(wsContentSpecial.has(data.resp)) {
-            alert(data.detail)
+            alert("special-status-upd", "Status Update!", data.detail)
             if(data.resp == "bot_action" && data.guild_id) {
                 // Now put the invite to the bot
                 window.open(`https://discord.com/api/oauth2/authorize?client_id=${data.bot_id}&scope=bot&application.command&guild_id=${data.guild_id}`, "_blank")
-                alert("Now invite bot to main server")
+                alert("invite-approve", "Almost there...", "Now invite bot to main server")
             }
         } else if(data.resp == "cosmog") {
             if(data.pass) {
-                alert(data.detail)
+                alert("success-verify", "Success!", data.detail)
                 document.querySelector("#verify-screen").innerHTML = `<h4>Verified</h4><pre>Your lynx password is ${data.pass}</pre><br/><div id="verify-parent"><button id="verify-btn" onclick="window.location.href = '/'">Open Lynx</button></div>`
             } else {
-                alert("Error: " + data.detail)
+                alert("fail-verify", "Verification Error!", data.detail)
                 document.querySelector("#verify-btn").innerText = "Verify";    
             }
         } else if(data.resp == "data_request") {
             console.log("WS: Got data request")
             if(data.detail) {
-                alert(data.detail)
+                alert("data-del", "Data deletion error", data.detail)
                 document.querySelector("#request-btn").innerText = "Request"
                 return
             } else if(data.data) {
@@ -216,7 +226,7 @@ function setData(data, noExtraCode=false) {
     refresh = false
     if(data.detail) {
         clearRefresh()
-        alert(data.detail)
+        alert("unknown-err", "Unknown Error", data.detail)
         return
     }
     document.querySelector("#verify-screen").innerHTML = data.data
@@ -230,7 +240,7 @@ function setData(data, noExtraCode=false) {
 
     if(data.ext_script) {
         let script = document.createElement("script")
-        script.src = data.ext_script
+        script.src = assetList[data.ext_script]
         document.body.appendChild(script)
     }
 
@@ -402,6 +412,8 @@ async function loadContent(loc) {
 
     clearInterval(myPermsInterval)
 
+    inDocs = false
+
     loc = loc.replace('https://lynx.fateslist.xyz', '')
 
     if(loc.startsWith("/docs-src")) {
@@ -414,6 +426,7 @@ async function loadContent(loc) {
     } else if(loc.startsWith("/docs")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("WS: Requested for docs-src")
+            inDocs = true
             ws.send(JSON.stringify({request: "docs", path: data.loc.replace("/docs/", ""), source: false}))
         })
         return
@@ -425,16 +438,19 @@ async function loadContent(loc) {
         return
     } else if(loc.startsWith("/staff-guide")) {
         waitForWsAndLoad({loc: loc}, (data) => {
+            inDocs = true
             ws.send(JSON.stringify({request: "docs", "path": "staff-guide", source: false}))
             return
         })
     } else if(loc.startsWith("/privacy")) {
         waitForWsAndLoad({loc: loc}, (data) => {
+            inDocs = true
             ws.send(JSON.stringify({request: "docs", "path": "privacy", source: false}))
             return
         })
     } else if(loc.startsWith("/status")) {
         waitForWsAndLoad({loc: loc}, (data) => {
+            inDocs = true
             ws.send(JSON.stringify({request: "docs", "path": "status-page", source: false}))
             return
         })

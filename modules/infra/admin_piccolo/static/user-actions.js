@@ -6,7 +6,6 @@ function sendUserAction(name, userId, reason, context="") {
             user_id: userId, 
             reason: reason, 
             context: context,
-            csrf_token: csrfToken
         }
     }))
 }

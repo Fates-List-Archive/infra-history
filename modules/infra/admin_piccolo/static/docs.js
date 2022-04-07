@@ -34,21 +34,21 @@ async function genClientWhitelist() {
     reason = document.querySelector('#whitelist-reason').value
 
     if(reason.length < 10) {
-        alert('Please enter a reason of at least 10 characters')
+        alert("whitelist-res", "Whoa there!", 'Please enter a reason of at least 10 characters')
         return
     }
 
     privacy = document.querySelector('#privacy-policy').value
 
     if(privacy.length < 20) {
-        alert('Please enter a privacy policy of at least 20 characters')
+        alert("whitelist-res", "Whoa there!", 'Please enter a privacy policy of at least 20 characters')
         return
     }
 
     client_info = document.querySelector('#client-info').value
 
     if(client_info.length < 10) {
-        alert('Please enter a client info of at least 10 characters')
+        alert("whitelist-res", "Almost done...", 'Please enter a client info of at least 10 characters')
         return
     }
 
@@ -69,7 +69,7 @@ async function dataRequest() {
 async function dataDelete() {
     let confirm = prompt("Are you sure you want to delete all data? This cannot be undone. Please read all warnings carefully. This may in the future trigger a webhook to all bots you have voted for.\n\nType 'DELETE-POPPYPAW' to confirm.")
     if(confirm !== "DELETE-POPPYPAW") {
-        alert("Aborted")
+        alert("del-res", "Aborted", "Aborted data deletion")
         return
     }
     userId = document.querySelector("#user-id-del").value
