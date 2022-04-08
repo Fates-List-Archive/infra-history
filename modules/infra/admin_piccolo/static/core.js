@@ -160,9 +160,9 @@ async function wsStart() {
                 // Before ignoring acked message, check if its pushed
                 if(!pushedMessages.includes(notif.id)) {
                     // Push the message
-                    console.log(`${notif.id} is not pushed`)
+                    console.debug(`${notif.id} is not pushed`)
                     notifCount = parseInt(document.querySelector("#notif-msg-count").innerText)
-                    console.log(`Notification count is ${notifCount}`)
+                    console.debug(`Notification count is ${notifCount}`)
                     document.querySelector("#notif-msg-count").innerText = notifCount + 1
     
                     $(`<a href="#" class="dropdown-item"><i class="fas fa-envelope mr-2"></i><span class="float-right text-muted text-sm">${notif.message}</span></a>`).insertBefore("#messages")
@@ -173,7 +173,7 @@ async function wsStart() {
                 if(notif.acked_users.includes(data.user_id)) {
                     return;
                 } else if(ackedMsg.includes(notif.id)) {
-                    console.log(`Ignoring acked message: ${notif.id}`)
+                    console.debug(`Ignoring acked message: ${notif.id}`)
                     return;
                 }
     
@@ -343,13 +343,12 @@ function docReady(fn) {
 }    
 
 async function extraCode() {
-    console.log({extraCode})
+    console.debug({extraCode})
     $(".temp-item").remove()
 
     loadDocs()
 
     var currentURL = window.location.pathname
-    console.log('Running extra code')
 
     var pathSplit = currentURL.split('/')
 
@@ -373,13 +372,13 @@ async function extraCode() {
         var tree = pathSplit[2]
         var navID = `#docs-${tree}-nav`
         $(navID).addClass('menu-open')
-        console.log(navID)
+        console.debug(navID)
     }
 
     try {
         document.querySelector(currentURLID).classList.add('active')
     } catch {
-        console.log(`No active element found: ${currentURLID}`)
+        console.debug(`No active element found: ${currentURLID}`)
     }
 }
 
@@ -463,13 +462,13 @@ async function loadContent(loc) {
     if(loc.startsWith("/docs-src")) {
         // Create request for docs
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for docs")
+            console.log("WS: Requested for docs-src")
             wsSend({request: "docs", path: data.loc.replace("/docs-src/", ""), source: true})
         })
         return
     } else if(loc.startsWith("/docs")) {
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for docs-src")
+            console.log("WS: Requested for docs")
             inDocs = true
             wsSend({request: "docs", path: data.loc.replace("/docs/", ""), source: false})
         })

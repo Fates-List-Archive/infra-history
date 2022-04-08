@@ -317,26 +317,12 @@ def doctree_gen():
     doctree_dict = dict(sorted(doctree_dict.items(), key=key_doctree, reverse=True))
 
     # Now we just need to loop doctree_dict, luckily, we now know exactly whats needed
-    doctree = """
-    <li id="docs-main-nav" class="nav-item">
-    <a href="#" class="nav-link">
-        <i class="nav-icon fa-solid fa-book"></i>
-        <p>Docs and Blogs <i class="right fas fa-angle-left"></i></p>
-    </a>
-    <ul class="nav nav-treeview">
-    """
+    doctree = """<li id="docs-main-nav" class="nav-item"><a href="#" class="nav-link"><i class="nav-icon fa-solid fa-book"></i><p>Docs and Blogs <i class="right fas fa-angle-left"></i></p></a><ul class="nav nav-treeview">"""
 
     for tree in doctree_dict.keys():
 
         if tree != "documentation":
-            doctree += f"""
-    <li id="docs-{tree}-nav" class="nav-item">
-    <a href="#" class="nav-link">
-        <i class="nav-icon fa-solid fa-book"></i>
-        <p>{tree.replace("-", " ").title()} <i class="right fas fa-angle-left"></i></p>
-    </a>
-    <ul class="nav nav-treeview">
-            """
+            doctree += f"""<li id="docs-{tree}-nav" class="nav-item"><a href="#" class="nav-link"><i class="nav-icon fa-solid fa-book"></i><p>{tree.replace("-", " ").title()} <i class="right fas fa-angle-left"></i></p></a><ul class="nav nav-treeview">"""
 
         for v in doctree_dict[tree]:
             v = v.replace(".md", "")
@@ -355,16 +341,7 @@ def doctree_gen():
 
             pretty_v = v.replace("-", " ").title()
 
-            doctree += f"""
-    <li class="nav-item">
-        <a id="{id}-nav" href="https://lynx.fateslist.xyz/docs/{url}" class="nav-link">
-            <i class="far fa-circle nav-icon"></i>
-            <p>
-                {pretty_v}
-            </p>
-        </a>
-    </li>
-            """
+            doctree += f"""<li class="nav-item"><a id="{id}-nav" href="https://lynx.fateslist.xyz/docs/{url}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>{pretty_v}</p></a></li>"""
         if tree != "documentation":
             doctree += "</ul>"
 
@@ -1843,7 +1820,7 @@ async def notifs(ws: WebSocket, _):
                 _send_notifs.append(notif)
         else:
             _send_notifs.append(notif)
-    return {"resp": "notifs", "data": jsonable_encoder(_send_notifs)}
+    return {"resp": "notifs", "data": _send_notifs}
 
 @ws_action("doctree")
 async def doctree(ws: WebSocket, _):
@@ -2001,7 +1978,7 @@ async def verify_code(ws: WebSocket, data: dict):
 
 @ws_action("index")
 async def index(_, __):
-    await {
+    return {
         "resp": "index", 
         "title": "Welcome To Lynx", 
         "data": """
@@ -2214,7 +2191,7 @@ async def data_request(ws: WebSocket, data: dict):
     return {
         "resp": "data_request",
         "user": str(user_id),
-        "data": jsonable_encoder(data)
+        "data": data
     }
 
 @ws_action("data_deletion")
