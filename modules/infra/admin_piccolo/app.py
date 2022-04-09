@@ -20,6 +20,7 @@ import requests
 import staffapps
 from dateutil import parser
 import datetime
+import signal
 
 sys.path.append(".")
 sys.path.append("modules/infra/admin_piccolo")
@@ -56,9 +57,14 @@ from mdit_py_plugins.container import container_plugin
 from fastapi.staticfiles import StaticFiles
 import importlib
 import msgpack
+import enum
 
 debug = False
 
+
+class SPLDEvent(enum.Enum):
+    maint = "MAINT"
+    refresh_needed = "REFRESH_NEEDED"
 
 async def fetch_user(user_id: int):
     async with aiohttp.ClientSession() as sess:
@@ -583,15 +589,6 @@ app = FastAPI(routes=[
     openapi_url="/_openapi"
 )
 
-
-@app.get("/_admin_code_check")
-def code_check_route(request: Request):
-    query = request.query_params
-    if not code_check(query.get("code", ""), query.get("user_id", 0)):
-        return PlainTextResponse(status_code=HTTPStatus.FORBIDDEN)
-    return PlainTextResponse(status_code=HTTPStatus.NO_CONTENT)
-
-
 def bot_select(id: str, bot_list: list[str], reason: bool = False):
     select = f"""
 <label for='{id}'>Choose a bot</label><br/>
@@ -675,7 +672,7 @@ def action(
             if owner["main"]:
                 data.main_owner = owner["owner"]
                 break
-
+    
     def decorator(function):
         async def wrapper(ws: WebSocket, data: ActionWithReason):
             if _data := await _core(ws, data):
@@ -689,11 +686,18 @@ def action(
             ws.state.user_id = int(ws.state.user["id"])
 
             res = await function(ws, data)  # Fake Websocket as Request for now TODO: Make this not fake
-            if action_log:
+            
+            err = res.get("err", False)
+            
+            if action_log and not err:
                 await app.state.db.execute("INSERT INTO user_bot_logs (user_id, bot_id, action, context) VALUES ($1, $2, $3, $4)", ws.state.user_id, data.bot_id, action_log.value, data.reason)
 
             res = jsonable_encoder(res)
             res["resp"] = "bot_action"
+
+            if not err:
+                # Tell client that a refresh is needed as a bot action has taken place
+                await manager.broadcast({"resp": "spld", "e": SPLDEvent.refresh_needed, "loc": "/bot-actions"})
             return res
 
         app.state.bot_actions[name] = wrapper
@@ -732,7 +736,6 @@ async def unclaim(request: Request, data: ActionWithReason):
     embed.add_field(name="Reason", value=data.reason)
 
     await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
-
     return {"detail": "Successfully unclaimed bot"}
 
 
@@ -982,11 +985,11 @@ async def reset_all_votes(request: Request, data: ActionWithReason):
 @action("set-flag", [], min_perm=3)
 async def set_flag(request: Request, data: ActionWithReason):
     if not isinstance(data.context, int):
-        return {"detail": "Flag must be an integer"}
+        return {"detail": "Flag must be an integer", "err": True}
     try:
         flag = enums.BotFlag(data.context)
     except:
-        return {"detail": "Flag must be of enum Flag"}
+        return {"detail": "Flag must be of enum Flag", "err": True}
 
     existing_flags = await app.state.db.fetchval("SELECT flags FROM bots WHERE bot_id = $1", data.bot_id)
     existing_flags = existing_flags or []
@@ -1019,11 +1022,11 @@ async def set_flag(request: Request, data: ActionWithReason):
 @action("unset-flag", [], min_perm=3)
 async def unset_flag(request: Request, data: ActionWithReason):
     if not isinstance(data.context, int):
-        return {"detail": "Flag must be an integer"}
+        return {"detail": "Flag must be an integer", "err": True}
     try:
         flag = enums.BotFlag(data.context)
     except:
-        return {"detail": "Flag must be of enum Flag"}
+        return {"detail": "Flag must be of enum Flag", "err": True}
 
     existing_flags = await app.state.db.fetchval("SELECT flags FROM bots WHERE bot_id = $1", data.bot_id)
     existing_flags = existing_flags or []
@@ -1031,7 +1034,7 @@ async def unset_flag(request: Request, data: ActionWithReason):
     try:
         existing_flags.remove(int(flag))
     except:
-        return {"detail": "Flag not on this bot"}
+        return {"detail": "Flag not on this bot", "err": True}
 
     try:
         existing_flags.remove(int(enums.BotFlag.unlocked))
@@ -1083,16 +1086,18 @@ class ConnectionManager:
         try:
             if websocket.state.debug:
                 print(f"Sending message: {websocket.client.host=}, {message=}")
-                await asyncio.sleep(0.75) # Avoid large-scale attacks using debug and allow easier debugging
                 await websocket.send_json(message)
             else:
                 await websocket.send_bytes(msgpack.packb(jsonable_encoder(message)))
-        except RuntimeError:
-            await websocket.close(1008)
+        except RuntimeError as e:
+            try:
+                await websocket.close(1008)
+            except:
+                ...
 
-    async def broadcast(self, message: str):
+    async def broadcast(self, message: dict | list):
         for connection in self.active_connections:
-            await connection.send_text(message)
+            await manager.send_personal_message(message, connection)
     
 manager = ConnectionManager()
 
@@ -1353,7 +1358,7 @@ async def staff_apps(ws: WebSocket, data: dict):
             <summary>{staff_app['app_id']}</summary>
             <h2>User Info</h2>
             <p><strong><em>Created At:</em></strong> {staff_app['created_at']}</p>
-            <p><strong><em>User:</em></strong> {user['username']} ({user['id']})</p>
+            <p><strong><em>User:</em></strong> {bleach.clean(user['username'])} ({user['id']})</p>
             <h2>Application:</h2> 
             {questions_html}
             <br/>
@@ -2508,6 +2513,17 @@ def user_action(
             res = await function(data)
             res = jsonable_encoder(res)
             res["resp"] = "user_action"
+
+            err = res.get("err", False)
+
+            if not err:
+                spl = res.get("spl", True)
+
+                if spl:
+                    # Tell client that a refresh is needed as a user action has taken place
+                    await manager.broadcast({"resp": "spld", "e": SPLDEvent.refresh_needed, "loc": "/user-actions"})
+
+
             return res
 
         app.state.user_actions[name] = wrapper
@@ -2532,7 +2548,8 @@ async def add_staff(data: UserActionWithReason):
             if res.status != 200:
                 json = await res.json()
                 return {
-                    "detail": f"User is not DMable {json}"
+                    "detail": f"User is not DMable {json}",
+                    "err": True
                 }
             json = await res.json()
             channel_id = json["id"]
@@ -2555,7 +2572,8 @@ Then head on over to https://lynx.fateslist.xyz to read our staff guide and get 
 
         if not res.ok:
             return {
-                "detail": f"Failed to send message (possibly blocked): {res.status}"
+                "detail": f"Failed to send message (possibly blocked): {res.status}",
+                "err": True
             }
 
     return {"detail": "Successfully added staff member"}
@@ -2566,17 +2584,19 @@ Then head on over to https://lynx.fateslist.xyz to read our staff guide and get 
 @user_action("ack_staff_app", [], min_perm=4)
 async def ack_staff_app(data: UserActionWithReason):
     await app.state.db.execute("DELETE FROM lynx_apps WHERE user_id = $1", data.user_id)
-    return {"detail": "Acked"}
+    # Special broadcast for Acking
+    await manager.broadcast({"resp": "spld", "e": SPLDEvent.refresh_needed, "loc": "/staff-apps"})
+    return {"detail": "Acked", "spl": False}
 
 
 @user_action("set_user_state", [], min_perm=4)
 async def set_user_state(data: UserActionWithReason):
     if not isinstance(data.context, int):
-        return {"detail": "State must be an integer"}
+        return {"detail": "State must be an integer", "err": True}
     try:
         state = enums.UserState(data.context)
     except:
-        return {"detail": "State must be of enum UserState"}
+        return {"detail": "State must be of enum UserState", "err": True}
 
     await app.state.db.fetchval("UPDATE users SET state = $1 WHERE user_id = $2", state, data.user_id)
 
@@ -2600,12 +2620,21 @@ print(app.state.bot_actions)
 
 @app.on_event("startup")
 async def startup():
+    signal.signal(signal.SIGINT, handle_kill)
     engine = engine_finder()
     app.state.engine = engine
     app.state.redis = aioredis.from_url("redis://localhost:1001", db=1)
     app.state.db = await asyncpg.create_pool()
     await engine.start_connection_pool()
 
+
+def handle_kill(*args, **kwargs):
+    async def _close():
+        await asyncio.sleep(0)
+        await manager.broadcast({"resp": "spld", "e": SPLDEvent.maint})
+
+    print("Broadcasting maintenance")
+    asyncio.create_task(_close())
 
 @app.on_event("shutdown")
 async def close():

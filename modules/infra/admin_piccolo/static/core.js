@@ -24,6 +24,8 @@ var staffPerm = 1
 var alreadyUp = false
 var refresh = false
 
+var currentLoc = window.location.pathname
+
 var debug = false
 
 var hasLoadedAdminScript = false
@@ -149,6 +151,19 @@ async function wsStart() {
         } else if(data.resp == "asset-list") {
             console.log("Got static asset list")
             assetList = data.assets
+        } else if(data.resp == "spld") {
+            console.log(`Got a spld (server pipeline) message: ${data.e}`)
+            if(data.e == "MAINT") {
+                console.log("Server is in maintenance mode. Alerting user to this")
+                alert("maint", "Maintenance", "Lynx is now down for maintenance, certain actions may be unavailable during this time!")
+            } else if(data.e == "REFRESH_NEEDED") {
+                console.log("Server says refresh is needed")
+                if(!data.loc || data.loc == currentLoc) {
+                    refreshPage()
+                } else {
+                    console.log("Refresh does not pertain to us!")
+                }
+            }
         } else if(data.resp == "doctree") {
             console.log("WS: Got doctree")
             addedDocTree = true
@@ -257,7 +272,7 @@ async function wsStart() {
                 document.querySelector("#request-btn").ariaDisabled = true
                 document.querySelector("#request-btn").setAttribute("disabled", "true")
             }
-        }
+        } 
     }      
 }
 
@@ -458,6 +473,8 @@ async function loadContent(loc) {
     inDocs = false
 
     loc = loc.replace('https://lynx.fateslist.xyz', '')
+
+    currentLoc = loc;
 
     if(loc.startsWith("/docs-src")) {
         // Create request for docs

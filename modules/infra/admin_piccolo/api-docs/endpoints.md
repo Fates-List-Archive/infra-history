@@ -104,6 +104,14 @@ def post_stats(bot_id: int, guild_count: int):
 }
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = false]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
+
 **Response Body Example**
 
 ```json
@@ -142,6 +150,90 @@ Returns the index for bots and servers
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **new** => (Array) Struct IndexBot 
+	- **guild_count** => i64 [default/example = 0]
+	- **description** => string [default/example = ""]
+	- **banner** => string [default/example = ""]
+	- **nsfw** => bool [default/example = false]
+	- **votes** => i64 [default/example = 0]
+	- **state** => i32 [default/example = 0]
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **flags** => (Array) 
+
+
+
+- **top_voted** => (Array) Struct IndexBot 
+	- **guild_count** => i64 [default/example = 0]
+	- **description** => string [default/example = ""]
+	- **banner** => string [default/example = ""]
+	- **nsfw** => bool [default/example = false]
+	- **votes** => i64 [default/example = 0]
+	- **state** => i32 [default/example = 0]
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **flags** => (Array) 
+
+
+
+- **certified** => (Array) Struct IndexBot 
+	- **guild_count** => i64 [default/example = 0]
+	- **description** => string [default/example = ""]
+	- **banner** => string [default/example = ""]
+	- **nsfw** => bool [default/example = false]
+	- **votes** => i64 [default/example = 0]
+	- **state** => i32 [default/example = 0]
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **flags** => (Array) 
+
+
+
+- **tags** => (Array) Struct Tag 
+	- **name** => string [default/example = ""]
+	- **iconify_data** => string [default/example = ""]
+	- **id** => string [default/example = ""]
+	- **owner_guild** => None (unknown value type)
+
+
+
+- **features** => (Array) Struct Feature 
+	- **id** => string [default/example = ""]
+	- **name** => string [default/example = ""]
+	- **viewed_as** => string [default/example = ""]
+	- **description** => string [default/example = ""]
+
+
+
+
+
 
 **Response Body Example**
 
@@ -252,6 +344,13 @@ Resolves the vanity for a bot/server in the list
 {}
 ```
 
+**Response Body Description**
+
+- **target_type** => string [default/example = "bot | server"]
+- **target_id** => string [default/example = "0000000000"]
+
+
+
 **Response Body Example**
 
 ```json
@@ -288,6 +387,26 @@ Get policies (rules, privacy policy, terms of service)
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **partners** => (Array) Struct Partner 
+	- **id** => string [default/example = "0"]
+	- **name** => string [default/example = "My development"]
+	- **owner** => string [default/example = "12345678901234567"]
+	- **image** => string [default/example = ""]
+	- **description** => string [default/example = "Some random description"]
+	- **links** => 	- **discord** => string [default/example = "https://discord.com/lmao"]
+	- **website** => string [default/example = "https://example.com"]
+
+
+
+
+
+- **icons** => 
+
+
+
 
 **Response Body Example**
 
@@ -343,6 +462,12 @@ Given the preview and long description, parse it and give the sanitized output. 
 }
 ```
 
+**Response Body Description**
+
+- **preview** => string [default/example = ""]
+
+
+
 **Response Body Example**
 
 ```json
@@ -368,8 +493,8 @@ Differences from API v2:
 - All responses are cached for a short period of time. There is *no* way to opt out unlike API v2
 - Some fields have been renamed or removed (such as ``promos`` which may be readded at a later date)
 
-This API returns some empty fields such as ``webhook``, ``webhook_secret``, `api_token`` and more. 
-This is to allow reuse of the Bot struct in Get Bot Settings which does contain this sensitive data. 
+This API returns some empty fields such as ``webhook``, ``webhook_secret``, ``api_token`` and more. 
+This is to allow reuse of the Bot struct in Get Bot Settings which *does* contain this sensitive data. 
 
 **Set the Frostpaw header if you are a custom client. Send Frostpaw-Invite header on invites**
 
@@ -382,7 +507,6 @@ This is to allow reuse of the Bot struct in Get Bot Settings which does contain 
 
 **Query parameters**
 
-- **lang** => None (unknown value type)
 
 
 
@@ -396,6 +520,127 @@ This is to allow reuse of the Bot struct in Get Bot Settings which does contain 
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **user** => Struct User 
+	- **id** => string [default/example = ""]
+	- **username** => string [default/example = ""]
+	- **disc** => string [default/example = ""]
+	- **avatar** => string [default/example = ""]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **description** => string [default/example = ""]
+- **tags** => (Array) 
+- **created_at** => string [default/example = "1970-01-01T00:00:00Z"]
+- **last_updated_at** => string [default/example = "1970-01-01T00:00:00Z"]
+- **last_stats_post** => string [default/example = "1970-01-01T00:00:00Z"]
+- **long_description** => string [default/example = "blah blah blah"]
+- **long_description_raw** => string [default/example = "blah blah blah unsanitized"]
+- **long_description_type** => i32 [default/example = 1]
+- **guild_count** => i64 [default/example = 0]
+- **shard_count** => i64 [default/example = 493]
+- **user_count** => i64 [default/example = 0]
+- **shards** => (Array) 
+- **prefix** => (Optional) string [default/example = "Some prefix, null = slash command"]
+- **library** => string [default/example = ""]
+- **invite** => (Optional) string [default/example = "Raw invite, null = auto-generated. Use invite_link instead"]
+- **invite_link** => string [default/example = "https://discord.com/api/oauth2/authorize...."]
+- **invite_amount** => i32 [default/example = 48]
+- **owners** => (Array) Struct BotOwner 
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **main** => bool [default/example = false]
+
+
+
+- **owners_html** => string [default/example = ""]
+- **features** => (Array) Struct Feature 
+	- **id** => string [default/example = ""]
+	- **name** => string [default/example = ""]
+	- **viewed_as** => string [default/example = ""]
+	- **description** => string [default/example = ""]
+
+
+
+- **state** => i32 [default/example = 0]
+- **page_style** => i32 [default/example = 1]
+- **website** => (Optional) string [default/example = "https://example.com"]
+- **support** => (Optional) string [default/example = ""]
+- **github** => (Optional) string [default/example = "https://github.com/Fates-List/FatesList"]
+- **css** => string [default/example = "<style></style>"]
+- **votes** => i64 [default/example = 0]
+- **total_votes** => i64 [default/example = 0]
+- **vanity** => string [default/example = ""]
+- **donate** => (Optional) string [default/example = "https://paypal.me/example"]
+- **privacy_policy** => (Optional) string [default/example = "https://lynx.fateslist.xyz/frostpaw/tos"]
+- **nsfw** => bool [default/example = false]
+- **banner_card** => (Optional) string [default/example = "https://api.fateslist.xyz/static/botlisticon.webp"]
+- **banner_page** => (Optional) string [default/example = "https://api.fateslist.xyz/static/botlisticon.webp"]
+- **keep_banner_decor** => bool [default/example = false]
+- **client_id** => string [default/example = ""]
+- **flags** => (Array) 
+- **action_logs** => (Array) Struct ActionLog 
+	- **user_id** => string [default/example = ""]
+	- **bot_id** => string [default/example = ""]
+	- **action** => i32 [default/example = 0]
+	- **action_time** => string [default/example = "1970-01-01T00:00:00Z"]
+	- **context** => (Optional) string [default/example = "Some context as to why the action happened"]
+
+
+
+- **vpm** => (Optional) (Array) Struct VotesPerMonth 
+	- **votes** => i64 [default/example = 0]
+	- **ts** => string [default/example = "1970-01-01T00:00:00Z"]
+
+
+
+- **uptime_checks_total** => (Optional) i32 [default/example = 30]
+- **uptime_checks_failed** => (Optional) i32 [default/example = 19]
+- **commands** => - **default** => (Array) Struct BotCommand 
+	- **cmd_type** => i32 [default/example = 0]
+	- **groups** => (Array) 
+	- **name** => string [default/example = ""]
+	- **vote_locked** => bool [default/example = false]
+	- **description** => string [default/example = ""]
+	- **args** => (Array) 
+	- **examples** => (Array) 
+	- **premium_only** => bool [default/example = false]
+	- **notes** => (Array) 
+	- **doc_link** => string [default/example = ""]
+	- **id** => None (unknown value type)
+	- **nsfw** => bool [default/example = false]
+
+
+
+
+
+- **resources** => (Array) Struct Resource 
+	- **id** => None (unknown value type)
+	- **resource_title** => string [default/example = ""]
+	- **resource_link** => string [default/example = ""]
+	- **resource_description** => string [default/example = ""]
+
+
+
+- **webhook** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
+- **webhook_secret** => (Optional) string [default/example = "This (along with ``webhook_type``, ``api_token`` and ``webhook_hmac_only``) will be redacted for Get Bot endpoint"]
+- **webhook_type** => None (unknown value type)
+- **webhook_hmac_only** => None (unknown value type)
+- **api_token** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
+
+
 
 **Response Body Example**
 
@@ -421,9 +666,9 @@ This is to allow reuse of the Bot struct in Get Bot Settings which does contain 
     "shard_count": 493,
     "user_count": 0,
     "shards": [],
-    "prefix": null,
+    "prefix": "Some prefix, null = slash command",
     "library": "",
-    "invite": null,
+    "invite": "Raw invite, null = auto-generated. Use invite_link instead",
     "invite_link": "https://discord.com/api/oauth2/authorize....",
     "invite_amount": 48,
     "owners": [
@@ -450,18 +695,18 @@ This is to allow reuse of the Bot struct in Get Bot Settings which does contain 
     ],
     "state": 0,
     "page_style": 1,
-    "website": null,
+    "website": "https://example.com",
     "support": "",
-    "github": null,
+    "github": "https://github.com/Fates-List/FatesList",
     "css": "<style></style>",
     "votes": 0,
     "total_votes": 0,
     "vanity": "",
-    "donate": null,
-    "privacy_policy": null,
+    "donate": "https://paypal.me/example",
+    "privacy_policy": "https://lynx.fateslist.xyz/frostpaw/tos",
     "nsfw": false,
-    "banner_card": null,
-    "banner_page": null,
+    "banner_card": "https://api.fateslist.xyz/static/botlisticon.webp",
+    "banner_page": "https://api.fateslist.xyz/static/botlisticon.webp",
     "keep_banner_decor": false,
     "client_id": "",
     "flags": [],
@@ -471,7 +716,7 @@ This is to allow reuse of the Bot struct in Get Bot Settings which does contain 
             "bot_id": "",
             "action": 0,
             "action_time": "1970-01-01T00:00:00Z",
-            "context": null
+            "context": "Some context as to why the action happened"
         }
     ],
     "vpm": [
@@ -509,7 +754,7 @@ This is to allow reuse of the Bot struct in Get Bot Settings which does contain 
         }
     ],
     "webhook": "This will be redacted for Get Bot endpoint",
-    "webhook_secret": "This will be redacted for Get Bot endpoint",
+    "webhook_secret": "This (along with ``webhook_type``, ``api_token`` and ``webhook_hmac_only``) will be redacted for Get Bot endpoint",
     "webhook_type": null,
     "webhook_hmac_only": null,
     "api_token": "This will be redacted for Get Bot endpoint"
@@ -549,6 +794,124 @@ Using -1 for ``gc_to`` will disable ``gc_to`` field
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **bots** => (Array) Struct IndexBot 
+	- **guild_count** => i64 [default/example = 0]
+	- **description** => string [default/example = ""]
+	- **banner** => string [default/example = ""]
+	- **nsfw** => bool [default/example = false]
+	- **votes** => i64 [default/example = 0]
+	- **state** => i32 [default/example = 0]
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **flags** => (Array) 
+
+
+
+- **servers** => (Array) Struct IndexBot 
+	- **guild_count** => i64 [default/example = 0]
+	- **description** => string [default/example = ""]
+	- **banner** => string [default/example = ""]
+	- **nsfw** => bool [default/example = false]
+	- **votes** => i64 [default/example = 0]
+	- **state** => i32 [default/example = 0]
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **flags** => (Array) 
+
+
+
+- **profiles** => (Array) Struct SearchProfile 
+	- **banner** => string [default/example = ""]
+	- **description** => string [default/example = ""]
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+
+
+
+- **packs** => (Array) Struct BotPack 
+	- **id** => string [default/example = "0"]
+	- **name** => string [default/example = ""]
+	- **description** => string [default/example = ""]
+	- **icon** => string [default/example = ""]
+	- **banner** => string [default/example = ""]
+	- **resolved_bots** => (Array) Struct ResolvedPackBot 
+		- **user** => Struct User 
+			- **id** => string [default/example = ""]
+			- **username** => string [default/example = ""]
+			- **disc** => string [default/example = ""]
+			- **avatar** => string [default/example = ""]
+			- **bot** => bool [default/example = false]
+			- **status** => string [default/example = "Unknown"]
+
+
+
+		- **description** => string [default/example = ""]
+
+
+
+	- **owner** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **created_at** => string [default/example = "1970-01-01T00:00:00Z"]
+
+
+
+- **tags** => Struct SearchTags 
+	- **bots** => (Array) Struct Tag 
+		- **name** => string [default/example = ""]
+		- **iconify_data** => string [default/example = ""]
+		- **id** => string [default/example = ""]
+		- **owner_guild** => None (unknown value type)
+
+
+
+	- **servers** => (Array) Struct Tag 
+		- **name** => string [default/example = ""]
+		- **iconify_data** => string [default/example = ""]
+		- **id** => string [default/example = ""]
+		- **owner_guild** => None (unknown value type)
+
+
+
+
+
+
+
+
 
 **Response Body Example**
 
@@ -687,6 +1050,75 @@ Searches the list for all bots/servers with tag *exactly* specified ``q``
 {}
 ```
 
+**Response Body Description**
+
+- **bots** => (Array) Struct IndexBot 
+	- **guild_count** => i64 [default/example = 0]
+	- **description** => string [default/example = ""]
+	- **banner** => string [default/example = ""]
+	- **nsfw** => bool [default/example = false]
+	- **votes** => i64 [default/example = 0]
+	- **state** => i32 [default/example = 0]
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **flags** => (Array) 
+
+
+
+- **servers** => (Array) Struct IndexBot 
+	- **guild_count** => i64 [default/example = 0]
+	- **description** => string [default/example = ""]
+	- **banner** => string [default/example = ""]
+	- **nsfw** => bool [default/example = false]
+	- **votes** => i64 [default/example = 0]
+	- **state** => i32 [default/example = 0]
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **flags** => (Array) 
+
+
+
+- **profiles** => (Array) 
+- **packs** => (Array) 
+- **tags** => Struct SearchTags 
+	- **bots** => (Array) Struct Tag 
+		- **name** => string [default/example = ""]
+		- **iconify_data** => string [default/example = ""]
+		- **id** => string [default/example = ""]
+		- **owner_guild** => None (unknown value type)
+
+
+
+	- **servers** => (Array) Struct Tag 
+		- **name** => string [default/example = ""]
+		- **iconify_data** => string [default/example = ""]
+		- **id** => string [default/example = ""]
+		- **owner_guild** => None (unknown value type)
+
+
+
+
+
+
+
+
+
 **Response Body Example**
 
 ```json
@@ -795,6 +1227,28 @@ def random_bot():
 {}
 ```
 
+**Response Body Description**
+
+- **guild_count** => i64 [default/example = 0]
+- **description** => string [default/example = ""]
+- **banner** => string [default/example = ""]
+- **nsfw** => bool [default/example = false]
+- **votes** => i64 [default/example = 0]
+- **state** => i32 [default/example = 0]
+- **user** => Struct User 
+	- **id** => string [default/example = ""]
+	- **username** => string [default/example = ""]
+	- **disc** => string [default/example = ""]
+	- **avatar** => string [default/example = ""]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **flags** => (Array) 
+
+
+
 **Response Body Example**
 
 ```json
@@ -860,6 +1314,28 @@ def random_server():
 {}
 ```
 
+**Response Body Description**
+
+- **guild_count** => i64 [default/example = 0]
+- **description** => string [default/example = ""]
+- **banner** => string [default/example = ""]
+- **nsfw** => bool [default/example = false]
+- **votes** => i64 [default/example = 0]
+- **state** => i32 [default/example = 0]
+- **user** => Struct User 
+	- **id** => string [default/example = ""]
+	- **username** => string [default/example = ""]
+	- **disc** => string [default/example = ""]
+	- **avatar** => string [default/example = ""]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **flags** => (Array) 
+
+
+
 **Response Body Example**
 
 ```json
@@ -910,7 +1386,6 @@ server privacy restrictions
 
 **Query parameters**
 
-- **lang** => None (unknown value type)
 
 
 
@@ -924,6 +1399,41 @@ server privacy restrictions
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **user** => Struct User 
+	- **id** => string [default/example = ""]
+	- **username** => string [default/example = ""]
+	- **disc** => string [default/example = ""]
+	- **avatar** => string [default/example = ""]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **description** => string [default/example = ""]
+- **tags** => (Array) 
+- **long_description_type** => i32 [default/example = 1]
+- **long_description** => string [default/example = ""]
+- **long_description_raw** => string [default/example = ""]
+- **vanity** => (Optional) string [default/example = "server-vanity"]
+- **guild_count** => i64 [default/example = 0]
+- **invite_amount** => i32 [default/example = 0]
+- **invite_link** => (Optional) string [default/example = "Only present if ``Frostpaw-Invite`` header is set"]
+- **created_at** => string [default/example = "1970-01-01T00:00:00Z"]
+- **state** => i32 [default/example = 0]
+- **flags** => (Array) 
+- **css** => string [default/example = ""]
+- **website** => (Optional) string [default/example = "https://frostpaw.com"]
+- **banner_card** => (Optional) string [default/example = "https://frostpaw.com/assets/img/banner-card.png"]
+- **banner_page** => (Optional) string [default/example = "https://frostpaw.com/assets/img/banner-page.png"]
+- **keep_banner_decor** => bool [default/example = false]
+- **nsfw** => bool [default/example = false]
+- **votes** => i64 [default/example = 0]
+- **total_votes** => i64 [default/example = 0]
+
+
 
 **Response Body Example**
 
@@ -942,17 +1452,17 @@ server privacy restrictions
     "long_description_type": 1,
     "long_description": "",
     "long_description_raw": "",
-    "vanity": null,
+    "vanity": "server-vanity",
     "guild_count": 0,
     "invite_amount": 0,
-    "invite_link": null,
+    "invite_link": "Only present if ``Frostpaw-Invite`` header is set",
     "created_at": "1970-01-01T00:00:00Z",
     "state": 0,
     "flags": [],
     "css": "",
-    "website": null,
-    "banner_card": null,
-    "banner_page": null,
+    "website": "https://frostpaw.com",
+    "banner_card": "https://frostpaw.com/assets/img/banner-card.png",
+    "banner_page": "https://frostpaw.com/assets/img/banner-page.png",
     "keep_banner_decor": false,
     "nsfw": false,
     "votes": 0,
@@ -1005,6 +1515,16 @@ this however, it is prone to change *anytime* in the future**.
 {}
 ```
 
+**Response Body Description**
+
+- **votes** => i64 [default/example = 10]
+- **voted** => bool [default/example = true]
+- **vote_right_now** => bool [default/example = false]
+- **expiry** => u64 [default/example = 101]
+- **timestamps** => (Array) string [default/example = "1970-01-01T00:00:00Z"]
+
+
+
 **Response Body Example**
 
 ```json
@@ -1026,8 +1546,6 @@ this however, it is prone to change *anytime* in the future**.
 
 
 This endpoint creates a vote for a bot which can only be done *once* every 8 hours.
-
-**It is documented purely to enable staff to use it**
 
 
 **Path parameters**
@@ -1054,13 +1572,73 @@ This endpoint creates a vote for a bot which can only be done *once* every 8 hou
 {}
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = false]
+- **reason** => (Optional) string [default/example = "Why the vote failed or any extra info to send to client if the vote succeeded"]
+- **context** => (Optional) string [default/example = "Some context on the vote"]
+
+
+
 **Response Body Example**
 
 ```json
 {
     "done": false,
-    "reason": "Why the vote failed",
-    "context": null
+    "reason": "Why the vote failed or any extra info to send to client if the vote succeeded",
+    "context": "Some context on the vote"
+}
+```
+**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+
+
+### Create Server Vote
+#### PATCH /users/{user_id}/servers/{server_id}/votes
+
+
+This endpoint creates a vote for a server which can only be done *once* every 8 hours
+and is independent from a bot vote.
+
+
+**Path parameters**
+
+- **user_id** => i64 [default/example = 0]
+- **server_id** => i64 [default/example = 0]
+
+
+
+**Query parameters**
+
+- **test** => bool [default/example = true]
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
+
+```json
+{}
+```
+
+**Response Body Description**
+
+- **done** => bool [default/example = false]
+- **reason** => (Optional) string [default/example = "Why the vote failed or any extra info to send to client if the vote succeeded"]
+- **context** => (Optional) string [default/example = "Some context on the vote"]
+
+
+
+**Response Body Example**
+
+```json
+{
+    "done": false,
+    "reason": "Why the vote failed or any extra info to send to client if the vote succeeded",
+    "context": "Some context on the vote"
 }
 ```
 **Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
@@ -1097,6 +1675,30 @@ index is too costly and making a new struct is unnecessary.
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **new** => (Array) 
+- **top_voted** => (Array) 
+- **certified** => (Array) 
+- **tags** => (Array) Struct Tag 
+	- **name** => string [default/example = ""]
+	- **iconify_data** => string [default/example = ""]
+	- **id** => string [default/example = ""]
+	- **owner_guild** => None (unknown value type)
+
+
+
+- **features** => (Array) Struct Feature 
+	- **id** => string [default/example = ""]
+	- **name** => string [default/example = ""]
+	- **viewed_as** => string [default/example = ""]
+	- **description** => string [default/example = ""]
+
+
+
+
+
 
 **Response Body Example**
 
@@ -1167,6 +1769,151 @@ Due to massive changes, this API cannot be mapped onto any v2 API
 {}
 ```
 
+**Response Body Description**
+
+- **bot** => Struct Bot 
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **description** => string [default/example = ""]
+	- **tags** => (Array) 
+	- **created_at** => string [default/example = "1970-01-01T00:00:00Z"]
+	- **last_updated_at** => string [default/example = "1970-01-01T00:00:00Z"]
+	- **last_stats_post** => string [default/example = "1970-01-01T00:00:00Z"]
+	- **long_description** => string [default/example = "blah blah blah"]
+	- **long_description_raw** => string [default/example = "blah blah blah unsanitized"]
+	- **long_description_type** => i32 [default/example = 1]
+	- **guild_count** => i64 [default/example = 0]
+	- **shard_count** => i64 [default/example = 493]
+	- **user_count** => i64 [default/example = 0]
+	- **shards** => (Array) 
+	- **prefix** => (Optional) string [default/example = "Some prefix, null = slash command"]
+	- **library** => string [default/example = ""]
+	- **invite** => (Optional) string [default/example = "Raw invite, null = auto-generated. Use invite_link instead"]
+	- **invite_link** => string [default/example = "https://discord.com/api/oauth2/authorize...."]
+	- **invite_amount** => i32 [default/example = 48]
+	- **owners** => (Array) Struct BotOwner 
+		- **user** => Struct User 
+			- **id** => string [default/example = ""]
+			- **username** => string [default/example = ""]
+			- **disc** => string [default/example = ""]
+			- **avatar** => string [default/example = ""]
+			- **bot** => bool [default/example = false]
+			- **status** => string [default/example = "Unknown"]
+
+
+
+		- **main** => bool [default/example = false]
+
+
+
+	- **owners_html** => string [default/example = ""]
+	- **features** => (Array) Struct Feature 
+		- **id** => string [default/example = ""]
+		- **name** => string [default/example = ""]
+		- **viewed_as** => string [default/example = ""]
+		- **description** => string [default/example = ""]
+
+
+
+	- **state** => i32 [default/example = 0]
+	- **page_style** => i32 [default/example = 1]
+	- **website** => (Optional) string [default/example = "https://example.com"]
+	- **support** => (Optional) string [default/example = ""]
+	- **github** => (Optional) string [default/example = "https://github.com/Fates-List/FatesList"]
+	- **css** => string [default/example = "<style></style>"]
+	- **votes** => i64 [default/example = 0]
+	- **total_votes** => i64 [default/example = 0]
+	- **vanity** => string [default/example = ""]
+	- **donate** => (Optional) string [default/example = "https://paypal.me/example"]
+	- **privacy_policy** => (Optional) string [default/example = "https://lynx.fateslist.xyz/frostpaw/tos"]
+	- **nsfw** => bool [default/example = false]
+	- **banner_card** => (Optional) string [default/example = "https://api.fateslist.xyz/static/botlisticon.webp"]
+	- **banner_page** => (Optional) string [default/example = "https://api.fateslist.xyz/static/botlisticon.webp"]
+	- **keep_banner_decor** => bool [default/example = false]
+	- **client_id** => string [default/example = ""]
+	- **flags** => (Array) 
+	- **action_logs** => (Array) Struct ActionLog 
+		- **user_id** => string [default/example = ""]
+		- **bot_id** => string [default/example = ""]
+		- **action** => i32 [default/example = 0]
+		- **action_time** => string [default/example = "1970-01-01T00:00:00Z"]
+		- **context** => (Optional) string [default/example = "Some context as to why the action happened"]
+
+
+
+	- **vpm** => (Optional) (Array) Struct VotesPerMonth 
+		- **votes** => i64 [default/example = 0]
+		- **ts** => string [default/example = "1970-01-01T00:00:00Z"]
+
+
+
+	- **uptime_checks_total** => (Optional) i32 [default/example = 30]
+	- **uptime_checks_failed** => (Optional) i32 [default/example = 19]
+	- **commands** => 	- **default** => (Array) Struct BotCommand 
+		- **cmd_type** => i32 [default/example = 0]
+		- **groups** => (Array) 
+		- **name** => string [default/example = ""]
+		- **vote_locked** => bool [default/example = false]
+		- **description** => string [default/example = ""]
+		- **args** => (Array) 
+		- **examples** => (Array) 
+		- **premium_only** => bool [default/example = false]
+		- **notes** => (Array) 
+		- **doc_link** => string [default/example = ""]
+		- **id** => None (unknown value type)
+		- **nsfw** => bool [default/example = false]
+
+
+
+
+
+
+- **resources** => (Array) Struct Resource 
+	- **id** => None (unknown value type)
+	- **resource_title** => string [default/example = ""]
+	- **resource_link** => string [default/example = ""]
+	- **resource_description** => string [default/example = ""]
+
+
+
+- **webhook** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
+- **webhook_secret** => (Optional) string [default/example = "This (along with ``webhook_type``, ``api_token`` and ``webhook_hmac_only``) will be redacted for Get Bot endpoint"]
+- **webhook_type** => None (unknown value type)
+- **webhook_hmac_only** => None (unknown value type)
+- **api_token** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
+
+
+- **context** => Struct BotSettingsContext 
+	- **tags** => (Array) Struct Tag 
+		- **name** => string [default/example = ""]
+		- **iconify_data** => string [default/example = ""]
+		- **id** => string [default/example = ""]
+		- **owner_guild** => None (unknown value type)
+
+
+
+	- **features** => (Array) Struct Feature 
+		- **id** => string [default/example = ""]
+		- **name** => string [default/example = ""]
+		- **viewed_as** => string [default/example = ""]
+		- **description** => string [default/example = ""]
+
+
+
+
+
+
+
+
+
 **Response Body Example**
 
 ```json
@@ -1192,9 +1939,9 @@ Due to massive changes, this API cannot be mapped onto any v2 API
         "shard_count": 493,
         "user_count": 0,
         "shards": [],
-        "prefix": null,
+        "prefix": "Some prefix, null = slash command",
         "library": "",
-        "invite": null,
+        "invite": "Raw invite, null = auto-generated. Use invite_link instead",
         "invite_link": "https://discord.com/api/oauth2/authorize....",
         "invite_amount": 48,
         "owners": [
@@ -1221,18 +1968,18 @@ Due to massive changes, this API cannot be mapped onto any v2 API
         ],
         "state": 0,
         "page_style": 1,
-        "website": null,
+        "website": "https://example.com",
         "support": "",
-        "github": null,
+        "github": "https://github.com/Fates-List/FatesList",
         "css": "<style></style>",
         "votes": 0,
         "total_votes": 0,
         "vanity": "",
-        "donate": null,
-        "privacy_policy": null,
+        "donate": "https://paypal.me/example",
+        "privacy_policy": "https://lynx.fateslist.xyz/frostpaw/tos",
         "nsfw": false,
-        "banner_card": null,
-        "banner_page": null,
+        "banner_card": "https://api.fateslist.xyz/static/botlisticon.webp",
+        "banner_page": "https://api.fateslist.xyz/static/botlisticon.webp",
         "keep_banner_decor": false,
         "client_id": "",
         "flags": [],
@@ -1242,7 +1989,7 @@ Due to massive changes, this API cannot be mapped onto any v2 API
                 "bot_id": "",
                 "action": 0,
                 "action_time": "1970-01-01T00:00:00Z",
-                "context": null
+                "context": "Some context as to why the action happened"
             }
         ],
         "vpm": [
@@ -1280,7 +2027,7 @@ Due to massive changes, this API cannot be mapped onto any v2 API
             }
         ],
         "webhook": "This will be redacted for Get Bot endpoint",
-        "webhook_secret": "This will be redacted for Get Bot endpoint",
+        "webhook_secret": "This (along with ``webhook_type``, ``api_token`` and ``webhook_hmac_only``) will be redacted for Get Bot endpoint",
         "webhook_type": null,
         "webhook_hmac_only": null,
         "api_token": "This will be redacted for Get Bot endpoint"
@@ -1336,6 +2083,14 @@ Returns the oauth2 link used to login with. ``reason`` contains the state UUID
 {}
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => (Optional) string [default/example = "https://discord.com/........."]
+
+
+
 **Response Body Example**
 
 ```json
@@ -1378,6 +2133,25 @@ Creates a oauth2 login given a code
     "state": "Random UUID right now"
 }
 ```
+
+**Response Body Description**
+
+- **state** => i32 [default/example = 0]
+- **token** => string [default/example = ""]
+- **user** => Struct User 
+	- **id** => string [default/example = ""]
+	- **username** => string [default/example = ""]
+	- **disc** => string [default/example = ""]
+	- **avatar** => string [default/example = ""]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **site_lang** => string [default/example = ""]
+- **css** => None (unknown value type)
+
+
 
 **Response Body Example**
 
@@ -1431,6 +2205,14 @@ This API is essentially a logout
 {}
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
+
 **Response Body Example**
 
 ```json
@@ -1475,6 +2257,14 @@ token ever gets leaked.
 {}
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
+
 **Response Body Example**
 
 ```json
@@ -1517,6 +2307,14 @@ token ever gets leaked.
 {}
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
+
 **Response Body Example**
 
 ```json
@@ -1558,6 +2356,14 @@ token ever gets leaked.
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
 
 **Response Body Example**
 
@@ -1625,9 +2431,9 @@ to false.
 - **shard_count** => i64 [default/example = 493]
 - **user_count** => i64 [default/example = 0]
 - **shards** => (Array) 
-- **prefix** => None (unknown value type)
+- **prefix** => (Optional) string [default/example = "Some prefix, null = slash command"]
 - **library** => string [default/example = ""]
-- **invite** => None (unknown value type)
+- **invite** => (Optional) string [default/example = "Raw invite, null = auto-generated. Use invite_link instead"]
 - **invite_link** => string [default/example = "https://discord.com/api/oauth2/authorize...."]
 - **invite_amount** => i32 [default/example = 48]
 - **owners** => (Array) Struct BotOwner 
@@ -1656,18 +2462,18 @@ to false.
 
 - **state** => i32 [default/example = 0]
 - **page_style** => i32 [default/example = 1]
-- **website** => None (unknown value type)
+- **website** => (Optional) string [default/example = "https://example.com"]
 - **support** => (Optional) string [default/example = ""]
-- **github** => None (unknown value type)
+- **github** => (Optional) string [default/example = "https://github.com/Fates-List/FatesList"]
 - **css** => string [default/example = "<style></style>"]
 - **votes** => i64 [default/example = 0]
 - **total_votes** => i64 [default/example = 0]
 - **vanity** => string [default/example = ""]
-- **donate** => None (unknown value type)
-- **privacy_policy** => None (unknown value type)
+- **donate** => (Optional) string [default/example = "https://paypal.me/example"]
+- **privacy_policy** => (Optional) string [default/example = "https://lynx.fateslist.xyz/frostpaw/tos"]
 - **nsfw** => bool [default/example = false]
-- **banner_card** => None (unknown value type)
-- **banner_page** => None (unknown value type)
+- **banner_card** => (Optional) string [default/example = "https://api.fateslist.xyz/static/botlisticon.webp"]
+- **banner_page** => (Optional) string [default/example = "https://api.fateslist.xyz/static/botlisticon.webp"]
 - **keep_banner_decor** => bool [default/example = false]
 - **client_id** => string [default/example = ""]
 - **flags** => (Array) 
@@ -1676,7 +2482,7 @@ to false.
 	- **bot_id** => string [default/example = ""]
 	- **action** => i32 [default/example = 0]
 	- **action_time** => string [default/example = "1970-01-01T00:00:00Z"]
-	- **context** => None (unknown value type)
+	- **context** => (Optional) string [default/example = "Some context as to why the action happened"]
 
 
 
@@ -1715,7 +2521,7 @@ to false.
 
 
 - **webhook** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
-- **webhook_secret** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
+- **webhook_secret** => (Optional) string [default/example = "This (along with ``webhook_type``, ``api_token`` and ``webhook_hmac_only``) will be redacted for Get Bot endpoint"]
 - **webhook_type** => None (unknown value type)
 - **webhook_hmac_only** => None (unknown value type)
 - **api_token** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
@@ -1746,9 +2552,9 @@ to false.
     "shard_count": 493,
     "user_count": 0,
     "shards": [],
-    "prefix": null,
+    "prefix": "Some prefix, null = slash command",
     "library": "",
-    "invite": null,
+    "invite": "Raw invite, null = auto-generated. Use invite_link instead",
     "invite_link": "https://discord.com/api/oauth2/authorize....",
     "invite_amount": 48,
     "owners": [
@@ -1775,18 +2581,18 @@ to false.
     ],
     "state": 0,
     "page_style": 1,
-    "website": null,
+    "website": "https://example.com",
     "support": "",
-    "github": null,
+    "github": "https://github.com/Fates-List/FatesList",
     "css": "<style></style>",
     "votes": 0,
     "total_votes": 0,
     "vanity": "",
-    "donate": null,
-    "privacy_policy": null,
+    "donate": "https://paypal.me/example",
+    "privacy_policy": "https://lynx.fateslist.xyz/frostpaw/tos",
     "nsfw": false,
-    "banner_card": null,
-    "banner_page": null,
+    "banner_card": "https://api.fateslist.xyz/static/botlisticon.webp",
+    "banner_page": "https://api.fateslist.xyz/static/botlisticon.webp",
     "keep_banner_decor": false,
     "client_id": "",
     "flags": [],
@@ -1796,7 +2602,7 @@ to false.
             "bot_id": "",
             "action": 0,
             "action_time": "1970-01-01T00:00:00Z",
-            "context": null
+            "context": "Some context as to why the action happened"
         }
     ],
     "vpm": [
@@ -1834,12 +2640,20 @@ to false.
         }
     ],
     "webhook": "This will be redacted for Get Bot endpoint",
-    "webhook_secret": "This will be redacted for Get Bot endpoint",
+    "webhook_secret": "This (along with ``webhook_type``, ``api_token`` and ``webhook_hmac_only``) will be redacted for Get Bot endpoint",
     "webhook_type": null,
     "webhook_hmac_only": null,
     "api_token": "This will be redacted for Get Bot endpoint"
 }
 ```
+
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
 
 **Response Body Example**
 
@@ -1905,9 +2719,9 @@ to false.
 - **shard_count** => i64 [default/example = 493]
 - **user_count** => i64 [default/example = 0]
 - **shards** => (Array) 
-- **prefix** => None (unknown value type)
+- **prefix** => (Optional) string [default/example = "Some prefix, null = slash command"]
 - **library** => string [default/example = ""]
-- **invite** => None (unknown value type)
+- **invite** => (Optional) string [default/example = "Raw invite, null = auto-generated. Use invite_link instead"]
 - **invite_link** => string [default/example = "https://discord.com/api/oauth2/authorize...."]
 - **invite_amount** => i32 [default/example = 48]
 - **owners** => (Array) Struct BotOwner 
@@ -1936,18 +2750,18 @@ to false.
 
 - **state** => i32 [default/example = 0]
 - **page_style** => i32 [default/example = 1]
-- **website** => None (unknown value type)
+- **website** => (Optional) string [default/example = "https://example.com"]
 - **support** => (Optional) string [default/example = ""]
-- **github** => None (unknown value type)
+- **github** => (Optional) string [default/example = "https://github.com/Fates-List/FatesList"]
 - **css** => string [default/example = "<style></style>"]
 - **votes** => i64 [default/example = 0]
 - **total_votes** => i64 [default/example = 0]
 - **vanity** => string [default/example = ""]
-- **donate** => None (unknown value type)
-- **privacy_policy** => None (unknown value type)
+- **donate** => (Optional) string [default/example = "https://paypal.me/example"]
+- **privacy_policy** => (Optional) string [default/example = "https://lynx.fateslist.xyz/frostpaw/tos"]
 - **nsfw** => bool [default/example = false]
-- **banner_card** => None (unknown value type)
-- **banner_page** => None (unknown value type)
+- **banner_card** => (Optional) string [default/example = "https://api.fateslist.xyz/static/botlisticon.webp"]
+- **banner_page** => (Optional) string [default/example = "https://api.fateslist.xyz/static/botlisticon.webp"]
 - **keep_banner_decor** => bool [default/example = false]
 - **client_id** => string [default/example = ""]
 - **flags** => (Array) 
@@ -1956,7 +2770,7 @@ to false.
 	- **bot_id** => string [default/example = ""]
 	- **action** => i32 [default/example = 0]
 	- **action_time** => string [default/example = "1970-01-01T00:00:00Z"]
-	- **context** => None (unknown value type)
+	- **context** => (Optional) string [default/example = "Some context as to why the action happened"]
 
 
 
@@ -1995,7 +2809,7 @@ to false.
 
 
 - **webhook** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
-- **webhook_secret** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
+- **webhook_secret** => (Optional) string [default/example = "This (along with ``webhook_type``, ``api_token`` and ``webhook_hmac_only``) will be redacted for Get Bot endpoint"]
 - **webhook_type** => None (unknown value type)
 - **webhook_hmac_only** => None (unknown value type)
 - **api_token** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
@@ -2026,9 +2840,9 @@ to false.
     "shard_count": 493,
     "user_count": 0,
     "shards": [],
-    "prefix": null,
+    "prefix": "Some prefix, null = slash command",
     "library": "",
-    "invite": null,
+    "invite": "Raw invite, null = auto-generated. Use invite_link instead",
     "invite_link": "https://discord.com/api/oauth2/authorize....",
     "invite_amount": 48,
     "owners": [
@@ -2055,18 +2869,18 @@ to false.
     ],
     "state": 0,
     "page_style": 1,
-    "website": null,
+    "website": "https://example.com",
     "support": "",
-    "github": null,
+    "github": "https://github.com/Fates-List/FatesList",
     "css": "<style></style>",
     "votes": 0,
     "total_votes": 0,
     "vanity": "",
-    "donate": null,
-    "privacy_policy": null,
+    "donate": "https://paypal.me/example",
+    "privacy_policy": "https://lynx.fateslist.xyz/frostpaw/tos",
     "nsfw": false,
-    "banner_card": null,
-    "banner_page": null,
+    "banner_card": "https://api.fateslist.xyz/static/botlisticon.webp",
+    "banner_page": "https://api.fateslist.xyz/static/botlisticon.webp",
     "keep_banner_decor": false,
     "client_id": "",
     "flags": [],
@@ -2076,7 +2890,7 @@ to false.
             "bot_id": "",
             "action": 0,
             "action_time": "1970-01-01T00:00:00Z",
-            "context": null
+            "context": "Some context as to why the action happened"
         }
     ],
     "vpm": [
@@ -2114,12 +2928,20 @@ to false.
         }
     ],
     "webhook": "This will be redacted for Get Bot endpoint",
-    "webhook_secret": "This will be redacted for Get Bot endpoint",
+    "webhook_secret": "This (along with ``webhook_type``, ``api_token`` and ``webhook_hmac_only``) will be redacted for Get Bot endpoint",
     "webhook_type": null,
     "webhook_hmac_only": null,
     "api_token": "This will be redacted for Get Bot endpoint"
 }
 ```
+
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
 
 **Response Body Example**
 
@@ -2186,6 +3008,14 @@ You **must** be main owner to use this endpoint.
 }
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
+
 **Response Body Example**
 
 ```json
@@ -2230,6 +3060,14 @@ You **must** be main owner to use this endpoint.
 {}
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
+
 **Response Body Example**
 
 ```json
@@ -2269,6 +3107,17 @@ Returns a array of sources that a bot can be imported from.
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **sources** => (Array) Struct ImportSourceListItem 
+	- **id** => string [default/example = "Rdl"]
+	- **name** => string [default/example = "Rovel Bot List"]
+
+
+
+
+
 
 **Response Body Example**
 
@@ -2315,6 +3164,14 @@ Imports a bot from a source listed in ``Get Import Sources``.
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
 
 **Response Body Example**
 
@@ -2368,6 +3225,14 @@ Creates a appeal/request for a bot.
     "appeal": "This bot deserves to be unbanned because..."
 }
 ```
+
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
 
 **Response Body Example**
 
@@ -2476,6 +3341,14 @@ but must exist in the object
 }
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
+
 **Response Body Example**
 
 ```json
@@ -2519,6 +3392,38 @@ Gets a user profile.
 {}
 ```
 
+**Response Body Description**
+
+- **user** => Struct User 
+	- **id** => string [default/example = ""]
+	- **username** => string [default/example = ""]
+	- **disc** => string [default/example = ""]
+	- **avatar** => string [default/example = ""]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **bots** => (Array) 
+- **description** => string [default/example = ""]
+- **profile_css** => string [default/example = ""]
+- **user_css** => string [default/example = ""]
+- **vote_reminder_channel** => (Optional) string [default/example = "939123825885474898"]
+- **packs** => (Array) 
+- **state** => i32 [default/example = 0]
+- **site_lang** => string [default/example = ""]
+- **action_logs** => (Array) Struct ActionLog 
+	- **user_id** => string [default/example = ""]
+	- **bot_id** => string [default/example = ""]
+	- **action** => i32 [default/example = 0]
+	- **action_time** => string [default/example = "1970-01-01T00:00:00Z"]
+	- **context** => (Optional) string [default/example = "Some context as to why the action happened"]
+
+
+
+
+
+
 **Response Body Example**
 
 ```json
@@ -2545,7 +3450,7 @@ Gets a user profile.
             "bot_id": "",
             "action": 0,
             "action_time": "1970-01-01T00:00:00Z",
-            "context": null
+            "context": "Some context as to why the action happened"
         }
     ]
 }
@@ -2599,7 +3504,7 @@ be present
 	- **bot_id** => string [default/example = ""]
 	- **action** => i32 [default/example = 0]
 	- **action_time** => string [default/example = "1970-01-01T00:00:00Z"]
-	- **context** => None (unknown value type)
+	- **context** => (Optional) string [default/example = "Some context as to why the action happened"]
 
 
 
@@ -2632,11 +3537,19 @@ be present
             "bot_id": "",
             "action": 0,
             "action_time": "1970-01-01T00:00:00Z",
-            "context": null
+            "context": "Some context as to why the action happened"
         }
     ]
 }
 ```
+
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
 
 **Response Body Example**
 
@@ -2701,6 +3614,77 @@ This may change in the future and is given by ``per_page`` key.
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **reviews** => (Array) Struct Review 
+	- **id** => None (unknown value type)
+	- **reply** => bool [default/example = false]
+	- **star_rating** => string [default/example = "0"]
+	- **review_text** => string [default/example = ""]
+	- **votes** => Struct ParsedReviewVotes 
+		- **votes** => (Array) 
+		- **upvotes** => (Array) 
+		- **downvotes** => (Array) 
+
+
+
+	- **flagged** => bool [default/example = false]
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **epoch** => (Array) 
+	- **replies** => (Array) 
+	- **parent_id** => None (unknown value type)
+
+
+
+- **per_page** => i64 [default/example = 9]
+- **from** => i64 [default/example = 0]
+- **stats** => Struct ReviewStats 
+	- **average_stars** => string [default/example = "8.800000"]
+	- **total** => i64 [default/example = 78]
+
+
+
+- **user_review** => (Optional) Struct Review 
+	- **id** => None (unknown value type)
+	- **reply** => bool [default/example = false]
+	- **star_rating** => string [default/example = "0"]
+	- **review_text** => string [default/example = ""]
+	- **votes** => Struct ParsedReviewVotes 
+		- **votes** => (Array) 
+		- **upvotes** => (Array) 
+		- **downvotes** => (Array) 
+
+
+
+	- **flagged** => bool [default/example = false]
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **epoch** => (Array) 
+	- **replies** => (Array) 
+	- **parent_id** => None (unknown value type)
+
+
+
+
+
 
 **Response Body Example**
 
@@ -2858,6 +3842,14 @@ also match the user token sent in the ``Authorization`` header
 }
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
+
 **Response Body Example**
 
 ```json
@@ -2911,7 +3903,7 @@ also match the user token sent in the ``Authorization`` header
 
 **Request Body Description**
 
-- **id** => (Optional) string [default/example = "1ceda8a1-9b0c-47f9-961a-52c725190986"]
+- **id** => (Optional) string [default/example = "789b339f-65c7-4308-b6c9-98022982fb03"]
 - **reply** => bool [default/example = false]
 - **star_rating** => string [default/example = "0"]
 - **review_text** => string [default/example = ""]
@@ -2943,7 +3935,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "1ceda8a1-9b0c-47f9-961a-52c725190986",
+    "id": "789b339f-65c7-4308-b6c9-98022982fb03",
     "reply": false,
     "star_rating": "0",
     "review_text": "",
@@ -2967,6 +3959,14 @@ also match the user token sent in the ``Authorization`` header
 }
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
+
 **Response Body Example**
 
 ```json
@@ -2988,7 +3988,7 @@ Deletes a review
 ``rid`` must be a valid uuid.
 
 ``user_id`` is *required* for this endpoint and must be the user making the review. It must
-also match the user token sent in the ``Authorization`` header
+also match the user token sent in the ``Authorization`` header. ``page`` is currently ignored
 
 A reviewable entity is currently only a bot or a server. Profile reviews are a possibility
 in the future.
@@ -3001,7 +4001,7 @@ set this a TargetType anyways so you might as well set it correctly.
 
 **Path parameters**
 
-- **rid** => string [default/example = "84561918-fab0-47e5-8f44-8b1d39f69481"]
+- **rid** => string [default/example = "1bdee305-ae78-4e29-87a1-5b4b466516c8"]
 
 
 
@@ -3023,6 +4023,14 @@ set this a TargetType anyways so you might as well set it correctly.
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
 
 **Response Body Example**
 
@@ -3059,7 +4067,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 
 **Path parameters**
 
-- **rid** => string [default/example = "2dfae064-a6bc-4e4a-8463-63249e9a0d52"]
+- **rid** => string [default/example = "61f2f7d5-daf7-4b74-9eb2-c1b8908491fc"]
 
 
 
@@ -3083,6 +4091,14 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
     "upvote": true
 }
 ```
+
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
 
 **Response Body Example**
 
@@ -3129,6 +4145,48 @@ if the list grows and then requires it.
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **total_bots** => i64 [default/example = 0]
+- **total_servers** => i64 [default/example = 0]
+- **total_users** => i64 [default/example = 0]
+- **bots** => (Array) Struct IndexBot 
+	- **guild_count** => i64 [default/example = 0]
+	- **description** => string [default/example = ""]
+	- **banner** => string [default/example = ""]
+	- **nsfw** => bool [default/example = false]
+	- **votes** => i64 [default/example = 0]
+	- **state** => i32 [default/example = 0]
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **flags** => (Array) 
+
+
+
+- **servers** => (Array) 
+- **uptime** => f64 [default/example = 0]
+- **cpu_idle** => f64 [default/example = 0]
+- **mem_total** => u64 [default/example = 0]
+- **mem_free** => u64 [default/example = 0]
+- **mem_available** => u64 [default/example = 0]
+- **swap_total** => u64 [default/example = 0]
+- **swap_free** => u64 [default/example = 0]
+- **mem_dirty** => u64 [default/example = 0]
+- **mem_active** => u64 [default/example = 0]
+- **mem_inactive** => u64 [default/example = 0]
+- **mem_buffers** => u64 [default/example = 0]
+- **mem_committed** => u64 [default/example = 0]
+
+
 
 **Response Body Example**
 
@@ -3221,6 +4279,14 @@ This is the ``target_type``
 }
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
+
 **Response Body Example**
 
 ```json
@@ -3254,7 +4320,7 @@ This is the ``target_type``
 
 **Query parameters**
 
-- **id** => string [default/example = "252b5208-5dda-4444-a6ba-231f3ed2ba52"]
+- **id** => string [default/example = "7ecb1079-d7ed-4e87-b6ee-015a6b4cdf31"]
 - **target_type** => i32 [default/example = 0]
 
 
@@ -3269,6 +4335,14 @@ This is the ``target_type``
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
 
 **Response Body Example**
 
@@ -3356,6 +4430,14 @@ multiple requests**
 }
 ```
 
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
+
 **Response Body Example**
 
 ```json
@@ -3404,6 +4486,14 @@ UUIDs in the case of ids. Bad names/ids will be ignored
 ```json
 {}
 ```
+
+**Response Body Description**
+
+- **done** => bool [default/example = true]
+- **reason** => None (unknown value type)
+- **context** => None (unknown value type)
+
+
 
 **Response Body Example**
 

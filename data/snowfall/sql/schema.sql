@@ -59,7 +59,6 @@ CREATE TABLE bots (
     webhook text,
     webhook_secret text,
     webhook_hmac_only boolean default false,
-    site_lang TEXT DEFAULT 'default',
     description text,
     long_description text,
     long_description_parsed text,
@@ -84,12 +83,12 @@ CREATE TABLE bots (
     privacy_policy text,
     nsfw boolean DEFAULT false,
     verifier bigint,
-    js_allowed BOOLEAN DEFAULT TRUE,
-    system boolean default false,
     uptime_checks_total integer default 0,
     uptime_checks_failed integer default 0,
     di_text text
 );
+
+CREATE INDEX bots_ext_index ON bots (username_cached, created_at, nsfw, prefix, privacy_policy, page_style); 
 
 CREATE TABLE resources (
     id uuid primary key DEFAULT uuid_generate_v4(),
