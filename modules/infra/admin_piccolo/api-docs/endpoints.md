@@ -70,22 +70,27 @@ def post_stats(bot_id: int, guild_count: int):
 ```
 
 
-**API v2 analogue:** (no longer working) [Post Stats](https://legacy.fateslist.xyz/api/docs/redoc#operation/set_stats)
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+- **guild_count** => i64 [default/example = 3939]
+- **shard_count** => (Optional) i64 [default/example = 48484]
+- **shards** => (Optional) (Array) i32 [default/example = 149]i32 [default/example = 22020]
+- **user_count** => (Optional) i64 [default/example = 39393]
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -99,7 +104,7 @@ def post_stats(bot_id: int, guild_count: int):
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -116,28 +121,29 @@ def post_stats(bot_id: int, guild_count: int):
 
 Returns the index for bots and servers
 
-**API v2 analogue:** (no longer working) [Get Index](https://legacy.fateslist.xyz/docs/redoc#operation/get_index)
+**Path parameters**
+
+
+
 
 **Query parameters**
 
-- **target_type** [String? | default = bot (type info may be incomplete, see example)]
+- **target_type** => (Optional) string [default/example = "bot"]
 
 
-**Example**
 
-```json
-{
-    "target_type": "bot"
-}
-```
+**Request Body Description**
 
-**Request Body**
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -224,28 +230,29 @@ Returns the index for bots and servers
 
 Resolves the vanity for a bot/server in the list
 
-**API v2 analogue:** (no longer working) [Get Vanity](https://legacy.fateslist.xyz/docs/redoc#operation/get_vanity)
-
 **Path parameters**
 
-- **code** [String (type info may be incomplete, see example)]
+- **code** => string [default/example = "my-vanity"]
 
 
-**Example**
 
-```json
-{
-    "code": "my-vanity"
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -256,44 +263,33 @@ Resolves the vanity for a bot/server in the list
 **Authorization Needed** | 
 
 
-### Get Policies
-#### GET /policies
-
-Get policies (rules, privacy policy, terms of service)
-
-**API v2 analogue:** (no longer working) [All Policies](https://legacy.fateslist.xyz/api/docs/redoc#operation/all_policies)
-
-**Request Body**
-
-```json
-{}
-```
-
-**Response Body**
-
-```json
-{
-    "rules": {},
-    "privacy_policy": {}
-}
-```
-**Authorization Needed** | 
-
-
 ### Get Partners
 #### GET /partners
 
 Get policies (rules, privacy policy, terms of service)
 
-**API v2 analogue:** (no longer working) [Get Partners](https://legacy.fateslist.xyz/api/docs/redoc#operation/get_partners)
+**Path parameters**
 
-**Request Body**
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -321,9 +317,24 @@ Get policies (rules, privacy policy, terms of service)
 
 Given the preview and long description, parse it and give the sanitized output. You must first connect over websocket!
 
-**API v2 analogue:** None
+**Path parameters**
 
-**Request Body**
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+- **text** => string [default/example = ""]
+- **long_description_type** => i32 [default/example = 1]
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -332,7 +343,7 @@ Given the preview and long description, parse it and give the sanitized output. 
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -363,41 +374,30 @@ This is to allow reuse of the Bot struct in Get Bot Settings which does contain 
 **Set the Frostpaw header if you are a custom client. Send Frostpaw-Invite header on invites**
 
 
-**API v2 analogue:** [Fetch Bot](https://legacy.fateslist.xyz/docs/redoc#operation/fetch_bot)
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
-
-```json
-{
-    "id": 0
-}
-```
 
 **Query parameters**
 
-- **lang** [Optional <String> (type info may be incomplete, see example)]
+- **lang** => None (unknown value type)
 
 
-**Example**
 
-```json
-{
-    "lang": null
-}
-```
+**Request Body Description**
 
-**Request Body**
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -521,30 +521,36 @@ This is to allow reuse of the Bot struct in Get Bot Settings which does contain 
 ### Search List
 #### GET /search?q={query}
 
-Searches the list based on a query named ``q``
 
-**API v2 analogue:** (no longer working) [Search List](https://legacy.fateslist.xyz/docs/redoc#operation/search_list)
+Searches the list based on a query named ``q``. 
+        
+Using -1 for ``gc_to`` will disable ``gc_to`` field
+
+**Path parameters**
+
+
+
 
 **Query parameters**
 
-- **q** [String? | default = mew (type info may be incomplete, see example)]
+- **q** => string [default/example = "mew"]
+- **gc_from** => i64 [default/example = 1]
+- **gc_to** => i64 [default/example = -1]
 
 
-**Example**
 
-```json
-{
-    "q": "mew"
-}
-```
+**Request Body Description**
 
-**Request Body**
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -659,28 +665,29 @@ Searches the list based on a query named ``q``
 
 Searches the list for all bots/servers with tag *exactly* specified ``q``
 
-**API v2 analogue:** (no longer working) [Search List](https://legacy.fateslist.xyz/docs/redoc#operation/search_list)
+**Path parameters**
+
+
+
 
 **Query parameters**
 
-- **q** [String? | default = music (type info may be incomplete, see example)]
+- **q** => string [default/example = "music"]
 
 
-**Example**
 
-```json
-{
-    "q": "music"
-}
-```
+**Request Body Description**
 
-**Request Body**
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -767,15 +774,28 @@ def random_bot():
 ```
 
 
-**API v2 analogue:** (no longer working) [Fetch Random Bot](https://legacy.fateslist.xyz/api/docs/redoc#operation/fetch_random_bot)
+**Path parameters**
 
-**Request Body**
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -819,15 +839,28 @@ def random_server():
 ```
 
 
-**API v2 analogue:** (no longer working) [Fetch Random Server](https://legacy.fateslist.xyz/api/docs/redoc#operation/fetch_random_server)
+**Path parameters**
 
-**Request Body**
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -869,41 +902,30 @@ server privacy restrictions
 **Set the Frostpaw header if you are a custom client**
 
 
-**API v2 analogue:** (no longer working) [Fetch Server](https://legacy.fateslist.xyz/docs/redoc#operation/fetch_server)
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
-
-```json
-{
-    "id": 0
-}
-```
 
 **Query parameters**
 
-- **lang** [Optional <String> (type info may be incomplete, see example)]
+- **lang** => None (unknown value type)
 
 
-**Example**
 
-```json
-{
-    "lang": null
-}
-```
+**Request Body Description**
 
-**Request Body**
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -940,7 +962,7 @@ server privacy restrictions
 **Authorization Needed** | 
 
 
-### Get User Votes
+### Get Bot Votes
 #### GET /users/{user_id}/bots/{bot_id}/votes
 
 
@@ -960,30 +982,30 @@ this however, it is prone to change *anytime* in the future**.
 - ``vts`` has been renamed to ``timestamps``
 
 
-**API v2 analogue:** (no longer working) [Get User Votes](https://legacy.fateslist.xyz/api/docs/redoc#operation/get_user_votes)
-
 **Path parameters**
 
-- **user_id** [i64 (type info may be incomplete, see example)]
-- **bot_id** [i64 (type info may be incomplete, see example)]
+- **user_id** => i64 [default/example = 0]
+- **bot_id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "user_id": 0,
-    "bot_id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -999,7 +1021,7 @@ this however, it is prone to change *anytime* in the future**.
 **Authorization Needed** | 
 
 
-### Create User Vote
+### Create Bot Vote
 #### PATCH /users/{user_id}/bots/{bot_id}/votes
 
 
@@ -1008,43 +1030,31 @@ This endpoint creates a vote for a bot which can only be done *once* every 8 hou
 **It is documented purely to enable staff to use it**
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **user_id** [i64 (type info may be incomplete, see example)]
-- **bot_id** [i64 (type info may be incomplete, see example)]
+- **user_id** => i64 [default/example = 0]
+- **bot_id** => i64 [default/example = 0]
 
 
-**Example**
-
-```json
-{
-    "user_id": 0,
-    "bot_id": 0
-}
-```
 
 **Query parameters**
 
-- **test** [bool (type info may be incomplete, see example)]
+- **test** => bool [default/example = true]
 
 
-**Example**
 
-```json
-{
-    "test": true
-}
-```
+**Request Body Description**
 
-**Request Body**
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1067,15 +1077,28 @@ This is used internally by sunbeam for the add bot system where a full bot
 index is too costly and making a new struct is unnecessary.
 
 
-**API v2 analogue:** None
+**Path parameters**
 
-**Request Body**
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1121,30 +1144,30 @@ Staff members *should* instead use Lynx.
 Due to massive changes, this API cannot be mapped onto any v2 API
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **user_id** [i64 (type info may be incomplete, see example)]
-- **bot_id** [i64 (type info may be incomplete, see example)]
+- **user_id** => i64 [default/example = 0]
+- **bot_id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "user_id": 0,
-    "bot_id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1292,15 +1315,28 @@ Due to massive changes, this API cannot be mapped onto any v2 API
 
 Returns the oauth2 link used to login with. ``reason`` contains the state UUID
 
-**API v2 analogue:** (no longer working) [Get OAuth2 Link](https://legacy.fateslist.xyz/docs/redoc#operation/get_oauth2_link)
+**Path parameters**
 
-**Request Body**
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1317,9 +1353,24 @@ Returns the oauth2 link used to login with. ``reason`` contains the state UUID
 
 Creates a oauth2 login given a code
 
-**API v2 analogue:** (no longer working) [Login User](https://legacy.fateslist.xyz/api/docs/redoc#operation/login_user)
+**Path parameters**
 
-**Request Body**
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+- **code** => string [default/example = "code from discord oauth"]
+- **state** => (Optional) string [default/example = "Random UUID right now"]
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -1328,7 +1379,7 @@ Creates a oauth2 login given a code
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1359,15 +1410,28 @@ even if you do not use cookies as it may perform other logout tasks in future
 This API is essentially a logout
 
 
-**API v2 analogue:** (no longer working) [Logout Sunbeam](https://legacy.fateslist.xyz/docs/redoc#operation/logout_sunbeam)
+**Path parameters**
 
-**Request Body**
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1389,28 +1453,29 @@ This API is essentially a logout
 token ever gets leaked.
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1430,28 +1495,29 @@ token ever gets leaked.
 token ever gets leaked.
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1471,28 +1537,29 @@ token ever gets leaked.
 token ever gets leaked.
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1523,22 +1590,139 @@ containing ``id`` filled in and the rest of a ``user``empty strings. Set ``bot``
 to false.
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+- **user** => Struct User 
+	- **id** => string [default/example = ""]
+	- **username** => string [default/example = ""]
+	- **disc** => string [default/example = ""]
+	- **avatar** => string [default/example = ""]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **description** => string [default/example = ""]
+- **tags** => (Array) 
+- **created_at** => string [default/example = "1970-01-01T00:00:00Z"]
+- **last_updated_at** => string [default/example = "1970-01-01T00:00:00Z"]
+- **last_stats_post** => string [default/example = "1970-01-01T00:00:00Z"]
+- **long_description** => string [default/example = "blah blah blah"]
+- **long_description_raw** => string [default/example = "blah blah blah unsanitized"]
+- **long_description_type** => i32 [default/example = 1]
+- **guild_count** => i64 [default/example = 0]
+- **shard_count** => i64 [default/example = 493]
+- **user_count** => i64 [default/example = 0]
+- **shards** => (Array) 
+- **prefix** => None (unknown value type)
+- **library** => string [default/example = ""]
+- **invite** => None (unknown value type)
+- **invite_link** => string [default/example = "https://discord.com/api/oauth2/authorize...."]
+- **invite_amount** => i32 [default/example = 48]
+- **owners** => (Array) Struct BotOwner 
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **main** => bool [default/example = false]
+
+
+
+- **owners_html** => string [default/example = ""]
+- **features** => (Array) Struct Feature 
+	- **id** => string [default/example = ""]
+	- **name** => string [default/example = ""]
+	- **viewed_as** => string [default/example = ""]
+	- **description** => string [default/example = ""]
+
+
+
+- **state** => i32 [default/example = 0]
+- **page_style** => i32 [default/example = 1]
+- **website** => None (unknown value type)
+- **support** => (Optional) string [default/example = ""]
+- **github** => None (unknown value type)
+- **css** => string [default/example = "<style></style>"]
+- **votes** => i64 [default/example = 0]
+- **total_votes** => i64 [default/example = 0]
+- **vanity** => string [default/example = ""]
+- **donate** => None (unknown value type)
+- **privacy_policy** => None (unknown value type)
+- **nsfw** => bool [default/example = false]
+- **banner_card** => None (unknown value type)
+- **banner_page** => None (unknown value type)
+- **keep_banner_decor** => bool [default/example = false]
+- **client_id** => string [default/example = ""]
+- **flags** => (Array) 
+- **action_logs** => (Array) Struct ActionLog 
+	- **user_id** => string [default/example = ""]
+	- **bot_id** => string [default/example = ""]
+	- **action** => i32 [default/example = 0]
+	- **action_time** => string [default/example = "1970-01-01T00:00:00Z"]
+	- **context** => None (unknown value type)
+
+
+
+- **vpm** => (Optional) (Array) Struct VotesPerMonth 
+	- **votes** => i64 [default/example = 0]
+	- **ts** => string [default/example = "1970-01-01T00:00:00Z"]
+
+
+
+- **uptime_checks_total** => (Optional) i32 [default/example = 30]
+- **uptime_checks_failed** => (Optional) i32 [default/example = 19]
+- **commands** => - **default** => (Array) Struct BotCommand 
+	- **cmd_type** => i32 [default/example = 0]
+	- **groups** => (Array) 
+	- **name** => string [default/example = ""]
+	- **vote_locked** => bool [default/example = false]
+	- **description** => string [default/example = ""]
+	- **args** => (Array) 
+	- **examples** => (Array) 
+	- **premium_only** => bool [default/example = false]
+	- **notes** => (Array) 
+	- **doc_link** => string [default/example = ""]
+	- **id** => None (unknown value type)
+	- **nsfw** => bool [default/example = false]
+
+
+
+
+
+- **resources** => (Array) Struct Resource 
+	- **id** => None (unknown value type)
+	- **resource_title** => string [default/example = ""]
+	- **resource_link** => string [default/example = ""]
+	- **resource_description** => string [default/example = ""]
+
+
+
+- **webhook** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
+- **webhook_secret** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
+- **webhook_type** => None (unknown value type)
+- **webhook_hmac_only** => None (unknown value type)
+- **api_token** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -1657,7 +1841,7 @@ to false.
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1686,22 +1870,139 @@ containing ``id`` filled in and the rest of a ``user``empty strings. Set ``bot``
 to false.
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+- **user** => Struct User 
+	- **id** => string [default/example = ""]
+	- **username** => string [default/example = ""]
+	- **disc** => string [default/example = ""]
+	- **avatar** => string [default/example = ""]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **description** => string [default/example = ""]
+- **tags** => (Array) 
+- **created_at** => string [default/example = "1970-01-01T00:00:00Z"]
+- **last_updated_at** => string [default/example = "1970-01-01T00:00:00Z"]
+- **last_stats_post** => string [default/example = "1970-01-01T00:00:00Z"]
+- **long_description** => string [default/example = "blah blah blah"]
+- **long_description_raw** => string [default/example = "blah blah blah unsanitized"]
+- **long_description_type** => i32 [default/example = 1]
+- **guild_count** => i64 [default/example = 0]
+- **shard_count** => i64 [default/example = 493]
+- **user_count** => i64 [default/example = 0]
+- **shards** => (Array) 
+- **prefix** => None (unknown value type)
+- **library** => string [default/example = ""]
+- **invite** => None (unknown value type)
+- **invite_link** => string [default/example = "https://discord.com/api/oauth2/authorize...."]
+- **invite_amount** => i32 [default/example = 48]
+- **owners** => (Array) Struct BotOwner 
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **main** => bool [default/example = false]
+
+
+
+- **owners_html** => string [default/example = ""]
+- **features** => (Array) Struct Feature 
+	- **id** => string [default/example = ""]
+	- **name** => string [default/example = ""]
+	- **viewed_as** => string [default/example = ""]
+	- **description** => string [default/example = ""]
+
+
+
+- **state** => i32 [default/example = 0]
+- **page_style** => i32 [default/example = 1]
+- **website** => None (unknown value type)
+- **support** => (Optional) string [default/example = ""]
+- **github** => None (unknown value type)
+- **css** => string [default/example = "<style></style>"]
+- **votes** => i64 [default/example = 0]
+- **total_votes** => i64 [default/example = 0]
+- **vanity** => string [default/example = ""]
+- **donate** => None (unknown value type)
+- **privacy_policy** => None (unknown value type)
+- **nsfw** => bool [default/example = false]
+- **banner_card** => None (unknown value type)
+- **banner_page** => None (unknown value type)
+- **keep_banner_decor** => bool [default/example = false]
+- **client_id** => string [default/example = ""]
+- **flags** => (Array) 
+- **action_logs** => (Array) Struct ActionLog 
+	- **user_id** => string [default/example = ""]
+	- **bot_id** => string [default/example = ""]
+	- **action** => i32 [default/example = 0]
+	- **action_time** => string [default/example = "1970-01-01T00:00:00Z"]
+	- **context** => None (unknown value type)
+
+
+
+- **vpm** => (Optional) (Array) Struct VotesPerMonth 
+	- **votes** => i64 [default/example = 0]
+	- **ts** => string [default/example = "1970-01-01T00:00:00Z"]
+
+
+
+- **uptime_checks_total** => (Optional) i32 [default/example = 30]
+- **uptime_checks_failed** => (Optional) i32 [default/example = 19]
+- **commands** => - **default** => (Array) Struct BotCommand 
+	- **cmd_type** => i32 [default/example = 0]
+	- **groups** => (Array) 
+	- **name** => string [default/example = ""]
+	- **vote_locked** => bool [default/example = false]
+	- **description** => string [default/example = ""]
+	- **args** => (Array) 
+	- **examples** => (Array) 
+	- **premium_only** => bool [default/example = false]
+	- **notes** => (Array) 
+	- **doc_link** => string [default/example = ""]
+	- **id** => None (unknown value type)
+	- **nsfw** => bool [default/example = false]
+
+
+
+
+
+- **resources** => (Array) Struct Resource 
+	- **id** => None (unknown value type)
+	- **resource_title** => string [default/example = ""]
+	- **resource_link** => string [default/example = ""]
+	- **resource_description** => string [default/example = ""]
+
+
+
+- **webhook** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
+- **webhook_secret** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
+- **webhook_type** => None (unknown value type)
+- **webhook_hmac_only** => None (unknown value type)
+- **api_token** => (Optional) string [default/example = "This will be redacted for Get Bot endpoint"]
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -1820,7 +2121,7 @@ to false.
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1841,24 +2142,35 @@ Transfers bot ownership.
 You **must** be main owner to use this endpoint.
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **user_id** [i64 (type info may be incomplete, see example)]
-- **bot_id** [i64 (type info may be incomplete, see example)]
+- **user_id** => i64 [default/example = 0]
+- **bot_id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "user_id": 0,
-    "bot_id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+- **user** => Struct User 
+	- **id** => string [default/example = "id here"]
+	- **username** => string [default/example = "Leave blank"]
+	- **disc** => string [default/example = "Leave blank"]
+	- **avatar** => string [default/example = "Leave blank"]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **main** => bool [default/example = true]
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -1874,7 +2186,7 @@ You **must** be main owner to use this endpoint.
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1895,30 +2207,30 @@ Deletes a bot.
 You **must** be main owner to use this endpoint.
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **user_id** [i64 (type info may be incomplete, see example)]
-- **bot_id** [i64 (type info may be incomplete, see example)]
+- **user_id** => i64 [default/example = 0]
+- **bot_id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "user_id": 0,
-    "bot_id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1937,15 +2249,28 @@ You **must** be main owner to use this endpoint.
 Returns a array of sources that a bot can be imported from.
 
 
-**API v2 analogue:** None
+**Path parameters**
 
-**Request Body**
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -1967,43 +2292,31 @@ Returns a array of sources that a bot can be imported from.
 Imports a bot from a source listed in ``Get Import Sources``.
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **user_id** [i64 (type info may be incomplete, see example)]
-- **bot_id** [i64 (type info may be incomplete, see example)]
+- **user_id** => i64 [default/example = 0]
+- **bot_id** => i64 [default/example = 0]
 
 
-**Example**
-
-```json
-{
-    "user_id": 0,
-    "bot_id": 0
-}
-```
 
 **Query parameters**
 
-- **src** [fates::models::ImportSource (type info may be incomplete, see example)]
+- **src** => string [default/example = "Rdl"]
 
 
-**Example**
 
-```json
-{
-    "src": "Rdl"
-}
-```
+**Request Body Description**
 
-**Request Body**
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2028,24 +2341,26 @@ Creates a appeal/request for a bot.
 **Ideally should only be used for custom clients**
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **user_id** [i64 (type info may be incomplete, see example)]
-- **bot_id** [i64 (type info may be incomplete, see example)]
+- **user_id** => i64 [default/example = 0]
+- **bot_id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "user_id": 0,
-    "bot_id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+- **request_type** => i32 [default/example = 0]
+- **appeal** => string [default/example = "This bot deserves to be unbanned because..."]
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -2054,7 +2369,7 @@ Creates a appeal/request for a bot.
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2080,9 +2395,54 @@ Creates a bot pack.
 but must exist in the object
 
 
-**API v2 analogue:** None
+**Path parameters**
 
-**Request Body**
+- **id** => i64 [default/example = 0]
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+- **id** => string [default/example = "0"]
+- **name** => string [default/example = ""]
+- **description** => string [default/example = ""]
+- **icon** => string [default/example = ""]
+- **banner** => string [default/example = ""]
+- **resolved_bots** => (Array) Struct ResolvedPackBot 
+	- **user** => Struct User 
+		- **id** => string [default/example = ""]
+		- **username** => string [default/example = ""]
+		- **disc** => string [default/example = ""]
+		- **avatar** => string [default/example = ""]
+		- **bot** => bool [default/example = false]
+		- **status** => string [default/example = "Unknown"]
+
+
+
+	- **description** => string [default/example = ""]
+
+
+
+- **owner** => Struct User 
+	- **id** => string [default/example = ""]
+	- **username** => string [default/example = ""]
+	- **disc** => string [default/example = ""]
+	- **avatar** => string [default/example = ""]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **created_at** => string [default/example = "1970-01-01T00:00:00Z"]
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -2116,7 +2476,7 @@ but must exist in the object
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2137,28 +2497,29 @@ but must exist in the object
 Gets a user profile.
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2174,11 +2535,19 @@ Gets a user profile.
     "description": "",
     "profile_css": "",
     "user_css": "",
-    "vote_reminder_channel": null,
+    "vote_reminder_channel": "939123825885474898",
     "packs": [],
     "state": 0,
     "site_lang": "",
-    "action_logs": []
+    "action_logs": [
+        {
+            "user_id": "",
+            "bot_id": "",
+            "action": 0,
+            "action_time": "1970-01-01T00:00:00Z",
+            "context": null
+        }
+    ]
 }
 ```
 **Authorization Needed** | 
@@ -2194,22 +2563,50 @@ Edits a user profile.
 be present
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "id": 0
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+- **user** => Struct User 
+	- **id** => string [default/example = ""]
+	- **username** => string [default/example = ""]
+	- **disc** => string [default/example = ""]
+	- **avatar** => string [default/example = ""]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **bots** => (Array) 
+- **description** => string [default/example = ""]
+- **profile_css** => string [default/example = ""]
+- **user_css** => string [default/example = ""]
+- **vote_reminder_channel** => (Optional) string [default/example = "939123825885474898"]
+- **packs** => (Array) 
+- **state** => i32 [default/example = 0]
+- **site_lang** => string [default/example = ""]
+- **action_logs** => (Array) Struct ActionLog 
+	- **user_id** => string [default/example = ""]
+	- **bot_id** => string [default/example = ""]
+	- **action** => i32 [default/example = 0]
+	- **action_time** => string [default/example = "1970-01-01T00:00:00Z"]
+	- **context** => None (unknown value type)
+
+
+
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -2225,15 +2622,23 @@ be present
     "description": "",
     "profile_css": "",
     "user_css": "",
-    "vote_reminder_channel": null,
+    "vote_reminder_channel": "939123825885474898",
     "packs": [],
     "state": 0,
     "site_lang": "",
-    "action_logs": []
+    "action_logs": [
+        {
+            "user_id": "",
+            "bot_id": "",
+            "action": 0,
+            "action_time": "1970-01-01T00:00:00Z",
+            "context": null
+        }
+    ]
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2272,45 +2677,32 @@ This may change in the future and is given by ``per_page`` key.
 ``from`` contains the index/count of the first review of the page.
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
-
-```json
-{
-    "id": 0
-}
-```
 
 **Query parameters**
 
-- **target_type** [fates::models::TargetType (type info may be incomplete, see example)]
-- **page** [Optional <i32> (type info may be incomplete, see example)]
-- **user_id** [i64? | default = 0 (type info may be incomplete, see example)]
+- **target_type** => i32 [default/example = 0]
+- **page** => (Optional) i32 [default/example = 1]
+- **user_id** => (Optional) i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "target_type": 0,
-    "page": 1,
-    "user_id": 0
-}
-```
+**Request Body Description**
 
-**Request Body**
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2394,39 +2786,51 @@ path.
 also match the user token sent in the ``Authorization`` header
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
-
-```json
-{
-    "id": 0
-}
-```
 
 **Query parameters**
 
-- **target_type** [fates::models::TargetType (type info may be incomplete, see example)]
-- **page** [Optional <i32> (type info may be incomplete, see example)]
-- **user_id** [i64? | default = 0 (type info may be incomplete, see example)]
+- **target_type** => i32 [default/example = 0]
+- **page** => None (unknown value type)
+- **user_id** => (Optional) i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "target_type": 0,
-    "page": null,
-    "user_id": 0
-}
-```
+**Request Body Description**
 
-**Request Body**
+- **id** => None (unknown value type)
+- **reply** => bool [default/example = false]
+- **star_rating** => string [default/example = "0"]
+- **review_text** => string [default/example = ""]
+- **votes** => Struct ParsedReviewVotes 
+	- **votes** => (Array) 
+	- **upvotes** => (Array) 
+	- **downvotes** => (Array) 
+
+
+
+- **flagged** => bool [default/example = false]
+- **user** => Struct User 
+	- **id** => string [default/example = ""]
+	- **username** => string [default/example = ""]
+	- **disc** => string [default/example = ""]
+	- **avatar** => string [default/example = ""]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **epoch** => (Array) 
+- **replies** => (Array) 
+- **parent_id** => None (unknown value type)
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -2454,7 +2858,7 @@ also match the user token sent in the ``Authorization`` header
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2491,43 +2895,55 @@ edit reviews using Lynx when required.
 also match the user token sent in the ``Authorization`` header
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
-
-```json
-{
-    "id": 0
-}
-```
 
 **Query parameters**
 
-- **target_type** [fates::models::TargetType (type info may be incomplete, see example)]
-- **page** [Optional <i32> (type info may be incomplete, see example)]
-- **user_id** [i64? | default = 0 (type info may be incomplete, see example)]
+- **target_type** => i32 [default/example = 0]
+- **page** => None (unknown value type)
+- **user_id** => (Optional) i64 [default/example = 0]
 
 
-**Example**
+
+**Request Body Description**
+
+- **id** => (Optional) string [default/example = "1ceda8a1-9b0c-47f9-961a-52c725190986"]
+- **reply** => bool [default/example = false]
+- **star_rating** => string [default/example = "0"]
+- **review_text** => string [default/example = ""]
+- **votes** => Struct ParsedReviewVotes 
+	- **votes** => (Array) 
+	- **upvotes** => (Array) 
+	- **downvotes** => (Array) 
+
+
+
+- **flagged** => bool [default/example = false]
+- **user** => Struct User 
+	- **id** => string [default/example = ""]
+	- **username** => string [default/example = ""]
+	- **disc** => string [default/example = ""]
+	- **avatar** => string [default/example = ""]
+	- **bot** => bool [default/example = false]
+	- **status** => string [default/example = "Unknown"]
+
+
+
+- **epoch** => (Array) 
+- **replies** => (Array) 
+- **parent_id** => None (unknown value type)
+
+
+
+**Request Body Example**
 
 ```json
 {
-    "target_type": 0,
-    "page": null,
-    "user_id": 0
-}
-```
-
-**Request Body**
-
-```json
-{
-    "id": "5a13edfb-3a2c-4836-86ea-1a3563394a8c",
+    "id": "1ceda8a1-9b0c-47f9-961a-52c725190986",
     "reply": false,
     "star_rating": "0",
     "review_text": "",
@@ -2551,7 +2967,7 @@ also match the user token sent in the ``Authorization`` header
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2583,45 +2999,32 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 set this a TargetType anyways so you might as well set it correctly.
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **rid** [String (type info may be incomplete, see example)]
+- **rid** => string [default/example = "84561918-fab0-47e5-8f44-8b1d39f69481"]
 
 
-**Example**
-
-```json
-{
-    "rid": "d0ff738b-25f1-4940-b91f-c313f1ab74e0"
-}
-```
 
 **Query parameters**
 
-- **target_type** [fates::models::TargetType (type info may be incomplete, see example)]
-- **page** [Optional <i32> (type info may be incomplete, see example)]
-- **user_id** [i64? | default = 0 (type info may be incomplete, see example)]
+- **target_type** => i32 [default/example = 0]
+- **page** => None (unknown value type)
+- **user_id** => (Optional) i64 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "target_type": 0,
-    "page": null,
-    "user_id": 0
-}
-```
+**Request Body Description**
 
-**Request Body**
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2654,22 +3057,25 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 **This endpoint does not require ``target_type`` at all. You can safely omit it**
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **rid** [String (type info may be incomplete, see example)]
+- **rid** => string [default/example = "2dfae064-a6bc-4e4a-8463-63249e9a0d52"]
 
 
-**Example**
 
-```json
-{
-    "rid": "df42e9d1-7a23-4b67-be53-13e122d057dd"
-}
-```
+**Query parameters**
 
-**Request Body**
+
+
+
+**Request Body Description**
+
+- **user_id** => string [default/example = "user id here"]
+- **upvote** => bool [default/example = true]
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -2678,7 +3084,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2703,15 +3109,28 @@ As a client, it is your responsibility, to parse this. Pagination may be added
 if the list grows and then requires it.
 
 
-**API v2 analogue:** None
+**Path parameters**
 
-**Request Body**
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2770,35 +3189,28 @@ A bot has a TargetType of 0 while a server has a TargetType of 1.
 This is the ``target_type``
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
-
-```json
-{
-    "id": 0
-}
-```
 
 **Query parameters**
 
-- **target_type** [fates::models::TargetType (type info may be incomplete, see example)]
+- **target_type** => i32 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "target_type": 0
-}
-```
+**Request Body Description**
 
-**Request Body**
+- **id** => None (unknown value type)
+- **resource_title** => string [default/example = ""]
+- **resource_link** => string [default/example = ""]
+- **resource_description** => string [default/example = ""]
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -2809,7 +3221,7 @@ This is the ``target_type``
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2834,43 +3246,31 @@ A bot has a TargetType of 0 while a server has a TargetType of 1.
 This is the ``target_type``
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
-
-```json
-{
-    "id": 0
-}
-```
 
 **Query parameters**
 
-- **id** [String (type info may be incomplete, see example)]
-- **target_type** [fates::models::TargetType (type info may be incomplete, see example)]
+- **id** => string [default/example = "252b5208-5dda-4444-a6ba-231f3ed2ba52"]
+- **target_type** => i32 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "id": "702f5909-057b-47db-8c3f-ef1fb99c8def",
-    "target_type": 0
-}
-```
+**Request Body Description**
 
-**Request Body**
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2900,35 +3300,40 @@ or otherwise fail with odd errors.  If you have more than this, then perform
 multiple requests**
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
-
-```json
-{
-    "id": 0
-}
-```
 
 **Query parameters**
 
-- **target_type** [fates::models::TargetType (type info may be incomplete, see example)]
+- **target_type** => i32 [default/example = 0]
 
 
-**Example**
 
-```json
-{
-    "target_type": 0
-}
-```
+**Request Body Description**
 
-**Request Body**
+- **commands** => (Array) Struct BotCommand 
+	- **cmd_type** => i32 [default/example = 0]
+	- **groups** => (Array) 
+	- **name** => string [default/example = ""]
+	- **vote_locked** => bool [default/example = false]
+	- **description** => string [default/example = ""]
+	- **args** => (Array) 
+	- **examples** => (Array) 
+	- **premium_only** => bool [default/example = false]
+	- **notes** => (Array) 
+	- **doc_link** => string [default/example = ""]
+	- **id** => None (unknown value type)
+	- **nsfw** => bool [default/example = false]
+
+
+
+
+
+
+**Request Body Example**
 
 ```json
 {
@@ -2951,7 +3356,7 @@ multiple requests**
 }
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
@@ -2975,45 +3380,32 @@ The ``id`` here must be the bot id you wish to add the command for
 UUIDs in the case of ids. Bad names/ids will be ignored
 
 
-**API v2 analogue:** None
-
 **Path parameters**
 
-- **id** [i64 (type info may be incomplete, see example)]
+- **id** => i64 [default/example = 0]
 
 
-**Example**
-
-```json
-{
-    "id": 0
-}
-```
 
 **Query parameters**
 
-- **nuke** [Optional <bool> (type info may be incomplete, see example)]
-- **names** [String? | default = command name|command name 2 (type info may be incomplete, see example)]
-- **ids** [String? | default = id 1|id 2 (type info may be incomplete, see example)]
+- **nuke** => (Optional) bool [default/example = false]
+- **names** => (Optional) string [default/example = "command name|command name 2"]
+- **ids** => (Optional) string [default/example = "id 1|id 2"]
 
 
-**Example**
 
-```json
-{
-    "nuke": false,
-    "names": "command name|command name 2",
-    "ids": "id 1|id 2"
-}
-```
+**Request Body Description**
 
-**Request Body**
+
+
+
+**Request Body Example**
 
 ```json
 {}
 ```
 
-**Response Body**
+**Response Body Example**
 
 ```json
 {
