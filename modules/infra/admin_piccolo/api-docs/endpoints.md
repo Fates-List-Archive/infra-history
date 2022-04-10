@@ -3903,7 +3903,7 @@ also match the user token sent in the ``Authorization`` header
 
 **Request Body Description**
 
-- **id** => (Optional) string [default/example = "789b339f-65c7-4308-b6c9-98022982fb03"]
+- **id** => (Optional) string [default/example = "5cb77b7b-eee2-427e-8910-e4a5c9edc1c7"]
 - **reply** => bool [default/example = false]
 - **star_rating** => string [default/example = "0"]
 - **review_text** => string [default/example = ""]
@@ -3935,7 +3935,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "789b339f-65c7-4308-b6c9-98022982fb03",
+    "id": "5cb77b7b-eee2-427e-8910-e4a5c9edc1c7",
     "reply": false,
     "star_rating": "0",
     "review_text": "",
@@ -4001,7 +4001,7 @@ set this a TargetType anyways so you might as well set it correctly.
 
 **Path parameters**
 
-- **rid** => string [default/example = "1bdee305-ae78-4e29-87a1-5b4b466516c8"]
+- **rid** => string [default/example = "a3050158-2863-4149-9a6c-d5ee977d4118"]
 
 
 
@@ -4067,7 +4067,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 
 **Path parameters**
 
-- **rid** => string [default/example = "61f2f7d5-daf7-4b74-9eb2-c1b8908491fc"]
+- **rid** => string [default/example = "4ba0ec36-7e57-4766-97f0-7de6baf3f58d"]
 
 
 
@@ -4320,7 +4320,7 @@ This is the ``target_type``
 
 **Query parameters**
 
-- **id** => string [default/example = "7ecb1079-d7ed-4e87-b6ee-015a6b4cdf31"]
+- **id** => string [default/example = "b36d07a1-c5fa-4684-8607-c1ded5f48863"]
 - **target_type** => i32 [default/example = 0]
 
 

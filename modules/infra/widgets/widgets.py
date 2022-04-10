@@ -240,13 +240,9 @@ Note that no_cache is slow and may lead to ratelimits and/or your got being bann
     if target_type == enums.WidgetType.bot:
         col = "bot_id"
         table = "bots"
-        event = enums.APIEvents.bot_view
-        _type = "bot"
     else:
         col = "guild_id"
         table = "servers"
-        event = enums.APIEvents.server_view
-        _type = "server"
 
     bot = await db.fetchrow(f"SELECT guild_count, votes, description FROM {table} WHERE {col} = $1", target_id)
     if not bot:
@@ -254,7 +250,6 @@ Note that no_cache is slow and may lead to ratelimits and/or your got being bann
     
     bot = dict(bot)
     
-    #bt.add_task(add_ws_event, redis, target_id, {"m": {"e": event}, "ctx": {"user": request.session.get('user_id'), "widget": True}}, type=_type)
     if target_type == enums.WidgetType.bot:
         data = {"bot": bot, "user": await _user_fetch(str(target_id))}
     else:

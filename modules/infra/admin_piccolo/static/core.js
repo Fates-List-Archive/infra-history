@@ -240,7 +240,7 @@ async function wsStart() {
         } else if(wsContentResp.has(data.resp)) {
             console.log(`WS: Got ${data.resp}`)   
             if(data.detail) {
-                alert("reset-ws", "Reset complete", data.detail)
+                alert("note-ws", "Note", data.detail)
             }
             setData(data)
         } else if(wsContentSpecial.has(data.resp)) {

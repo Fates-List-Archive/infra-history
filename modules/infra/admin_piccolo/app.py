@@ -92,72 +92,14 @@ async def get_perms(user_id: int):
         async with sess.get(f"https://api.fateslist.xyz/flamepaw/_getperm?user_id={user_id}") as res:
             return await res.text()
 
-def site_enum2html():
-    """Converts the enums in modules/models/enums.py into markdown. Mainly for apidocs creation"""
-    enums = importlib.import_module("modules.models.enums")
-    aenum = importlib.import_module("aenum")
-    md = {}
-    md_path = pathlib.Path("data/res/base_enum.md")
-    with md_path.open() as f:
-        base_md = f.read()
-
-    for key in enums.__dict__.keys():
-        # Ignore internal or dunder keys
-        if key.startswith("_") or key in ("IntEnum", "Enum"):
-            continue
-
-        v = enums.__dict__[key]
-        if isinstance(v, aenum.EnumType):
-            props = list(v)
-            try:
-                fields = v._init_
-            except AttributeError:
-                fields = []
-            md[key] = {}
-            md[key]["doc"] = "\n"
-            md[key]["table"] = "| Name | Value | Description |"
-            nl = "\n| :--- | :--- | :--- |"
-            keys = []
-            for ext in fields:
-                if ext in ("value", "__doc__"):
-                    continue
-                md[key][
-                    "table"] += f" {ext.strip('_').replace('_', ' ').title()} |"
-                nl += " :--- |"
-                keys.append(ext)
-            md[key]["table"] += f"{nl}\n"
-
-            if v.__doc__ and v.__doc__ != "An enumeration.":
-                md[key]["doc"] = "\n" + v.__doc__ + "\n\n"
-
-            for prop in props:
-                md[key][
-                    "table"] += f"| {prop.name} | {prop.value} | {prop.__doc__} |"
-                for prop_key in keys:
-                    tmp = getattr(prop, prop_key)
-                    try:
-                        tmp = str(tmp) + f" ({tmp.value})"
-                    except AttributeError:
-                        tmp = str(tmp)
-                    md[key]["table"] += f" {tmp} |"
-                md[key]["table"] += "\n"
-
-    md = dict(sorted(md.items()))
-
-    md_out = []
-    for key in md.keys():
-        md_out.append(f'## {key}\n{md[key]["doc"]}{md[key]["table"]}')
-
-    return base_md + "\n" + "\n\n".join(md_out)
-
-# Autogenerate some stuff
-with open("modules/infra/admin_piccolo/api-docs/structures/enums-ref.md", "w") as f:
-    f.write(site_enum2html())
-
 docs_template = requests.get("https://api.fateslist.xyz/_docs_template").text
+enums_docs_template = requests.get("https://api.fateslist.xyz/_enum_docs_template").text
 
 with open("modules/infra/admin_piccolo/api-docs/endpoints.md", "w") as f:
     f.write(docs_template)
+
+with open("modules/infra/admin_piccolo/api-docs/enums-ref.md", "w") as f:
+    f.write(enums_docs_template)
 
 
 def get_token(length: int) -> str:
@@ -1872,9 +1814,10 @@ Just want to provide feedback? [Rate this page](#rate-this-page)
 
 <label for='doc-feedback'>Your Feedback</label>
 <textarea 
-id='doc-feedback'
-name='doc-feedback'
-placeholder='I feel like you could...'
+id="doc-feedback"
+name="doc-feedback"
+class="form-control"
+placeholder="I feel like X, Y and Z could change because..."
 ></textarea>
 
 <button onclick='rateDoc()'>Rate</button>

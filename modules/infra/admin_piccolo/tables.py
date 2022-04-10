@@ -73,13 +73,13 @@ class Bot(Table, tablename="bots"):
     privacy_policy = Text()
     nsfw = Boolean(default = False)
     api_token = Text()
-    js_allowed = Boolean(default = True)
     invite = Text()
     invite_amount = Integer(default = 0)
     features = Array(base_column = Text(), default = [])
     flags = Array(base_column = Integer(), default = [])
     uptime_checks_total = BigInt()
     uptime_checks_failed = BigInt()
+    page_style = Integer(choices = enums.PageStyle)
 
 class BotVotes(Table, tablename="user_vote_table"):
     user_id = BigInt(primary_key=True, help_text="The user id of the user who voted")
