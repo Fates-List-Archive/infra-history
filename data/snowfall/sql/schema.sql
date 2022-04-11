@@ -236,15 +236,6 @@ CREATE TABLE user_bot_logs (
     CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE user_reminders (
-    user_id BIGINT NOT NULL,
-    bot_id BIGINT NOT NULL,
-    resolved BOOLEAN DEFAULT false,
-    remind_time timestamptz NOT NULL DEFAULT NOW() + interval '8 hours',
-    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT bots_fk FOREIGN KEY (bot_id) REFERENCES bots(bot_id) ON DELETE CASCADE ON UPDATE CASCADE
-);
-
 CREATE TABLE user_payments (
     user_id bigint NOT NULL,
     token TEXT NOT NULL,

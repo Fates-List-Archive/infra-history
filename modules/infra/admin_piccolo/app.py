@@ -62,9 +62,10 @@ debug = False
 
 
 class SPLDEvent(enum.Enum):
-    maint = "MAINT"
-    refresh_needed = "REFRESH_NEEDED"
-    missing_perms = "NO_PERMS"
+    maint = "M"
+    refresh_needed = "RN"
+    missing_perms = "MP"
+    out_of_date = "OD"
 
 async def fetch_user(user_id: int):
     async with aiohttp.ClientSession() as sess:
@@ -2067,7 +2068,6 @@ async def data_request(ws: WebSocket, data: dict):
     reviews = await app.state.db.fetch("SELECT * FROM reviews WHERE user_id = $1", user_id)
     review_votes = await app.state.db.fetch("SELECT * FROM review_votes WHERE user_id = $1", user_id)
     user_bot_logs = await app.state.db.fetch("SELECT * FROM user_bot_logs WHERE user_id = $1", user_id)
-    user_reminders = await app.state.db.fetch("SELECT * FROM user_reminders WHERE user_id = $1", user_id)
     user_payments = await app.state.db.fetch("SELECT * FROM user_payments WHERE user_id = $1", user_id)
     servers = await app.state.db.fetch("SELECT * FROM servers WHERE owner_id = $1", user_id)
     lynx_apps = await app.state.db.fetch("SELECT * FROM lynx_apps WHERE user_id = $1", user_id)
@@ -2078,7 +2078,7 @@ async def data_request(ws: WebSocket, data: dict):
 
     data = {"user": user, "owners": owners, "bot_voters": bot_voters, "user_vote_table": user_vote_table,
             "reviews": reviews, "review_votes": review_votes, "user_bot_logs": user_bot_logs,
-            "user_reminders": user_reminders, "user_payments": user_payments, "servers": servers,
+            "user_payments": user_payments, "servers": servers,
             "lynx_apps": lynx_apps, "lynx_logs": lynx_logs, "lynx_notifications": lynx_notifications,
             "lynx_ratings": lynx_ratings, "owned_bots": [],
             "privacy": "Fates list does not profile users or use third party cookies for tracking other than what "
@@ -2233,15 +2233,17 @@ async def do_task_and_send(f, ws, data):
     await manager.send_personal_message(ret, ws)
 
 @app.websocket("/_ws")
-async def ws(ws: WebSocket, debug: bool | None = None):
+async def ws(ws: WebSocket, debug: bool, nonce: str = None):
     if ws.headers.get("Origin") != "https://lynx.fateslist.xyz":
         print(f"Ignoring malicious websocket request with origin {ws.headers.get('Origin')}")
         return
-    if debug is None:
-        print("Out of date client")
-        ws.state.debug = True
+
+    # Check nonce to ensure client is up to date
+    if nonce != "Catnip":
+        print("Client out of date, nonce incorrect")
+        ws.state.debug = debug
         await manager.connect(ws)
-        await manager.send_personal_message({"resp": "index", "detail": "Reload window now"}, ws)
+        await manager.send_personal_message({"resp": "spld", "e": SPLDEvent.out_of_date}, ws)
         await asyncio.sleep(0.3)
         await ws.close(4008)
         return

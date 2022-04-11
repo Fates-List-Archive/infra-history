@@ -40,6 +40,11 @@ const wsContentSpecial = new Set(['user_action', 'bot_action', 'eternatus', 'sur
 
 var assetList = {};
 
+function getNonce() {
+	// Protect against simple regexes with this
+	return "C" + "a" + "t" + "n" + "i".repeat(1) + "p" + "!".repeat(0)
+}
+
 function downloadTextFile(text, name) {
     const a = document.createElement('a');
     const type = name.split(".").pop();
@@ -95,7 +100,7 @@ async function wsStart() {
 
     startingWs = true
     
-    ws = new WebSocket(`wss://lynx.fateslist.xyz/_ws?debug=${debug}`)
+    ws = new WebSocket(`wss://lynx.fateslist.xyz/_ws?debug=${debug}&nonce=${getNonce()}`)
     ws.onopen = function (event) {
         console.log("WS connection opened. Started promise to send initial auth")
         if(ws.readyState === ws.CONNECTING) {
@@ -114,11 +119,11 @@ async function wsStart() {
     ws.onclose = function (event) {
         if(event.code == 4008) {
             // Token error
-            console.log("Token error, requesting a login")
+            console.log("Token/Client error, requesting a login")
             wsUp = true;
             startingWs = true;
             wsFatal = true;
-            $("#ws-info").html("Invalid token, login again using Login button in sidebar")
+            $("#ws-info").html("Invalid token/client, login again using Login button in sidebar or refreshing your page")
             return
         }
 
@@ -153,20 +158,23 @@ async function wsStart() {
             assetList = data.assets
         } else if(data.resp == "spld") {
             console.log(`Got a spld (server pipeline) message: ${data.e}`)
-            if(data.e == "MAINT") {
+            if(data.e == "M") {
                 console.log("Server is in maintenance mode. Alerting user to this")
                 alert("maint", "Maintenance", "Lynx is now down for maintenance, certain actions may be unavailable during this time!")
-            } else if(data.e == "REFRESH_NEEDED") {
+            } else if(data.e == "RN") {
                 console.log("Server says refresh is needed")
                 if(!data.loc || data.loc == currentLoc) {
                     refreshPage()
                 } else {
                     console.log("Refresh does not pertain to us!")
                 }
-            } else if(data.e == "NO_PERMS") {
+            } else if(data.e == "MP") {
                 console.log("Server says we do not have the required permissions")
                 loadContent(`/missing-perms?min-perm=${data.min_perm || 2}`)
-            }
+            } else if(data.e == "OD") {
+		console.log("Client out of date. Invalid nonce?")
+		alert("nonce-err", "Hmmm...", "Your Lynx client is a bit out of date. Consider refreshing your page?")
+	    }
         } else if(data.resp == "doctree") {
             console.log("WS: Got doctree")
             addedDocTree = true
