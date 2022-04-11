@@ -55,7 +55,6 @@ from mdit_py_plugins.anchors import anchors_plugin
 from mdit_py_plugins.field_list import fieldlist_plugin
 from mdit_py_plugins.container import container_plugin
 from fastapi.staticfiles import StaticFiles
-import importlib
 import msgpack
 import enum
 
@@ -87,16 +86,12 @@ async def send_message(msg: dict):
         async with sess.post(f"http://localhost:1234/messages", json=msg) as res:
             return res
 
-async def get_perms(user_id: int):
-    async with aiohttp.ClientSession() as sess:
-        async with sess.get(f"https://api.fateslist.xyz/flamepaw/_getperm?user_id={user_id}") as res:
-            return await res.text()
-
 docs_template = requests.get("https://api.fateslist.xyz/_docs_template").text
-enums_docs_template = requests.get("https://api.fateslist.xyz/_enum_docs_template").text
 
 with open("modules/infra/admin_piccolo/api-docs/endpoints.md", "w") as f:
     f.write(docs_template)
+
+enums_docs_template = requests.get("https://api.fateslist.xyz/_enum_docs_template").text
 
 with open("modules/infra/admin_piccolo/api-docs/enums-ref.md", "w") as f:
     f.write(enums_docs_template)
@@ -104,7 +99,7 @@ with open("modules/infra/admin_piccolo/api-docs/enums-ref.md", "w") as f:
 
 def get_token(length: int) -> str:
     secure_str = ""
-    for i in range(0, length):
+    for _ in range(0, length):
         secure_str += secrets.choice(string.ascii_letters + string.digits)
     return secure_str
 
@@ -175,16 +170,6 @@ async def unban_user(server, member, reason):
                 return None
             return await resp.json()
 
-
-admin = create_admin(
-    [Notifications, LynxSurveys, LynxSurveyResponses, LynxRatings, LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags,
-     ServerTags, Reviews, ReviewVotes, UserBotLogs, BotVotes],
-    allowed_hosts=["lynx.fateslist.xyz"],
-    production=True,
-    site_name="Lynx Admin"
-)
-
-
 def code_check(code: str, user_id: int):
     expected = hashlib.sha3_384()
     expected.update(
@@ -196,10 +181,8 @@ def code_check(code: str, user_id: int):
         return False
     return True
 
-
 class Unknown:
     username = "Unknown"
-
 
 # Staff Permission Checks
 
@@ -210,7 +193,6 @@ class StaffMember(BaseModel):
     perm: int
     staff_id: Union[str, int]
 
-
 async def is_staff_unlocked(bot_id: int, user_id: int, redis: aioredis.Connection):
     return await redis.exists(f"fl_staff_access-{user_id}:{bot_id}")
 
@@ -219,11 +201,12 @@ async def is_staff(user_id: int, base_perm: int) -> Union[bool, int, StaffMember
     if user_id < 0:
         staff_perm = None
     else:
-        staff_perm = await get_perms(user_id)
+        async with aiohttp.ClientSession() as sess:
+            async with sess.get(f"https://api.fateslist.xyz/flamepaw/_getperm?user_id={user_id}") as res:
+                staff_perm = await res.text()
+                staff_perm = orjson.loads(staff_perm)
     if not staff_perm:
         staff_perm = {"fname": "Unknown", "id": "0", "staff_id": "0", "perm": 0}
-    else:
-        staff_perm = orjson.loads(staff_perm)
     sm = StaffMember(name=staff_perm["fname"], id=staff_perm["id"], staff_id=staff_perm["staff_id"],
                      perm=staff_perm["perm"])  # Initially
     rc = sm.perm >= base_perm
@@ -300,12 +283,6 @@ def doctree_gen():
 
     return doctree
 
-
-global lynx_form_beta
-
-with open("modules/infra/admin_piccolo/lynx-ui.html") as f:
-    lynx_form_beta = f.read()
-
 with open("modules/infra/admin_piccolo/api-docs/staff-guide.md") as f:
     staff_guide_md = f.read()
 
@@ -326,6 +303,13 @@ md = (
 
 staff_guide = md.render(staff_guide_md)
 
+admin = create_admin(
+    [Notifications, LynxSurveys, LynxSurveyResponses, LynxRatings, LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags,
+     ServerTags, Reviews, ReviewVotes, UserBotLogs, BotVotes],
+    allowed_hosts=["lynx.fateslist.xyz"],
+    production=True,
+    site_name="Lynx Admin"
+)
 
 async def auth_user_cookies(request: Request):
     if request.cookies.get("sunbeam-session:warriorcats"):
@@ -362,24 +346,8 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         if request.url.path.startswith("/_"):
             return await call_next(request)
-        elif not request.url.path.startswith("/admin"):
-            try:
-                if app.state.lynx_form_beta:
-                    lynx_form_html = app.state.lynx_form_beta
-                else:
-                    lynx_form_html = lynx_form_beta
-            except:
-                lynx_form_html = lynx_form_beta
-            return HTMLResponse(lynx_form_html)
 
         print("[LYNX] Admin request. Middleware started")
-
-        if request.url.path.startswith(
-                ("/staff-guide", "/requests", "/links", "/roadmap", "/docs", "/my-perms")) or request.url.path == "/":
-            if request.headers.get("Frostpaw-Staff-Notify"):
-                return await call_next(request)
-            else:
-                return HTMLResponse(lynx_form_html)
 
         await auth_user_cookies(request)
 
@@ -999,18 +967,6 @@ async def unset_flag(request: Request, data: ActionWithReason):
     await send_message({"content": f"<@{data.main_owner}>", "embed": embed, "channel_id": bot_logs})
 
     return {"detail": "Successfully unset flag"}
-
-
-@app.get("/_new_html")
-def new_html(request: Request):
-    if request.headers.get("CF-Connecting-IP"):
-        print("Ignoring malicious new html request")
-        return
-    with open("modules/infra/admin_piccolo/lynx-ui.html") as f:
-        app.state.lynx_form_beta = f.read()
-
-    return
-
 
 # Lynx base websocket
 class ConnectionManager:

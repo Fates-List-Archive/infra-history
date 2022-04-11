@@ -239,9 +239,6 @@ async function wsStart() {
             document.querySelector("#verify-screen").innerHTML = "Credential reset successful!"
         } else if(wsContentResp.has(data.resp)) {
             console.log(`WS: Got ${data.resp}`)   
-            if(data.detail) {
-                alert("note-ws", "Note", data.detail)
-            }
             setData(data)
         } else if(wsContentSpecial.has(data.resp)) {
             alert("special-status-upd", "Status Update!", data.detail)
@@ -285,7 +282,7 @@ function setData(data, noExtraCode=false) {
     refresh = false
     if(data.detail) {
         clearRefresh()
-        alert("unknown-err", "Unknown Error", data.detail)
+        alert("note-ws", "Important Note", data.detail)
         return
     }
     document.querySelector("#verify-screen").innerHTML = data.data
