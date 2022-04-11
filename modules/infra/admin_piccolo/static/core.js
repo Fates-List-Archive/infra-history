@@ -99,8 +99,14 @@ async function wsStart() {
     $("#ws-info").html("Starting websocket...")
 
     startingWs = true
+
+    // Select the client
+    let cliExt = "NODBG"
+    if(debug) {
+        cliExt = "DBG"
+    }
     
-    ws = new WebSocket(`wss://lynx.fateslist.xyz/_ws?debug=${debug}&nonce=${getNonce()}`)
+    ws = new WebSocket(`wss://lynx.fateslist.xyz/_ws?cli=${getNonce()}@${cliExt}&plat=WEB`)
     ws.onopen = function (event) {
         console.log("WS connection opened. Started promise to send initial auth")
         if(ws.readyState === ws.CONNECTING) {

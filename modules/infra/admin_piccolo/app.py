@@ -66,6 +66,7 @@ class SPLDEvent(enum.Enum):
     refresh_needed = "RN"
     missing_perms = "MP"
     out_of_date = "OD"
+    unsupported = "U"
 
 async def fetch_user(user_id: int):
     async with aiohttp.ClientSession() as sess:
@@ -574,7 +575,7 @@ def action(
         if not await state_check(data.bot_id):
             return {
                 "resp": "bot_action",
-                "detail": f"Bot state check error: {states=}".replace("<", "&lt").replace(">", "&gt")
+                "detail": replace_if_web(f"Bot state check error: {states=}", ws)
             }
 
         data.owners = await app.state.db.fetch("SELECT owner, main FROM bot_owner WHERE bot_id = $1", data.bot_id)
@@ -982,10 +983,15 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
     async def send_personal_message(self, message: dict | list, websocket: WebSocket):
+        ## REMOVE WHEN SQUIRREL SUPPORTS SPLD LIKE WEB DOES
+        if websocket.state.plat == "SQUIRREL" and message.get("resp") == "spld":
+            # Not supported by squirrel yet
+            message = {"resp": "index", "detail": f"{message.get('e', 'Unknown SPLD event')}"}
+        
         try:
             if websocket.state.debug:
                 print(f"Sending message: {websocket.client.host=}, {message=}")
-                await websocket.send_json(message)
+                await websocket.send_json(jsonable_encoder(message))
             else:
                 await websocket.send_bytes(msgpack.packb(jsonable_encoder(message)))
         except RuntimeError as e:
@@ -2232,23 +2238,57 @@ async def do_task_and_send(f, ws, data):
     ret = await f(ws, data)
     await manager.send_personal_message(ret, ws)
 
+async def out_of_date(ws):
+    await manager.connect(ws)
+    await manager.send_personal_message({"resp": "spld", "e": SPLDEvent.out_of_date}, ws)
+    await asyncio.sleep(0.3)
+    await ws.close(4008)
+
+def replace_if_web(msg, ws):
+    if ws.state.plat == "WEB":
+        return msg.replace("<", "&lt").replace(">", "&gt")
+    return msg
+
+# Cli = client, plat = platform (WEB or SQUIRREL)
 @app.websocket("/_ws")
-async def ws(ws: WebSocket, debug: bool, nonce: str = None):
+async def ws(ws: WebSocket, cli: str, plat: str):
     if ws.headers.get("Origin") != "https://lynx.fateslist.xyz":
         print(f"Ignoring malicious websocket request with origin {ws.headers.get('Origin')}")
         return
+    
+    protocol = cli.split("@")
+
+    if len(protocol) == 2:
+        if protocol[1] == "DBG":
+            ws.state.debug = True
+        elif protocol[1] == "NODBG":
+            ws.state.debug = False
+    else:
+        print("Client out of date, invalid nonce")
+        ws.state.debug = False
+        return await out_of_date(ws)
+
+    if plat not in ("WEB", "SQUIRREL"):
+        print("Client out of date, invalid platform")
+
+        ws.state.debug = False
+        return await out_of_date(ws)
+    
+    if plat == "SQUIRREL":
+        ws.state.debug = True # Squirrel doesnt support no-debug mode *yet*
+    
+    ws.state.cli = cli
+    ws.state.plat = plat
 
     # Check nonce to ensure client is up to date
-    if nonce != "Catnip":
+    if len(protocol) != 2 or (
+        (ws.state.plat == "WEB" and protocol[0] != "Catnip")  # TODO, obfuscate/hide nonce in core.js and app.py
+        or (ws.state.plat == "SQUIRREL" and protocol[0] != "BurdockRoot")
+    ):
         print("Client out of date, nonce incorrect")
-        ws.state.debug = debug
-        await manager.connect(ws)
-        await manager.send_personal_message({"resp": "spld", "e": SPLDEvent.out_of_date}, ws)
-        await asyncio.sleep(0.3)
-        await ws.close(4008)
-        return
 
-    ws.state.debug = debug
+        ws.state.debug = False
+        return await out_of_date(ws)
 
     ws.state.user = None
     ws.state.member = StaffMember(name="Unknown", id=0, perm=-1, staff_id=0)
@@ -2338,6 +2378,11 @@ async def ws(ws: WebSocket, debug: bool, nonce: str = None):
                     ws.state.verified = False
             
             try:
+                if ws.state.plat == "SQUIRREL" and data.get("request") not in ("bot_action", "user_action"):
+                    print("[LYNX] Warning: Unsupported squirrel action")
+                    await manager.send_personal_message({"resp": "spld", "e": SPLDEvent.unsupported}, ws)
+                    continue
+
                 f = ws_action_dict.get(data.get("request"))
                 if not f:
                     print(f"could not find {data}")
@@ -2394,7 +2439,7 @@ def user_action(
         if not await state_check(data.user_id):
             return {
                 "resp": "user_action",
-                "detail": f"User state check error: {states=}".replace("<", "&lt").replace(">", "&gt")
+                "detail": replace_if_web(f"User state check error: {states=}", ws)
             }
 
     def decorator(function):
