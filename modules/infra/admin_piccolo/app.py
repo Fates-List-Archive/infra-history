@@ -64,6 +64,7 @@ debug = False
 class SPLDEvent(enum.Enum):
     maint = "MAINT"
     refresh_needed = "REFRESH_NEEDED"
+    missing_perms = "NO_PERMS"
 
 async def fetch_user(user_id: int):
     async with aiohttp.ClientSession() as sess:
@@ -358,11 +359,10 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         perm = member.perm
 
         # Before erroring, ensure they are perm of at least 2 and have no staff_verify_code set
-        if member.perm < 2 or not request.state.is_verified:
+        if member.perm < 2: 
+            return RedirectResponse("/missing-perms?perm=2")
+        elif not request.state.is_verified:
             return RedirectResponse("/staff-verify")
-
-        if perm < 2:
-            return ORJSONResponse({"detail": "You do not have permission to view this page"})
 
         # Perm check
         if request.url.path.startswith("/admin/api"):
@@ -1116,7 +1116,7 @@ We're always open, don't worry!
 @ws_action("loa")
 async def loa(ws: WebSocket, _):
     if ws.state.member.perm < 2:
-        return {"resp": "loa", "detail": "You do not have permission to view this page", "wait_for_upg": True}
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
 
     md = (
         MarkdownIt()
@@ -1188,7 +1188,7 @@ There are *two* ways of creating a LOA.
 @ws_action("send_loa")
 async def send_loa(ws: WebSocket, data: dict):
     if ws.state.member.perm < 2:
-        return {"resp": "staff_apps", "detail": "You do not have permission to view this page", "wait_for_upg": True}
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
     if not data.get("answers"):
         return {"resp": "send_loa", "detail": "You did not fill out the form correctly"}
     if not data["answers"]["reason"]:
@@ -1216,7 +1216,7 @@ async def send_loa(ws: WebSocket, data: dict):
 async def staff_apps(ws: WebSocket, data: dict):
     # Get staff application list
     if ws.state.member.perm < 2:
-        return {"resp": "staff_apps", "detail": "You do not have permission to view this page", "wait_for_upg": True}
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
     elif not ws.state.verified:
         return {"resp": "staff_verify_forced"}
 
@@ -1282,9 +1282,7 @@ async def user_actions(ws: WebSocket, data: dict):
     data = data.get("data", {})
     # Easiest way to block cross origin is to just use a hidden input
     if ws.state.member.perm < 3:
-        return {"resp": "user_actions",
-                "detail": "You do not have permission to view this page. Minimum perm needed is 3",
-                "wait_for_upg": True}
+        return {"resp": "spld", "e": SPLDEvent.missing_perms, "min_perm": 3}
     elif not ws.state.verified:
         return {"resp": "staff_verify_forced"}
 
@@ -1369,9 +1367,7 @@ placeholder="Enter reason for state change here!"
 @ws_action("bot_actions")
 async def bot_actions(ws: WebSocket, _):
     if ws.state.member.perm < 2:
-        return {"resp": "bot_actions",
-                "detail": "You do not have permission to view this page. Minimum perm needed is 3",
-                "wait_for_upg": True}
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
     elif not ws.state.verified:
         return {"resp": "staff_verify_forced"}
 
@@ -1659,8 +1655,7 @@ placeholder="Reason for resetting all votes. Defaults to 'Monthly Votes Reset'"
 @ws_action("staff_verify")
 async def staff_verify(ws: WebSocket, _):
     if ws.state.member.perm < 2:
-        return {"resp": "staff_verify", "detail": "You do not have permission to view this page",
-                "wait_for_upg": True}
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
     return {
         "resp": "staff_verify",
         "title": "Fates List Staff Verification",

@@ -163,6 +163,9 @@ async function wsStart() {
                 } else {
                     console.log("Refresh does not pertain to us!")
                 }
+            } else if(data.e == "NO_PERMS") {
+                console.log("Server says we do not have the required permissions")
+                loadContent(`/missing-perms?min-perm=${data.min_perm || 2}`)
             }
         } else if(data.resp == "doctree") {
             console.log("WS: Got doctree")
@@ -602,9 +605,12 @@ async function loadContent(loc) {
             wsSend({request: "get_sa_questions"})
         })
         return
+    } else if(loc.startsWith("/missing-perms")) {
+        alert("missing-perms", "Missing Permissions", "You do not have permission to view this page.")
+        setData({"title": "401 - Unauthorized", "data": `Unauthorized User`})
     } else {
         document.querySelector("#verify-screen").innerHTML = "Animus magic is broken today!"
-        document.querySelectorAll(".content")[0].innerHTML = `<h4>404<h4><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a></h4>`
+        setData({"title": "404 - Not Found", "data": `<h4>404<h4><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a></h4>`})
     }
 
     linkMod()
