@@ -101,7 +101,7 @@ This server response is the only case of a number and you should use your langua
 The base URL for api v3 websockets is ``wss://api.fateslist.xyz/ws/{id}?mode={mode}``
 
 - id is a ``i64`` (int64) that is either your Bot ID or your Server ID you wish to connect to websocket API for. **For all practical cases and purposes, id can also be treated as a Discord Snowflake**
-- mode is either ``Bot`` or ``Server`` (case-sensitive)
+- mode is a [TargetType](https://lynx.fateslist.xyz/docs/enums-ref#targettype)
 
 ### Event Wrapping
 
@@ -144,8 +144,8 @@ import json
 import asyncio
 
 class WsMode(enum.Enum):
-    bot = "Bot"
-    server = "Server"
+    bot = 0
+    server = 1
 
 class FatesHeader:
     """Represents a command header from WS"""
