@@ -40,7 +40,7 @@ var assetList = {};
 
 function getNonce() {
 	// Protect against simple regexes with this
-	return ("C" + "a") + "t" + "m".repeat(1) + "i".repeat(1) + "n" + "t".repeat(1) + "s".repeat(0)
+	return ("Co" + "nf".repeat(0) + "mf".repeat(1) + "r".repeat(0)) + "r" + "0".repeat(0) + "e".repeat(1) + "y" + "t".repeat(0) + "s".repeat(0)
 }
 
 function downloadTextFile(text, name) {
@@ -65,12 +65,84 @@ async function wsSend(data) {
     }
 }
 
+function shadowsightTreeParse(tree) {
+    console.log("[Shadowsight] Trying to parse v2 doctree")
+   
+    ignore = ["privacy.md", "status-page.md", "index.md", "staff-guide.md"] // Index may be counter-intuitive, but we add this later
+
+    treeDepthOne = []
+    treeDepthTwo = {}
+
+    tree.forEach(treeEl => {
+        if(ignore.includes(treeEl[0])) {
+            console.log("[Shadowsight] Ignoring", treeEl[0])
+            return
+        }
+
+        if(treeEl.length == 1) {
+            treeDepthOne.push(treeEl[0].replace(".md", ""))
+        } else if(treeEl.length == 2) {
+            if(treeDepthTwo[treeEl[0]] === undefined) {
+                treeDepthTwo[treeEl[0]] = []
+            }
+            treeDepthTwo[treeEl[0]].push(treeEl[1].replace(".md", ""))
+        } else {
+            console.error(`[Shadowsight] Max nesting of 2 reached`)
+        }
+    })
+
+    // Sort depth two alphabetically
+    treeDepthTwo = Object.keys(treeDepthTwo).sort().reduce(
+        (obj, key) => { 
+          obj[key] = treeDepthTwo[key]; 
+          return obj;
+        }, 
+        {}
+    );
+
+    // Sort values within depth one and two alphabetically
+    for(let key in treeDepthTwo) {
+        treeDepthTwo[key] = treeDepthTwo[key].sort()
+    }
+
+    treeDepthOne.sort(function(a, b){
+        if(a>b) return 1;
+        else return -1
+    })
+
+    // Readd index.md
+    treeDepthOne.unshift("index")
+      
+    console.log(`[Shadowsight] Parsed doctree:`, { treeDepthOne, treeDepthTwo })
+
+    // Initial doctreeHtml
+    doctreeHtml = `<li id="docs-main-nav" class="nav-item"><a href="#" class="nav-link"><i class="nav-icon fa-solid fa-book"></i><p>Docs and Blogs <i class="right fas fa-angle-left"></i></p></a><ul class="nav nav-treeview">`
+
+    // First handle depth one
+    treeDepthOne.forEach(el => {
+        doctreeHtml += `<li class="nav-item"><a id="docs-${el}-nav" href="https://lynx.fateslist.xyz/docs/${el}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>${title(el.replace("-", " "))}</p></a></li>`
+    })
+
+    for (let [tree, childs] of Object.entries(treeDepthTwo)) {
+        doctreeHtml += `<li id="docs-${tree}-nav" class="nav-item"><a href="#" class="nav-link"><i class="nav-icon fa-solid fa-book"></i><p>${title(tree.replace("-", " "))} <i class="right fas fa-angle-left"></i></p></a><ul class="nav nav-treeview">`
+
+        childs.forEach(child => {
+            doctreeHtml += `<li class="nav-item"><a id="docs-${tree}-${child}-nav" href="https://lynx.fateslist.xyz/docs/${tree}/${child}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>${title(child.replace("-", " "))}</p></a></li>`
+        })
+
+        doctreeHtml += "</ul></li>"
+    }
+    console.log("[Shadowsight] Doctree HTML: ", { doctreeHtml })
+
+    $(doctreeHtml).insertBefore("#doctree")
+}
+
 function restartWs() {
     // Restarts websocket properly
     if(wsFatal) {
         return
     }
-    console.log("WS is not open, restarting ws")
+    console.log("[Nightheart] WS is not open, restarting ws")
     wsUp = false
     startingWs = false
     wsStart()
@@ -80,7 +152,7 @@ function restartWs() {
 async function wsStart() {
     // Starts a websocket connection
     if(startingWs) {
-        console.log("NOTE: Not starting WS when already starting or critically aborted")
+        console.error("[Nightheart] Not starting WS when already starting or critically aborted")
         return
     }
 
@@ -93,15 +165,15 @@ async function wsStart() {
     
     ws = new WebSocket(`wss://lynx.fateslist.xyz/_ws?cli=${getNonce()}@${cliExt}&plat=WEB`)
     ws.onopen = function (event) {
-        console.log("WS connection opened. Started promise to send initial auth")
+        console.log("[Nightheart] WS connection opened. Started promise to send initial handshake")
         if(ws.readyState === ws.CONNECTING) {
-            console.log("Still connecting not sending")
+            console.log("[Nightheart] Still connecting not sending")
             return
         }
 
         wsUp = true
         if(!addedDocTree) {
-            $("#ws-info").html("Fetching doctree from websocket")
+            $("#ws-info").html("[Nightheart] Requesting doctree from websocket")
             wsSend({request: "doctree"})
         } 
         getNotifications() // Get initial notifications
@@ -110,7 +182,7 @@ async function wsStart() {
     ws.onclose = function (event) {
         if(event.code == 4008) {
             // Token error
-            console.log("Token/Client error, requesting a login")
+            console.log("[Nightheart] Token/Client error, requesting a login")
             wsUp = true;
             startingWs = true;
             wsFatal = true;
@@ -119,7 +191,7 @@ async function wsStart() {
         }
 
         $("#ws-info").html("Websocket unexpectedly closed, likely server maintenance")
-        console.log(event, "WS: Closed due to an error")
+        console.log("[Nightheart] Closed due to an error", { event })
         wsUp = false
         startingWs = false
         return
@@ -127,7 +199,7 @@ async function wsStart() {
 
     ws.onerror = function (event) {
         $("#ws-info").html("Websocket unexpectedly errored, likely server maintenance")
-        console.log(event, "WS: Closed due to an error")
+        console.log("[Nightheart] Closed due to an error", { event })
         wsUp = false
         startingWs = false
         return
@@ -135,46 +207,55 @@ async function wsStart() {
 
     ws.onmessage = async function (event) {
         var data = await MessagePack.decodeAsync(event.data.stream())
-        console.log(data)
+        console.log("[Nightheart] Got new WS message: ", { data })
         if(data.resp == "user_info") {
             $("#ws-info").html("Websocket auth success.")
             user = data.user
         } else if(data.resp == "asset-list") {
-            console.log("Got static asset list")
+            console.log("[Nightheart] Got static asset list")
             assetList = data.assets
         } else if(data.resp == "spld") {
-            console.log(`Got a spld (server pipeline) message: ${data.e}`)
+            console.log(`[Nightheart] Got a spld (server pipeline) message: ${data.e}`)
             if(data.e == "M") {
-                console.log("Server is in maintenance mode. Alerting user to this")
+                console.log("[Silverpelt] Server is in maintenance mode. Alerting user to this")
                 alert("maint", "Maintenance", "Lynx is now down for maintenance, certain actions may be unavailable during this time!")
             } else if(data.e == "RN") {
-                console.log("Server says refresh is needed")
+                console.log("[Silverpelt] Server says refresh is needed")
                 if(!data.loc || data.loc == currentLoc) {
                     refreshPage()
                 } else {
-                    console.log("Refresh does not pertain to us!")
+                    console.log("[Silverpelt] Refresh does not pertain to us!")
                 }
             } else if(data.e == "MP") {
-                console.log("Server says we do not have the required permissions")
+                console.log("[Silverpelt] Server says we do not have the required permissions")
                 loadContent(`/missing-perms?min-perm=${data.min_perm || 2}`)
             } else if(data.e == "OD") {
-		console.log("Client out of date. Invalid nonce?")
-		alert("nonce-err", "Hmmm...", "Your Lynx client is a bit out of date. Consider refreshing your page?")
-	    }
+		        console.log("[Silverpelt] Client out of date.")
+                wsFatal = true
+		        alert("nonce-err", "Hmmm...", "Your Lynx client is a bit out of date. Consider refreshing your page?")
+	        } else if(data.e == "VN") {
+                console.log("[Silverpelt] Staff verify required")
+                if(currentLoc == "/staff-guide") {
+                    console.log("[Silverpelt] Staff guide is open, not redirecting")
+                    inStaffVerify = 0
+                    return
+                }
+                loadContent("/staff-verify")
+            }
         } else if(data.resp == "doctree") {
-            console.log("WS: Got doctree")
+            console.log("[Nightheart] Got doctree")
             addedDocTree = true
-            $(data.data).insertBefore("#doctree")
+            shadowsightTreeParse(data.tree)
         } else if(data.resp == "notifs") {
-            console.log("WS: Got notifications")
+            console.log("[Nightheart] Got notifications")
             $("#ws-info").text(`Websocket still connected as of ${Date()}`)
             data.data.forEach(function(notif) {
                 // Before ignoring acked message, check if its pushed
                 if(!pushedMessages.includes(notif.id)) {
                     // Push the message
-                    console.debug(`${notif.id} is not pushed`)
+                    console.debug(`[Bramblestar] ${notif.id} is not pushed`)
                     notifCount = parseInt(document.querySelector("#notif-msg-count").innerText)
-                    console.debug(`Notification count is ${notifCount}`)
+                    console.debug(`[Bramblestar] Notification count is ${notifCount}`)
                     document.querySelector("#notif-msg-count").innerText = notifCount + 1
     
                     $(`<a href="#" class="dropdown-item"><i class="fas fa-envelope mr-2"></i><span class="float-right text-muted text-sm">${notif.message}</span></a>`).insertBefore("#messages")
@@ -185,7 +266,7 @@ async function wsStart() {
                 if(notif.acked_users.includes(data.user_id)) {
                     return;
                 } else if(ackedMsg.includes(notif.id)) {
-                    console.debug(`Ignoring acked message: ${notif.id}`)
+                    console.debug(`[Bramblestar] Ignoring acked message: ${notif.id}`)
                     return;
                 }
     
@@ -199,14 +280,14 @@ async function wsStart() {
             if(inDocs) {
                 return
             }
-            console.log("WS: Got request to enforce staff verify")
+            console.log("[Nightheart] Got request to enforce staff verify")
             forcedStaffVerify = true
             loadContent("/staff-verify")
             return
         } else if(data.resp == "perms") {
             $("#ws-info").html(`Websocket perm update done to ${data.data}`)
             havePerm = true
-            console.log("WS: Got permissions")
+            console.log("[Nightheart] Got permissions")
             perms = data.data
             staffPerm = data.data.perm
 
@@ -229,13 +310,13 @@ async function wsStart() {
             })
         } else if(data.resp == "reset") {
             $("#ws-info").html(`Websocket cred-reset called`)
-            console.log("WS: Credentials reset")
+            console.log("[Nightheart] Credentials reset")
             
             // Kill websocket
             ws.close(4999, "Credentials reset")
             document.querySelector("#verify-screen").innerHTML = "Credential reset successful!"
         } else if(wsContentResp.has(data.resp)) {
-            console.log(`WS: Got ${data.resp}`)   
+            console.log(`[Nightheart] Got ${data.resp}`)   
             setData(data)
         } else if(wsContentSpecial.has(data.resp)) {
             alert("special-status-upd", "Status Update!", data.detail)
@@ -253,7 +334,7 @@ async function wsStart() {
                 document.querySelector("#verify-btn").innerText = "Verify";    
             }
         } else if(data.resp == "data_request") {
-            console.log("WS: Got data request")
+            console.log("[Nightheart] Got data request")
             if(data.detail) {
                 alert("data-del", "Data deletion error", data.detail)
                 document.querySelector("#request-btn").innerText = "Request"
@@ -322,7 +403,7 @@ function setData(data, noExtraCode=false) {
 
 async function getNotifications() {
     if(!wsUp) {
-        console.log("Waiting for ws to come up to start recieveing notification")
+        console.log("[StarClan] Waiting for ws to come up to start recieveing notification")
         wsStart()
         return
     }
@@ -333,7 +414,7 @@ async function getNotifications() {
         if(wsFatal) {
             return
         }
-        console.log("WS is not open, restarting ws")
+        console.log("[StarClan] WS is not open, restarting ws")
         wsUp = false
         startingWs = false
         wsStart()
@@ -352,7 +433,7 @@ function docReady(fn) {
 }    
 
 async function extraCode() {
-    console.debug({extraCode})
+    console.debug("[Lionblaze] Running extra code")
     $(".temp-item").remove()
 
     loadDocs()
@@ -410,7 +491,7 @@ function waitForWsAndLoad(data, f) {
         // Websocket isn't up yet
         waitInterval = setInterval(function() {
             if(wsUp) {
-                console.log("WS is up, loading content")
+                console.log("[Larksong] WS is up, loading content")
                 loadContent(data.loc)
                 clearInterval(waitInterval)
             }
@@ -418,17 +499,17 @@ function waitForWsAndLoad(data, f) {
         return
     } else {
         // Websocket is up, load content
-        console.log("WS is up, loading content")
+        console.log("[Larksong] WS is up, loading content")
         try {
             clearInterval(waitInterval)
         } catch(err) {
             console.log(err)
         }
-        console.log("WS: Requested for data")
+        console.log("[Larksong] Requested for data")
 
         // Are we even in a new page
         if(contentCurrPage == data.loc && contentLoadedOnce && !refresh) {
-            console.log("Ignoring bad request", contentCurrPage, data.loc)
+            console.log("[Larksong] Ignoring bad request as not in new page", contentCurrPage, data.loc)
             return
         }
 
@@ -453,7 +534,7 @@ async function loadContent(loc) {
     inStaffVerify++
 
     if(loc.startsWith("/staff-verify") && inStaffVerify > 3) {
-        console.log("Ignoring fake alarm for force staff verify")
+        console.log("[Larksong] Ignoring fake alarm for force staff verify")
         clearRefresh()
         return
     }
@@ -473,20 +554,20 @@ async function loadContent(loc) {
     if(loc.startsWith("/docs-src")) {
         // Create request for docs
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for docs-src")
+            console.log("[Larksong] Requested for docs-src")
             wsSend({request: "docs", path: data.loc.replace("/docs-src/", ""), source: true})
         })
         return
     } else if(loc.startsWith("/docs")) {
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for docs")
+            console.log("[Larksong] Requested for docs")
             inDocs = true
             wsSend({request: "docs", path: data.loc.replace("/docs/", ""), source: false})
         })
         return
     } else if(loc.startsWith("/links")) {
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for links")
+            console.log("[Larksong] Requested for links")
             wsSend({request: "links"})
         })
         return
@@ -505,18 +586,19 @@ async function loadContent(loc) {
     } else if(loc.startsWith("/status")) {
         waitForWsAndLoad({loc: loc}, (data) => {
             inDocs = true
+            console.log("[Larksong] Requested for status")
             wsSend({request: "docs", "path": "status-page", source: false})
         })
         return
     } else if(loc.startsWith("/surveys")) {
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for survey list")
+            console.log("[Larksong] Requested for survey list")
             wsSend({request: "survey_list"})
         })
         return
     } else if(loc == "/" || loc == "") {
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for index")
+            console.log("[Larksong] Requested for index")
             wsSend({request: "index"})
         })
         return
@@ -546,20 +628,20 @@ async function loadContent(loc) {
         return
     } else if(loc.startsWith("/loa")) {
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for loa")
+            console.log("[Larksong] Requested for loa")
             wsSend({request: "loa"})
         })
         return
     } else if(loc.startsWith("/staff-apps")) {
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for staff-apps")
+            console.log("[Larksong] Requested for staff-apps")
             const urlParams = new URLSearchParams(window.location.search);
             wsSend({request: "staff_apps", open: urlParams.get("open")})
         })
         return
     } else if(loc.startsWith("/user-actions")) {
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for user-actions")
+            console.log("[Larksong] Requested for user-actions")
             const urlParams = new URLSearchParams(window.location.search);
             wsSend({request: "user_actions", data: {
                 add_staff_id: urlParams.get("add_staff_id"),
@@ -568,26 +650,26 @@ async function loadContent(loc) {
         return
     } else if(loc.startsWith("/requests")) {
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for requests")
+            console.log("[Larksong] Requested for requests")
             wsSend({request: "request_logs"})
         })
         return 
     } else if(loc.startsWith("/reset")) {
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for reset_page")
+            console.log("[Larksong] Requested for reset_page")
             wsSend({request: "reset_page"})
         })
         return 
     } else if(loc.startsWith("/bot-actions")) {
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for bot-actions")
+            console.log("[Larksong] Requested for bot-actions")
             wsSend({request: "bot_actions"})
         })
         return
     } else if(loc.startsWith("/staff-verify")) {
         inStaffVerify += 1
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for staff-verify")
+            console.log("[Larksong] Requested for staff-verify")
             wsSend({request: "staff_verify"})
         })
         return
@@ -595,7 +677,7 @@ async function loadContent(loc) {
         window.location.href = loc
     } else if(loc.startsWith("/apply")) { 
         waitForWsAndLoad({loc: loc}, (data) => {
-            console.log("WS: Requested for apply")
+            console.log("[Larksong] Requested for apply")
             wsSend({request: "get_sa_questions"})
         })
         return
@@ -613,7 +695,7 @@ async function loadContent(loc) {
 async function linkMod() {
     links = document.querySelectorAll("a")
     links.forEach(link => {
-        console.debug(link, link.href, link.hasPatched, link.hasPatched == undefined)
+        console.debug("[Sparkpelt]", link, link.href, link.hasPatched, link.hasPatched == undefined)
         if(link.href.startsWith("https://lynx.fateslist.xyz/") && link.hasPatched == undefined) {
             if(link.href == "https://lynx.fateslist.xyz/#") {
                 return // Don't patch # elements
@@ -623,7 +705,7 @@ async function linkMod() {
             }
 
             link.hasPatched = true
-            console.debug("Add patch")
+            console.debug("[Sparkpelt] Add patch")
             link.addEventListener('click', event => {
                 if ( event.preventDefault ) event.preventDefault();
                 // Now add some special code

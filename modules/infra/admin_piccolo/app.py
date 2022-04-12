@@ -67,6 +67,7 @@ class SPLDEvent(enum.Enum):
     missing_perms = "MP"
     out_of_date = "OD"
     unsupported = "U"
+    verify_needed = "VN"
 
 async def fetch_user(user_id: int):
     async with aiohttp.ClientSession() as sess:
@@ -214,77 +215,6 @@ async def is_staff(user_id: int, base_perm: int) -> Union[bool, int, StaffMember
                      perm=staff_perm["perm"])  # Initially
     rc = sm.perm >= base_perm
     return rc, sm.perm, sm
-
-
-# Create the doc tree
-def doctree_gen():
-    doctree_dict = {"documentation": []}
-
-    def _gen_doctree(path_split):
-        if len(path_split) == 1:
-            # Then we have life easy
-            doctree_dict["documentation"].append(path_split[0])
-        elif len(path_split) == 2:
-            if path_split[0] not in doctree_dict:
-                doctree_dict[path_split[0]] = []
-            doctree_dict[path_split[0]].append(path_split[1])
-            doctree_dict[path_split[0]] = sorted(doctree_dict[path_split[0]])
-        else:
-            raise RuntimeError("Max nesting of 2 reached")
-
-    to_hide = ["privacy.md", "status-page.md"]
-
-    for path in pathlib.Path("modules/infra/admin_piccolo/api-docs").rglob("*.md"):
-        proper_path = str(path).replace("modules/infra/admin_piccolo/api-docs/", "")
-        if proper_path in to_hide:
-            continue
-        print(f"[LYNX] DoctreeGen: {proper_path=}")
-        path_split = proper_path.split("/")
-        _gen_doctree(path_split)
-
-    def key_doctree(x):
-        if x[0] == "documentation":
-            return 10000000000000000
-        else:
-            return -1 * len(x[0][0])
-
-    doctree_dict = dict(sorted(doctree_dict.items(), key=key_doctree, reverse=True))
-
-    # Now we just need to loop doctree_dict, luckily, we now know exactly whats needed
-    doctree = """<li id="docs-main-nav" class="nav-item"><a href="#" class="nav-link"><i class="nav-icon fa-solid fa-book"></i><p>Docs and Blogs <i class="right fas fa-angle-left"></i></p></a><ul class="nav nav-treeview">"""
-
-    for tree in doctree_dict.keys():
-
-        if tree != "documentation":
-            doctree += f"""<li id="docs-{tree}-nav" class="nav-item"><a href="#" class="nav-link"><i class="nav-icon fa-solid fa-book"></i><p>{tree.replace("-", " ").title()} <i class="right fas fa-angle-left"></i></p></a><ul class="nav nav-treeview">"""
-
-        for v in doctree_dict[tree]:
-            v = v.replace(".md", "")
-
-            if tree == "documentation":
-                id_tree = "docs"
-            else:
-                id_tree = f"docs-{tree}"
-
-            id = f"{id_tree}-{v}"
-
-            if tree == "documentation":
-                url = v
-            else:
-                url = f"{tree}/{v}"
-
-            pretty_v = v.replace("-", " ").title()
-
-            doctree += f"""<li class="nav-item"><a id="{id}-nav" href="https://lynx.fateslist.xyz/docs/{url}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>{pretty_v}</p></a></li>"""
-        if tree != "documentation":
-            doctree += "</ul>"
-
-    doctree += "</ul></li>"
-
-    if debug:
-        print(doctree)
-
-    return doctree
 
 with open("modules/infra/admin_piccolo/api-docs/staff-guide.md") as f:
     staff_guide_md = f.read()
@@ -1124,6 +1054,8 @@ We're always open, don't worry!
 async def loa(ws: WebSocket, _):
     if ws.state.member.perm < 2:
         return {"resp": "spld", "e": SPLDEvent.missing_perms}
+    elif not ws.state.verified:
+        return {"resp": "spld", "e": SPLDEvent.verify_needed}
 
     md = (
         MarkdownIt()
@@ -1225,7 +1157,7 @@ async def staff_apps(ws: WebSocket, data: dict):
     if ws.state.member.perm < 2:
         return {"resp": "spld", "e": SPLDEvent.missing_perms}
     elif not ws.state.verified:
-        return {"resp": "staff_verify_forced"}
+        return {"resp": "spld", "e": SPLDEvent.verify_needed}
 
     staff_apps = await app.state.db.fetch(
         "SELECT user_id, app_id, questions, answers, created_at FROM lynx_apps ORDER BY created_at DESC")
@@ -1291,7 +1223,7 @@ async def user_actions(ws: WebSocket, data: dict):
     if ws.state.member.perm < 3:
         return {"resp": "spld", "e": SPLDEvent.missing_perms, "min_perm": 3}
     elif not ws.state.verified:
-        return {"resp": "staff_verify_forced"}
+        return {"resp": "spld", "e": SPLDEvent.verify_needed}
 
     user_state_select = """
 <label for='user_state_select'>New State</label><br/>
@@ -1376,7 +1308,7 @@ async def bot_actions(ws: WebSocket, _):
     if ws.state.member.perm < 2:
         return {"resp": "spld", "e": SPLDEvent.missing_perms}
     elif not ws.state.verified:
-        return {"resp": "staff_verify_forced"}
+        return {"resp": "spld", "e": SPLDEvent.verify_needed}
 
     queue = await app.state.db.fetch(
         "SELECT bot_id, username_cached, description, prefix, created_at FROM bots WHERE state = $1 ORDER BY created_at ASC",
@@ -1729,7 +1661,14 @@ async def notifs(ws: WebSocket, _):
 
 @ws_action("doctree")
 async def doctree(ws: WebSocket, _):
-    return {"resp": "doctree", "data": doctree_gen().replace("\n", "")}
+    docs = []
+
+    for path in pathlib.Path("modules/infra/admin_piccolo/api-docs").rglob("*.md"):
+        proper_path = str(path).replace("modules/infra/admin_piccolo/api-docs/", "")
+        
+        docs.append(proper_path.split("/"))
+    
+    return {"resp": "doctree", "tree": docs}
 
 @ws_action("docs")
 async def docs(ws: WebSocket, data: dict):
@@ -1751,8 +1690,9 @@ async def docs(ws: WebSocket, data: dict):
     except FileNotFoundError as exc:
         return {"resp": "docs", "detail": f"api-docs/{page}.md not found -> {exc}"}
 
-    # Inject rating code
-    md_data = f"""
+    # Inject rating code if plat != DOCREADER
+    if ws.state.plat != "DOCREADER":
+        md_data = f"""
 
 <div id='feedback-div'>
 
@@ -1781,7 +1721,7 @@ placeholder="I feel like X, Y and Z could change because..."
 <button onclick='rateDoc()'>Rate</button>
 
 ### [View Source](https://lynx.fateslist.xyz/docs-src/{page})
-    """
+        """
 
     # If looking for source
     if source:
@@ -1791,7 +1731,7 @@ placeholder="I feel like X, Y and Z could change because..."
             "title": page.split('/')[-1].replace('-', ' ').title() + " (Source)",
             "data": f"""
     <pre>{md_data.replace('<', '&lt').replace('>', '&gt')}</pre>
-            """
+            """ if ws.state.plat != "DOCREADER" else md_data,
         }
 
     md = (
@@ -2252,18 +2192,18 @@ def replace_if_web(msg, ws):
 # Cli = client, plat = platform (WEB or SQUIRREL)
 @app.websocket("/_ws")
 async def ws(ws: WebSocket, cli: str, plat: str):
-    if ws.headers.get("Origin") != "https://lynx.fateslist.xyz":
+    if ws.headers.get("Origin") != "https://lynx.fateslist.xyz" and plat != "DOCREADER":
         print(f"Ignoring malicious websocket request with origin {ws.headers.get('Origin')}")
         return
     
-    if plat not in ("WEB", "SQUIRREL"):
+    if plat not in ("WEB", "SQUIRREL", "DOCREADER"):
         print("Client out of date, invalid platform")
 
         ws.state.debug = False
         return await out_of_date(ws)
     
-    if plat == "SQUIRREL":
-        ws.state.debug = True # Squirrel doesnt support no-debug mode *yet*
+    if plat in ("SQUIRREL", "DOCREADER"):
+        ws.state.debug = True # Squirrel and docreader doesnt support no-debug mode *yet*
     else:
         ws.state.debug = False
     
@@ -2279,15 +2219,16 @@ async def ws(ws: WebSocket, cli: str, plat: str):
         return await out_of_date(ws)
 
     # Check nonce to ensure client is up to date
-    if (ws.state.plat == "WEB" and cli != "Catmint"  # TODO, obfuscate/hide nonce in core.js and app.py
+    if (ws.state.plat == "WEB" and cli != "Comfrey"  # TODO, obfuscate/hide nonce in core.js and app.py
         or (ws.state.plat == "SQUIRREL" and cli != "BurdockRoot")
+        or (ws.state.plat == "DOCREADER" and cli != "Quailfeather")
     ):
         print("Client out of date, nonce incorrect")
 
         ws.state.debug = False
         return await out_of_date(ws)
     
-    if ws.state.plat == "WEB":
+    if ws.state.plat in ("WEB", "DOCREADER"):
         if not _time.isdigit():
             print("Client out of date, nonce incorrect")
 
@@ -2313,9 +2254,8 @@ async def ws(ws: WebSocket, cli: str, plat: str):
         "apply": "/_static/apply.js?v=79",
     }}, ws)
 
-    print(f"WS Cookies: {ws.cookies}")
-
-    if ws.cookies.get("sunbeam-session:warriorcats"):
+    if ws.cookies.get("sunbeam-session:warriorcats") and ws.state.plat != "DOCREADER":
+        print(f"WS Cookies: {ws.cookies}")
         try:
             sunbeam_user = orjson.loads(b64decode(ws.cookies.get("sunbeam-session:warriorcats")))
             data = await app.state.db.fetchrow(
@@ -2340,7 +2280,7 @@ async def ws(ws: WebSocket, cli: str, plat: str):
             ws.state.verified = True
 
             if not code_check(data["staff_verify_code"], int(sunbeam_user["user"]["id"])) and ws.state.member.perm >= 2:
-                await manager.send_personal_message({"resp": "staff_verify_forced"}, ws)  # Request staff verify
+                await manager.send_personal_message({"resp": "spld", "e": SPLDEvent.verify_needed}, ws)  # Request staff verify
                 ws.state.verified = False
 
         except Exception as exc:
@@ -2392,17 +2332,16 @@ async def ws(ws: WebSocket, cli: str, plat: str):
                     print("[LYNX] Warning: Unsupported squirrel action")
                     await manager.send_personal_message({"resp": "spld", "e": SPLDEvent.unsupported}, ws)
                     continue
+                elif ws.state.plat == "DOCREADER" and data.get("request") not in ("docs", "doctree"):
+                    print("[LYNX] Warning: Unsupported docreader action")
+                    await manager.send_personal_message({"resp": "spld", "e": SPLDEvent.unsupported}, ws)
+                    continue
 
                 f = ws_action_dict.get(data.get("request"))
                 if not f:
                     print(f"could not find {data}")
                 else:
-                    if ws.state.debug:
-                        ret = await f(ws, data)
-                        print(f"DEBUG: {ret=}")
-                        await manager.send_personal_message(ret, ws)
-                    else:
-                        asyncio.create_task(do_task_and_send(f, ws, data))
+                    asyncio.create_task(do_task_and_send(f, ws, data))
             except Exception as exc:
                 print(exc)
 
