@@ -20,7 +20,7 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 
-	"github.com/Fates-List/discordgo"
+	"github.com/bwmarrin/discordgo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gin-gonic/gin"
 	ginlogrus "github.com/toorop/gin-logrus"

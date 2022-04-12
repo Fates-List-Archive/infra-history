@@ -1659,17 +1659,6 @@ async def notifs(ws: WebSocket, _):
             _send_notifs.append(notif)
     return {"resp": "notifs", "data": _send_notifs}
 
-@ws_action("doctree")
-async def doctree(ws: WebSocket, _):
-    docs = []
-
-    for path in pathlib.Path("modules/infra/admin_piccolo/api-docs").rglob("*.md"):
-        proper_path = str(path).replace("modules/infra/admin_piccolo/api-docs/", "")
-        
-        docs.append(proper_path.split("/"))
-    
-    return {"resp": "doctree", "tree": docs}
-
 @ws_action("docs")
 async def docs(ws: WebSocket, data: dict):
     page = data.get("path", "/").split("#")[0]
@@ -2219,7 +2208,7 @@ async def ws(ws: WebSocket, cli: str, plat: str):
         return await out_of_date(ws)
 
     # Check nonce to ensure client is up to date
-    if (ws.state.plat == "WEB" and cli != "Comfreys"  # TODO, obfuscate/hide nonce in core.js and app.py
+    if (ws.state.plat == "WEB" and cli != "Comfrey0s"  # TODO, obfuscate/hide nonce in core.js and app.py
         or (ws.state.plat == "SQUIRREL" and cli != "BurdockRoot")
         or (ws.state.plat == "DOCREADER" and cli != "Quailfeather")
     ):
@@ -2248,6 +2237,13 @@ async def ws(ws: WebSocket, cli: str, plat: str):
     await manager.connect(ws)
 
     if ws.state.plat == "WEB":
+        docs = []
+
+        for path in pathlib.Path("modules/infra/admin_piccolo/api-docs").rglob("*.md"):
+            proper_path = str(path).replace("modules/infra/admin_piccolo/api-docs/", "")
+            
+            docs.append(proper_path.split("/"))
+        
         await manager.send_personal_message({
             "resp": "cfg", 
             "assets": {
@@ -2257,7 +2253,8 @@ async def ws(ws: WebSocket, cli: str, plat: str):
                 "apply": "/_static/apply.js?v=79",
             },
             "responses": ['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions"],
-            "actions": ['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa']
+            "actions": ['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa'],
+            "tree": docs
         }, ws)
 
     if ws.cookies.get("sunbeam-session:warriorcats") and ws.state.plat != "DOCREADER":
@@ -2336,7 +2333,7 @@ async def ws(ws: WebSocket, cli: str, plat: str):
                     print("[LYNX] Warning: Unsupported squirrel action")
                     await manager.send_personal_message({"resp": "spld", "e": SPLDEvent.unsupported}, ws)
                     continue
-                elif ws.state.plat == "DOCREADER" and data.get("request") not in ("docs", "doctree"):
+                elif ws.state.plat == "DOCREADER" and data.get("request") not in ("docs",):
                     print("[LYNX] Warning: Unsupported docreader action")
                     await manager.send_personal_message({"resp": "spld", "e": SPLDEvent.unsupported}, ws)
                     continue

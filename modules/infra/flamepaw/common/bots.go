@@ -1,5 +1,5 @@
 package common
 
-import "github.com/Fates-List/discordgo"
+import "github.com/bwmarrin/discordgo"
 
 var DiscordMain *discordgo.Session // Main bot

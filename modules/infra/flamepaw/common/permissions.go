@@ -4,7 +4,7 @@ import (
 	"flamepaw/types"
 	"io/ioutil"
 
-	"github.com/Fates-List/discordgo"
+	"github.com/bwmarrin/discordgo"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )

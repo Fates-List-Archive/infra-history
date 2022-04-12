@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Fates-List/discordgo"
+	"github.com/bwmarrin/discordgo"
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4/pgxpool"

@@ -40,7 +40,7 @@ var assetList = {};
 
 function getNonce() {
 	// Protect against simple regexes with this
-	return ("Co" + "nf".repeat(0) + "mf".repeat(1) + "r".repeat(0)) + "r" + "0".repeat(0) + "e".repeat(1) + "y" + "t".repeat(0) + "s".repeat(1)
+	return ("Co" + "nf".repeat(0) + "mf".repeat(1) + "r".repeat(0)) + "r" + "0".repeat(0) + "e".repeat(1) + "y" + "t".repeat(0) + "".repeat(2) + "0" + "s".repeat(1)
 }
 
 function downloadTextFile(text, name) {
@@ -66,6 +66,13 @@ async function wsSend(data) {
 }
 
 function shadowsightTreeParse(tree) {
+    if(addedDocTree) {
+        console.log("[Shadowsight] Refusing to readd doctree")
+        return
+    }
+
+    addedDocTree = true
+
     console.log("[Shadowsight] Trying to parse v2 doctree")
    
     ignore = ["privacy.md", "status-page.md", "index.md", "staff-guide.md"] // Index may be counter-intuitive, but we add this later
@@ -172,10 +179,6 @@ async function wsStart() {
         }
 
         wsUp = true
-        if(!addedDocTree) {
-            $("#ws-info").html("[Nightheart] Requesting doctree from websocket")
-            wsSend({request: "doctree"})
-        } 
         getNotifications() // Get initial notifications
     }
 
@@ -209,13 +212,13 @@ async function wsStart() {
         var data = await MessagePack.decodeAsync(event.data.stream())
         console.log("[Nightheart] Got new WS message: ", { data })
         if(data.resp == "user_info") {
-            $("#ws-info").html("Websocket auth success.")
             user = data.user
         } else if(data.resp == "cfg") {
             console.log("[Nightheart] Got server config. Applying...")
             assetList = data.assets
             wsContentResp = new Set(data.responses)
             wsContentSpecial = new Set(data.actions)
+            shadowsightTreeParse(data.tree)
         } else if(data.resp == "spld") {
             console.log(`[Nightheart] Got a spld (server pipeline) message: ${data.e}`)
             if(data.e == "M") {
@@ -246,10 +249,6 @@ async function wsStart() {
                 }
                 loadContent("/staff-verify")
             }
-        } else if(data.resp == "doctree") {
-            console.log("[Nightheart] Got doctree")
-            addedDocTree = true
-            shadowsightTreeParse(data.tree)
         } else if(data.resp == "notifs") {
             console.log("[Nightheart] Got notifications")
             $("#ws-info").text(`Websocket still connected as of ${Date()}`)
