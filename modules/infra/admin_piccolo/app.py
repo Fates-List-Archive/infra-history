@@ -2323,8 +2323,6 @@ async def ws(ws: WebSocket, cli: str, plat: str):
                     await manager.send_personal_message({"resp": "perms", "data": ws.state.member.dict()}, ws)
 
                 if ws.state.verified and not code_check(check["staff_verify_code"], int(sunbeam_user["user"]["id"])):
-                    if ws.state.member.perm >= 2:
-                        await manager.send_personal_message({"resp": "staff_verify_forced"}, ws)  # Request staff verify
                     ws.state.verified = False
             
             try:

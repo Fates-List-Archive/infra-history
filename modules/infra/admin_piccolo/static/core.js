@@ -237,7 +237,6 @@ async function wsStart() {
                 console.log("[Silverpelt] Staff verify required")
                 if(currentLoc == "/staff-guide") {
                     console.log("[Silverpelt] Staff guide is open, not redirecting")
-                    inStaffVerify = 0
                     return
                 }
                 loadContent("/staff-verify")
@@ -276,14 +275,6 @@ async function wsStart() {
                     localStorage.ackedMsg = JSON.stringify(ackedMsg);
                 }
             })
-        } else if(data.resp == "staff_verify_forced") {
-            if(inDocs) {
-                return
-            }
-            console.log("[Nightheart] Got request to enforce staff verify")
-            forcedStaffVerify = true
-            loadContent("/staff-verify")
-            return
         } else if(data.resp == "perms") {
             $("#ws-info").html(`Websocket perm update done to ${data.data}`)
             havePerm = true
@@ -519,23 +510,11 @@ function waitForWsAndLoad(data, f) {
 }
 
 myPermsInterval = -1
-inStaffVerify = 0
 
 async function loadContent(loc) {
     if(wsFatal) {
         document.title = "Token Error"
         document.querySelector("#verify-screen").innerHTML = ""
-        return
-    } else if(forcedStaffVerify && inStaffVerify < 1) {
-        clearRefresh()
-        return
-    }
-
-    inStaffVerify++
-
-    if(loc.startsWith("/staff-verify") && inStaffVerify > 3) {
-        console.log("[Larksong] Ignoring fake alarm for force staff verify")
-        clearRefresh()
         return
     }
 
@@ -667,7 +646,6 @@ async function loadContent(loc) {
         })
         return
     } else if(loc.startsWith("/staff-verify")) {
-        inStaffVerify += 1
         waitForWsAndLoad({loc: loc}, (data) => {
             console.log("[Larksong] Requested for staff-verify")
             wsSend({request: "staff_verify"})
