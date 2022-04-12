@@ -240,6 +240,9 @@ async function wsStart() {
                 if(currentLoc == "/staff-guide") {
                     console.log("[Silverpelt] Staff guide is open, not redirecting")
                     return
+                } else if(data.e == "U") {
+                    console.log("[Silverpelt] Unsupported action")
+                    alert("nonce-err", "Whoa!", "This action is not quite supported at this time")
                 }
                 loadContent("/staff-verify")
             }
