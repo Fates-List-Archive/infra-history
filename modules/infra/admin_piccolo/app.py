@@ -2256,18 +2256,6 @@ async def ws(ws: WebSocket, cli: str, plat: str):
         print(f"Ignoring malicious websocket request with origin {ws.headers.get('Origin')}")
         return
     
-    protocol = cli.split("@")
-
-    if len(protocol) == 2:
-        if protocol[1] == "DBG":
-            ws.state.debug = True
-        elif protocol[1] == "NODBG":
-            ws.state.debug = False
-    else:
-        print("Client out of date, invalid nonce")
-        ws.state.debug = False
-        return await out_of_date(ws)
-
     if plat not in ("WEB", "SQUIRREL"):
         print("Client out of date, invalid platform")
 
@@ -2276,19 +2264,41 @@ async def ws(ws: WebSocket, cli: str, plat: str):
     
     if plat == "SQUIRREL":
         ws.state.debug = True # Squirrel doesnt support no-debug mode *yet*
+    else:
+        ws.state.debug = False
     
     ws.state.cli = cli
     ws.state.plat = plat
 
+    try:
+        cli, _time = cli.split("@")
+    except:
+        print("Client out of date, invalid cli")
+
+        ws.state.debug = False
+        return await out_of_date(ws)
+
     # Check nonce to ensure client is up to date
-    if len(protocol) != 2 or (
-        (ws.state.plat == "WEB" and protocol[0] != "Catnip")  # TODO, obfuscate/hide nonce in core.js and app.py
-        or (ws.state.plat == "SQUIRREL" and protocol[0] != "BurdockRoot")
+    if (ws.state.plat == "WEB" and cli != "Catmint"  # TODO, obfuscate/hide nonce in core.js and app.py
+        or (ws.state.plat == "SQUIRREL" and cli != "BurdockRoot")
     ):
         print("Client out of date, nonce incorrect")
 
         ws.state.debug = False
         return await out_of_date(ws)
+    
+    if ws.state.plat == "WEB":
+        if not _time.isdigit():
+            print("Client out of date, nonce incorrect")
+
+            ws.state.debug = False
+            return await out_of_date(ws)
+        elif time.time() - int(_time) > 20:
+            print("Network connection too slow!")
+
+            ws.state.debug = False
+            return await out_of_date(ws)
+
 
     ws.state.user = None
     ws.state.member = StaffMember(name="Unknown", id=0, perm=-1, staff_id=0)

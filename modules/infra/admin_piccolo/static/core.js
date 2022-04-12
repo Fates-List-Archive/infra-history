@@ -26,8 +26,6 @@ var refresh = false
 
 var currentLoc = window.location.pathname
 
-var debug = false
-
 var hasLoadedAdminScript = false
 
 var perms = {name: "Please wait for websocket to finish loading", perm: 0}
@@ -42,7 +40,7 @@ var assetList = {};
 
 function getNonce() {
 	// Protect against simple regexes with this
-	return "C" + "a" + "t" + "n" + "i".repeat(1) + "p" + "!".repeat(0)
+	return ("C" + "a") + "t" + "m".repeat(1) + "i".repeat(1) + "n" + "t".repeat(1) + "s".repeat(0)
 }
 
 function downloadTextFile(text, name) {
@@ -61,11 +59,7 @@ async function wsSend(data) {
     }
 
     if(ws.readyState === ws.OPEN) {
-        if(debug) {
-            ws.send(JSON.stringify(data))
-        } else {
-            ws.send(MessagePack.encode(data))
-        }
+        ws.send(MessagePack.encode(data))
     } else {
         restartWs()
     }
@@ -83,12 +77,6 @@ function restartWs() {
     return
 }
 
-function setDebug(bool) {
-    // Sets debug mode
-    debug = bool
-    restartWs()
-}
-
 async function wsStart() {
     // Starts a websocket connection
     if(startingWs) {
@@ -101,10 +89,7 @@ async function wsStart() {
     startingWs = true
 
     // Select the client
-    let cliExt = "NODBG"
-    if(debug) {
-        cliExt = "DBG"
-    }
+    let cliExt = Date.now()
     
     ws = new WebSocket(`wss://lynx.fateslist.xyz/_ws?cli=${getNonce()}@${cliExt}&plat=WEB`)
     ws.onopen = function (event) {
@@ -149,12 +134,7 @@ async function wsStart() {
     }
 
     ws.onmessage = async function (event) {
-        var data = null
-        if(debug) {
-            data = JSON.parse(event.data)
-        } else {
-            data = await MessagePack.decodeAsync(event.data.stream())
-        }
+        var data = await MessagePack.decodeAsync(event.data.stream())
         console.log(data)
         if(data.resp == "user_info") {
             $("#ws-info").html("Websocket auth success.")
