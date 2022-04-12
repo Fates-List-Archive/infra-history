@@ -121,7 +121,7 @@ def post_stats(bot_id: int, guild_count: int):
     "context": null
 }
 ```
-**Authorization Needed** | [Bot](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [Bot](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### Index
@@ -1589,7 +1589,7 @@ This endpoint creates a vote for a bot which can only be done *once* every 8 hou
     "context": "Some context on the vote"
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### Create Server Vote
@@ -1641,7 +1641,7 @@ and is independent from a bot vote.
     "context": "Some context on the vote"
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### Mini Index
@@ -2052,7 +2052,7 @@ Due to massive changes, this API cannot be mapped onto any v2 API
     }
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ## Auth
@@ -2274,7 +2274,7 @@ token ever gets leaked.
     "context": null
 }
 ```
-**Authorization Needed** | [Bot](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [Bot](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### New User Token
@@ -2324,7 +2324,7 @@ token ever gets leaked.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### New Server Token
@@ -2374,7 +2374,7 @@ token ever gets leaked.
     "context": null
 }
 ```
-**Authorization Needed** | [Server](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [Server](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ## Bot Actions
@@ -2664,7 +2664,7 @@ to false.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### Edit Bot
@@ -2952,7 +2952,7 @@ to false.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### Transfer Ownership
@@ -3025,7 +3025,7 @@ You **must** be main owner to use this endpoint.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### Delete Bot
@@ -3077,7 +3077,7 @@ You **must** be main owner to use this endpoint.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### Get Import Sources
@@ -3182,7 +3182,7 @@ Imports a bot from a source listed in ``Get Import Sources``.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ## Appeal
@@ -3193,9 +3193,9 @@ Imports a bot from a source listed in ``Get Import Sources``.
 
 Creates a appeal/request for a bot.
 
-``request_type`` is a ``BotRequestType``, see [Enum Reference](https://docs.fateslist.xyz/structures/enums.autogen/)
+``request_type`` is a [BotRequestType](https://lynx.fateslist.xyz/docs/enums-ref#botrequesttype)
 
-**Ideally should only be used for custom clients**
+**Ideally only useful for custom clients**
 
 
 **Path parameters**
@@ -3243,7 +3243,7 @@ Creates a appeal/request for a bot.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ## Packs
@@ -3358,7 +3358,7 @@ but must exist in the object
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ## Users
@@ -3405,6 +3405,7 @@ Gets a user profile.
 
 
 - **bots** => (Array) 
+- **description_raw** => string [default/example = ""]
 - **description** => string [default/example = ""]
 - **profile_css** => string [default/example = ""]
 - **user_css** => string [default/example = ""]
@@ -3437,6 +3438,7 @@ Gets a user profile.
         "status": "Unknown"
     },
     "bots": [],
+    "description_raw": "",
     "description": "",
     "profile_css": "",
     "user_css": "",
@@ -3492,6 +3494,7 @@ be present
 
 
 - **bots** => (Array) 
+- **description_raw** => string [default/example = ""]
 - **description** => string [default/example = ""]
 - **profile_css** => string [default/example = ""]
 - **user_css** => string [default/example = ""]
@@ -3524,6 +3527,7 @@ be present
         "status": "Unknown"
     },
     "bots": [],
+    "description_raw": "",
     "description": "",
     "profile_css": "",
     "user_css": "",
@@ -3619,11 +3623,9 @@ This may change in the future and is given by ``per_page`` key.
 
 - **reviews** => (Array) Struct Review 
 	- **id** => None (unknown value type)
-	- **reply** => bool [default/example = false]
 	- **star_rating** => string [default/example = "0"]
 	- **review_text** => string [default/example = ""]
 	- **votes** => Struct ParsedReviewVotes 
-		- **votes** => (Array) 
 		- **upvotes** => (Array) 
 		- **downvotes** => (Array) 
 
@@ -3656,11 +3658,9 @@ This may change in the future and is given by ``per_page`` key.
 
 - **user_review** => (Optional) Struct Review 
 	- **id** => None (unknown value type)
-	- **reply** => bool [default/example = false]
 	- **star_rating** => string [default/example = "0"]
 	- **review_text** => string [default/example = ""]
 	- **votes** => Struct ParsedReviewVotes 
-		- **votes** => (Array) 
 		- **upvotes** => (Array) 
 		- **downvotes** => (Array) 
 
@@ -3693,11 +3693,9 @@ This may change in the future and is given by ``per_page`` key.
     "reviews": [
         {
             "id": null,
-            "reply": false,
             "star_rating": "0",
             "review_text": "",
             "votes": {
-                "votes": [],
                 "upvotes": [],
                 "downvotes": []
             },
@@ -3723,11 +3721,9 @@ This may change in the future and is given by ``per_page`` key.
     },
     "user_review": {
         "id": null,
-        "reply": false,
         "star_rating": "0",
         "review_text": "",
         "votes": {
-            "votes": [],
             "upvotes": [],
             "downvotes": []
         },
@@ -3787,11 +3783,9 @@ also match the user token sent in the ``Authorization`` header
 **Request Body Description**
 
 - **id** => None (unknown value type)
-- **reply** => bool [default/example = false]
 - **star_rating** => string [default/example = "0"]
 - **review_text** => string [default/example = ""]
 - **votes** => Struct ParsedReviewVotes 
-	- **votes** => (Array) 
 	- **upvotes** => (Array) 
 	- **downvotes** => (Array) 
 
@@ -3819,11 +3813,9 @@ also match the user token sent in the ``Authorization`` header
 ```json
 {
     "id": null,
-    "reply": false,
     "star_rating": "0",
     "review_text": "",
     "votes": {
-        "votes": [],
         "upvotes": [],
         "downvotes": []
     },
@@ -3859,7 +3851,7 @@ also match the user token sent in the ``Authorization`` header
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### Edit Review
@@ -3903,12 +3895,10 @@ also match the user token sent in the ``Authorization`` header
 
 **Request Body Description**
 
-- **id** => (Optional) string [default/example = "5cb77b7b-eee2-427e-8910-e4a5c9edc1c7"]
-- **reply** => bool [default/example = false]
+- **id** => (Optional) string [default/example = "67900122-e428-4408-a150-21b700290feb"]
 - **star_rating** => string [default/example = "0"]
 - **review_text** => string [default/example = ""]
 - **votes** => Struct ParsedReviewVotes 
-	- **votes** => (Array) 
 	- **upvotes** => (Array) 
 	- **downvotes** => (Array) 
 
@@ -3935,12 +3925,10 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "5cb77b7b-eee2-427e-8910-e4a5c9edc1c7",
-    "reply": false,
+    "id": "67900122-e428-4408-a150-21b700290feb",
     "star_rating": "0",
     "review_text": "",
     "votes": {
-        "votes": [],
         "upvotes": [],
         "downvotes": []
     },
@@ -3976,7 +3964,7 @@ also match the user token sent in the ``Authorization`` header
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### Delete Review
@@ -4001,7 +3989,7 @@ set this a TargetType anyways so you might as well set it correctly.
 
 **Path parameters**
 
-- **rid** => string [default/example = "a3050158-2863-4149-9a6c-d5ee977d4118"]
+- **rid** => string [default/example = "6b170111-ac07-4c7a-9b77-03752735ce94"]
 
 
 
@@ -4041,7 +4029,7 @@ set this a TargetType anyways so you might as well set it correctly.
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### Vote Review
@@ -4067,7 +4055,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
 
 **Path parameters**
 
-- **rid** => string [default/example = "4ba0ec36-7e57-4766-97f0-7de6baf3f58d"]
+- **rid** => string [default/example = "e34c9ae9-6643-4d5d-a9c2-ea9334b737c1"]
 
 
 
@@ -4109,7 +4097,7 @@ A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``
     "context": null
 }
 ```
-**Authorization Needed** | [User](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ## Stats
@@ -4296,7 +4284,7 @@ This is the ``target_type``
     "context": null
 }
 ```
-**Authorization Needed** | [Bot](https://docs.fateslist.xyz/endpoints#authorization), [Server](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [Bot](https://lynx.fateslist.xyz/docs/endpoints#authorization), [Server](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### Delete Resource
@@ -4320,7 +4308,7 @@ This is the ``target_type``
 
 **Query parameters**
 
-- **id** => string [default/example = "b36d07a1-c5fa-4684-8607-c1ded5f48863"]
+- **id** => string [default/example = "76eeaa88-927d-4958-92f4-a7771671c08c"]
 - **target_type** => i32 [default/example = 0]
 
 
@@ -4353,7 +4341,7 @@ This is the ``target_type``
     "context": null
 }
 ```
-**Authorization Needed** | [Bot](https://docs.fateslist.xyz/endpoints#authorization), [Server](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [Bot](https://lynx.fateslist.xyz/docs/endpoints#authorization), [Server](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ## Commands
@@ -4447,7 +4435,7 @@ multiple requests**
     "context": null
 }
 ```
-**Authorization Needed** | [Bot](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [Bot](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ### Delete Bot Command
@@ -4504,6 +4492,6 @@ UUIDs in the case of ids. Bad names/ids will be ignored
     "context": null
 }
 ```
-**Authorization Needed** | [Bot](https://docs.fateslist.xyz/endpoints#authorization)
+**Authorization Needed** | [Bot](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
