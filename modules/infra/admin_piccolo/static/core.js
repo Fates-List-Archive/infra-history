@@ -32,15 +32,15 @@ var perms = {name: "Please wait for websocket to finish loading", perm: 0}
 
 var user = {id: "0", username: "Please wait for websocket to finish loading"}
 
-const wsContentResp = new Set(['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions"])
+let wsContentResp = new Set([])
 
-const wsContentSpecial = new Set(['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa'])
+let wsContentSpecial = new Set([])
 
 var assetList = {};
 
 function getNonce() {
 	// Protect against simple regexes with this
-	return ("Co" + "nf".repeat(0) + "mf".repeat(1) + "r".repeat(0)) + "r" + "0".repeat(0) + "e".repeat(1) + "y" + "t".repeat(0) + "s".repeat(0)
+	return ("Co" + "nf".repeat(0) + "mf".repeat(1) + "r".repeat(0)) + "r" + "0".repeat(0) + "e".repeat(1) + "y" + "t".repeat(0) + "s".repeat(1)
 }
 
 function downloadTextFile(text, name) {
@@ -211,9 +211,11 @@ async function wsStart() {
         if(data.resp == "user_info") {
             $("#ws-info").html("Websocket auth success.")
             user = data.user
-        } else if(data.resp == "asset-list") {
-            console.log("[Nightheart] Got static asset list")
+        } else if(data.resp == "cfg") {
+            console.log("[Nightheart] Got server config. Applying...")
             assetList = data.assets
+            wsContentResp = new Set(data.responses)
+            wsContentSpecial = new Set(data.actions)
         } else if(data.resp == "spld") {
             console.log(`[Nightheart] Got a spld (server pipeline) message: ${data.e}`)
             if(data.e == "M") {

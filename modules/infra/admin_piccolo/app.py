@@ -2219,7 +2219,7 @@ async def ws(ws: WebSocket, cli: str, plat: str):
         return await out_of_date(ws)
 
     # Check nonce to ensure client is up to date
-    if (ws.state.plat == "WEB" and cli != "Comfrey"  # TODO, obfuscate/hide nonce in core.js and app.py
+    if (ws.state.plat == "WEB" and cli != "Comfreys"  # TODO, obfuscate/hide nonce in core.js and app.py
         or (ws.state.plat == "SQUIRREL" and cli != "BurdockRoot")
         or (ws.state.plat == "DOCREADER" and cli != "Quailfeather")
     ):
@@ -2247,12 +2247,18 @@ async def ws(ws: WebSocket, cli: str, plat: str):
 
     await manager.connect(ws)
 
-    await manager.send_personal_message({"resp": "asset-list", "assets": {
-        "bot-actions": "/_static/bot-actions.js?v=74",
-        "user-actions": "/_static/user-actions.js?v=73",
-        "surveys": "/_static/surveys.js?v=72",
-        "apply": "/_static/apply.js?v=79",
-    }}, ws)
+    if ws.state.plat == "WEB":
+        await manager.send_personal_message({
+            "resp": "cfg", 
+            "assets": {
+                "bot-actions": "/_static/bot-actions.js?v=74",
+                "user-actions": "/_static/user-actions.js?v=73",
+                "surveys": "/_static/surveys.js?v=72",
+                "apply": "/_static/apply.js?v=79",
+            },
+            "responses": ['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions"],
+            "actions": ['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa']
+        }, ws)
 
     if ws.cookies.get("sunbeam-session:warriorcats") and ws.state.plat != "DOCREADER":
         print(f"WS Cookies: {ws.cookies}")
