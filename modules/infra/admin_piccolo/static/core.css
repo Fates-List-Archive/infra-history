@@ -3,6 +3,10 @@
     word-wrap: break-word;
 }
 
+code {
+    color: lightblue;
+}
+
 textarea {
     width: 100%; 
     height: 200px !important; 

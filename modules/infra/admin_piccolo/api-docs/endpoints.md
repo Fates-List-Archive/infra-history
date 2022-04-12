@@ -3578,7 +3578,7 @@ Gets reviews for a reviewable entity.
 A reviewable entity is currently only a bot or a server. Profile reviews are a possibility
 in the future.
 
-A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``target_type``
+``target_type`` is a [TargetType](https://lynx.fateslist.xyz/docs/enums-ref#targettype)
 
 This reviewable entities id which is a ``i64`` is the id that is specifed in the
 path.
@@ -3757,10 +3757,11 @@ so there should not be an error even if provided.
 A reviewable entity is currently only a bot or a server. Profile reviews are a possibility
 in the future.
 
-A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``target_type``
+The ``parent_id`` is optional and is used to create a reply to a review.
 
-This reviewable entities id which is a ``i64`` is the id that is specifed in the
-path.
+``target_type`` is a [TargetType](https://lynx.fateslist.xyz/docs/enums-ref#targettype)
+
+``review`` is a [Review](https://lynx.fateslist.xyz/docs/models-ref#review)
 
 ``user_id`` is *required* for this endpoint and must be the user making the review. It must
 also match the user token sent in the ``Authorization`` header
@@ -3804,7 +3805,7 @@ also match the user token sent in the ``Authorization`` header
 
 - **epoch** => (Array) 
 - **replies** => (Array) 
-- **parent_id** => None (unknown value type)
+- **parent_id** => (Optional) string [default/example = "c260a637-384f-4be8-887a-649e1f3aa8b9"]
 
 
 
@@ -3830,7 +3831,7 @@ also match the user token sent in the ``Authorization`` header
     },
     "epoch": [],
     "replies": [],
-    "parent_id": null
+    "parent_id": "c260a637-384f-4be8-887a-649e1f3aa8b9"
 }
 ```
 
@@ -3866,7 +3867,7 @@ so there should not be an error even if provided.
 A reviewable entity is currently only a bot or a server. Profile reviews are a possibility
 in the future.
 
-A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``target_type``
+``target_type`` is a [TargetType](https://lynx.fateslist.xyz/docs/enums-ref#targettype)
 
 This reviewable entities id which is a ``i64`` is the id that is specifed in the
 path.
@@ -3895,7 +3896,7 @@ also match the user token sent in the ``Authorization`` header
 
 **Request Body Description**
 
-- **id** => (Optional) string [default/example = "67900122-e428-4408-a150-21b700290feb"]
+- **id** => (Optional) string [default/example = "1229c8f7-b8b7-443d-a5f6-74498e616011"]
 - **star_rating** => string [default/example = "0"]
 - **review_text** => string [default/example = ""]
 - **votes** => Struct ParsedReviewVotes 
@@ -3925,7 +3926,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "67900122-e428-4408-a150-21b700290feb",
+    "id": "1229c8f7-b8b7-443d-a5f6-74498e616011",
     "star_rating": "0",
     "review_text": "",
     "votes": {
@@ -3981,15 +3982,15 @@ also match the user token sent in the ``Authorization`` header. ``page`` is curr
 A reviewable entity is currently only a bot or a server. Profile reviews are a possibility
 in the future.
 
-A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``target_type``
+``target_type`` is a [TargetType](https://lynx.fateslist.xyz/docs/enums-ref#targettype)
 
 ``target_type`` is not currently checked but it is a good idea to set it anyways. You must
-set this a TargetType anyways so you might as well set it correctly.
+set this anyways so you might as well set it correctly.
 
 
 **Path parameters**
 
-- **rid** => string [default/example = "6b170111-ac07-4c7a-9b77-03752735ce94"]
+- **rid** => string [default/example = "70f6229e-f46b-471d-9c3c-de6b3193b602"]
 
 
 
@@ -4048,14 +4049,14 @@ also match the user token sent in the ``Authorization`` header.
 A reviewable entity is currently only a bot or a server. Profile reviews are a possibility
 in the future.
 
-A bot has a TargetType of 0 while a server has a TargetType of 1. This is the ``target_type``
+``target_type`` is a [TargetType](https://lynx.fateslist.xyz/docs/enums-ref#targettype)
 
 **This endpoint does not require ``target_type`` at all. You can safely omit it**
 
 
 **Path parameters**
 
-- **rid** => string [default/example = "e34c9ae9-6643-4d5d-a9c2-ea9334b737c1"]
+- **rid** => string [default/example = "ddf11192-298b-4f0b-8b06-e511620bc76a"]
 
 
 
@@ -4231,8 +4232,7 @@ support the frontend resource creator in Bot Settings as of right now.
 
 The ``id`` here must be the resource id
 
-A bot has a TargetType of 0 while a server has a TargetType of 1. 
-This is the ``target_type``
+``target_type`` is a [TargetType](https://lynx.fateslist.xyz/docs/enums-ref#targettype)
 
 
 **Path parameters**
@@ -4296,8 +4296,7 @@ support the frontend resource creator in Bot Settings as of right now.
 
 The ``id`` here must be the resource id
 
-A bot has a TargetType of 0 while a server has a TargetType of 1. 
-This is the ``target_type``
+``target_type`` is a [TargetType](https://lynx.fateslist.xyz/docs/enums-ref#targettype)
 
 
 **Path parameters**
@@ -4308,7 +4307,7 @@ This is the ``target_type``
 
 **Query parameters**
 
-- **id** => string [default/example = "76eeaa88-927d-4958-92f4-a7771671c08c"]
+- **id** => string [default/example = "a2b2f80d-1b77-45c2-9e90-96a2f672a0b9"]
 - **target_type** => i32 [default/example = 0]
 
 
@@ -4360,6 +4359,8 @@ the command depending on its ``name``.**
 **Only post up to 10-20 commands at a time, otherwise requests may be truncated
 or otherwise fail with odd errors.  If you have more than this, then perform 
 multiple requests**
+
+``target_type`` is a [TargetType](https://lynx.fateslist.xyz/docs/enums-ref#targettype)
 
 
 **Path parameters**
