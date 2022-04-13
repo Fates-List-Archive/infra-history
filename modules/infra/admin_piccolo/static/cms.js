@@ -7,7 +7,12 @@ function setData(data, noExtraCode=false) {
         linkify: true,
     })
     md.use(markdownItAnchor, {
-        permalink: true,
+        permalink: markdownItAnchor.permalink.linkInsideHeader({
+            symbol: "\u00B6",
+        }),
+        slugify: s => {
+            return s.toLowerCase().replaceAll("(", "").replaceAll(")", "").replaceAll(" ", "-").replaceAll("/", "-").replaceAll("\\", "-").replaceAll(".", "").replaceAll("!", "").replaceAll("?", "")
+        },
         level: [1, 2, 3, 4, 5]
     });
     md.use(markdownitContainer, 'info')

@@ -1,5 +1,3 @@
-const { info } = require("console")
-
 actions = {
     "user_info": (data) => {
         user = data.user
