@@ -83,7 +83,7 @@ actions = {
         // Remove admin panel
         if(staffPerm >= 2) {
             if(!hasLoadedAdminScript) {
-                loadModule("admin-nav", "/_static/admin-nav.js?v=m1", () => {
+                loadModule("admin-nav", "/_static/admin-nav.js?v=m2", () => {
                     hasLoadedAdminScript = true
                 })
             } else {

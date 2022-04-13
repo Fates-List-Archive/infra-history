@@ -188,6 +188,6 @@
       <div id="sidebar-overlay"></div>
     </div>
   </body>
-  <script src="/_static/core.js?v=djdjdjjdwjdjj"></script>
+  <script>const log=(...a)=>{console[a[0]](`%c[${a[1]}]%c`,"color:purple;font-weight:bold;","",...a.slice(2))},debug=(...a)=>(a.unshift("debug"),log(...a)),info=(...a)=>(a.unshift("info"),log(...a)),warn=(...a)=>(a.unshift("warn"),log(...a)),error=(...a)=>(a.unshift("error"),log(...a));modulesLoaded=[];function readyModule(a){info("StarClan",`Module: ${a} has loaded successfully!`),modulesLoaded.push(a)}function loadModule(a,b,c=()=>{}){if(!modulesLoaded.includes(a)){info("StarClan",`Loading module ${a} (path=${b})`);let d=document.createElement("script");d.src=b,d.async=!1,document.body.appendChild(d),setInterval(function(){modulesLoaded.includes(a)&&(c(),clearInterval(this))})}}loadModule("doctree","/_static/doctree.js?v=2"),loadModule("docs","/_static/docs.js?v=m1"),loadModule("utils","/_static/utils.js?v=m1"),loadModule("ws","/_static/ws.js?v=m5"),loadModule("cms","/_static/cms.js?v=m9"),loadModule("cstate","/_static/cstate.js?v=m1"),loadModule("wsactions","/_static/wsactions.js?v=m5"),loadModule("routers","/_static/routers.js?v=m8"),loadModule("alert","/_static/alert.js?v=m3");</script>
   <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.7.2/dist.es5+umd/msgpack.min.js"></script>
 </html>  

@@ -69,6 +69,6 @@ function loadAdmin() {
     adminLoaded = true
 }
 
-docReady(loadAdmin)
+$(loadAdmin)
 
 readyModule("admin-nav")

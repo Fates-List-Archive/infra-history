@@ -168,4 +168,19 @@ async function linkMod() {
     })
 }
 
+$(function() {
+    if(!alreadyUp) {
+        interval = setInterval(function() {
+            if(modulesLoaded.includes("ws") && modulesLoaded.includes("cstate") && modulesLoaded.includes("cms") && modulesLoaded.includes("routers") && modulesLoaded.includes("alert")) {
+                clearInterval(interval)
+                startSetup()
+                setInterval(startSetup, 5000)    
+                loadContent(window.location.pathname)
+                alreadyUp = true 
+                clearInterval(interval)     
+            }
+        })
+    }
+})
+
 readyModule("cms")
