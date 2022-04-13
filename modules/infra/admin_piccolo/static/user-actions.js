@@ -27,3 +27,5 @@ async function setUserState() {
     let reason = document.querySelector("#user_state_reason").value
     sendUserAction("set_user_state", userId, reason, parseInt(state))
 }
+
+readyModule("user-actions")

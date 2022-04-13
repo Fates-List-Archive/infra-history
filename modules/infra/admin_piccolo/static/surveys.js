@@ -19,3 +19,5 @@ function submitSurvey(id, questions) {
 
     wsSend({request: "survey", id: id, answers: answers})
 }
+
+readyModule("surveys")

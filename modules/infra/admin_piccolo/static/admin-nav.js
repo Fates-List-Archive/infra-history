@@ -70,3 +70,5 @@ function loadAdmin() {
 }
 
 docReady(loadAdmin)
+
+readyModule("admin-nav")

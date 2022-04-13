@@ -97,3 +97,5 @@ async function setFlag() {
 
     sendBotAction(action, botId, reason, flag)
 }
+
+readyModule("bot-actions")

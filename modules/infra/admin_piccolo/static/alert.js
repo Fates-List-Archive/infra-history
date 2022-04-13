@@ -3,17 +3,25 @@ let alerts = []
 let intervals = []
 
 function alert(id, title, content) {
-    if(alerts.length > 0) {
-        intervals.push(setTimeout(() => {
-            alert(id, title, content)
-        }, 300))
-        return
+    if(id === "fatal-error") {
+        intervals.forEach(interval => {
+            clearInterval(interval)
+            intervals.splice(intervals.indexOf(interval), 1)
+        })
+        alerts = [id];
+    } else {
+        if(alerts.length > 0) {
+            intervals.push(setTimeout(() => {
+                alert(id, title, content)
+            }, 300))
+            return
+        }
+        alerts.push(id)
+        intervals.forEach(interval => {
+            clearInterval(interval)
+            intervals.splice(intervals.indexOf(interval), 1)
+        })
     }
-    alerts.push(id)
-    intervals.forEach(interval => {
-        clearInterval(interval)
-        intervals.splice(intervals.indexOf(interval), 1)
-    })
     $("#alert-placer").html(`
 <dialog 
     id="${id}"
@@ -109,3 +117,5 @@ function closeAlert() {
 }
 
 window.alert = alert
+
+readyModule("alert")

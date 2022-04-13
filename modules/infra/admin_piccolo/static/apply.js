@@ -58,3 +58,5 @@ async function loaSend() {
         }, false)
       })
   })()  
+
+  readyModule("apply")

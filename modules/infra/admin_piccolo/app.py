@@ -68,6 +68,7 @@ class SPLDEvent(enum.Enum):
     out_of_date = "OD"
     unsupported = "U"
     verify_needed = "VN"
+    ping = "P"
 
 async def fetch_user(user_id: int):
     async with aiohttp.ClientSession() as sess:
@@ -447,20 +448,25 @@ def bot_select(id: str, bot_list: list[str], reason: bool = False):
 
     # Add a input for bot id instead of select
     select += f"""
+<div class="form-group">
 <label for="{id}-alt">Or enter a Bot ID</label><br/>
-<input type="number" id="{id}-alt" name="{id}-alt"/>
+<input class="form-control" type="number" id="{id}-alt" name="{id}-alt" placeholder="Bot ID..."/>
+</div>
 <br/>
     """
 
     if reason:
         select += f"""
+<div class="form-group">
 <label for="{id}-reason">Reason</label><br/>
 <textarea 
+    class="form-control"
     type="text" 
     id="{id}-reason" 
     name="{id}-reason"
     placeholder="Enter reason and feedback for improvement here"
 ></textarea>
+</div>
 <br/>
         """
 
@@ -928,7 +934,8 @@ class ConnectionManager:
             try:
                 await websocket.close(1008)
             except:
-                ...
+                return False
+        return True
 
     async def broadcast(self, message: dict | list):
         for connection in self.active_connections:
@@ -1193,13 +1200,15 @@ async def staff_apps(ws: WebSocket, data: dict):
         app_html += f"""
         <details {open_attr}>
             <summary>{staff_app['app_id']}</summary>
+            <a href='/user-actions?add_staff_id={user['id']}'"><button>Accept</button></a>
+            <button onclick="deleteAppByUser('{user['id']}')">Delete</button>
             <h2>User Info</h2>
             <p><strong><em>Created At:</em></strong> {staff_app['created_at']}</p>
             <p><strong><em>User:</em></strong> {bleach.clean(user['username'])} ({user['id']})</p>
             <h2>Application:</h2> 
             {questions_html}
             <br/>
-            <button onclick="window.location.href = '/addstaff?add_staff_id={user['id']}'">Accept</button>
+            <a href='/user-actions?add_staff_id={user['id']}'"><button>Accept</button></a>
             <button onclick="deleteAppByUser('{user['id']}')">Delete</button>
         </details>
         """
@@ -1270,9 +1279,11 @@ Now that we're all caught up with the staff guide, here are the list of actions 
 - Head Admin+ only
 - Definition: user => bot_reviewer
 
+<div class="form-group">
 <label for="staff_user_id">User ID</label>
 <input class="form-control" id="staff_user_id" name="staff_user_id" placeholder='user id here' type="number" value="{data.get("add_staff_id") or ''}" />
 <button onclick="addStaff()">Add</button>
+</div>
 
 :::
 
@@ -1283,18 +1294,23 @@ Now that we're all caught up with the staff guide, here are the list of actions 
 - Admin+ only
 - Definition: state => $user_state
 
+<div class="form-group">
 <label for="user_state_id">User ID</label>
 <input class="form-control" id="user_state_id" name="user_state_id" placeholder='user id here' type="number" />
+</div>
 
 {user_state_select}
 
+<div class="form-group">
 <label for="user_state_reason">Reason</label>
 <textarea 
+class="form-control"
 type="text" 
 id="user_state_reason" 
 name="user_state_reason"
 placeholder="Enter reason for state change here!"
 ></textarea>
+</div>
 
 <button onclick="setUserState()">Set State</button>
 
@@ -1560,10 +1576,13 @@ Please check site pages before approving/denying. You can save lots of time by d
 - Head Admin+ only
 - Definition: votes => 0 %all%
 
+<div class="form-group">
 <textarea
+class = "form-control"
 id="reset-all-votes-reason"
 placeholder="Reason for resetting all votes. Defaults to 'Monthly Votes Reset'"
 ></textarea>
+</div>
 
 <button onclick="resetAllVotes()">Reset All</button>
 
@@ -1644,20 +1663,41 @@ async function verify() {
 """
     }
 
-@ws_action("notifs")
-async def notifs(ws: WebSocket, _):
-    notifs = await app.state.db.fetch("SELECT id, acked_users, message, type, staff_only FROM lynx_notifications")
-    _send_notifs = []
-    for notif in notifs:
-        if notif["staff_only"]:
-            if ws.state.member.perm >= 2:
+async def notifs(ws: WebSocket):
+    notifs_sent = []
+    notifs_sent_times = 0
+
+    while True:
+        notifs = await app.state.db.fetch("SELECT id, acked_users, message, type, staff_only FROM lynx_notifications")
+        _send_notifs = []
+        for notif in notifs:
+            if notif["id"] in notifs_sent and notifs_sent_times >= 3:
+                # Don't keep sending same message over and over again, give a buffer of 3 times
+                continue
+
+            if notif["staff_only"]:
+                if ws.state.member.perm >= 2:
+                    _send_notifs.append(notif)
+                    notifs_sent.append(notif["id"])
+            elif notif["acked_users"]:
+                if ws.state.user and int(ws.state.user["id"]) in notif["acked_users"]:
+                    _send_notifs.append(notif)
+                    notifs_sent.append(notif["id"])
+            else:
                 _send_notifs.append(notif)
-        elif notif["acked_users"]:
-            if ws.state.user and int(ws.state.user["id"]) in notif["acked_users"]:
-                _send_notifs.append(notif)
-        else:
-            _send_notifs.append(notif)
-    return {"resp": "notifs", "data": _send_notifs}
+                notifs_sent.append(notif["id"])
+        
+        if len(_send_notifs) > 0:
+            res = await manager.send_personal_message({"resp": "notifs", "data": _send_notifs}, ws)
+            if not res:
+                return
+
+        res = await manager.send_personal_message({"resp": "spld", "e": SPLDEvent.ping}, ws)
+        notifs_sent_times += 1
+        if not res:
+            return
+
+        await asyncio.sleep(5)
 
 @ws_action("docs")
 async def docs(ws: WebSocket, data: dict):
@@ -2176,7 +2216,7 @@ async def out_of_date(ws):
 def replace_if_web(msg, ws):
     if ws.state.plat == "WEB":
         return msg.replace("<", "&lt").replace(">", "&gt")
-    return msg
+    return msg    
 
 # Cli = client, plat = platform (WEB or SQUIRREL)
 @app.websocket("/_ws")
@@ -2208,7 +2248,7 @@ async def ws(ws: WebSocket, cli: str, plat: str):
         return await out_of_date(ws)
 
     # Check nonce to ensure client is up to date
-    if (ws.state.plat == "WEB" and cli != "Comfrey0s"  # TODO, obfuscate/hide nonce in core.js and app.py
+    if (ws.state.plat == "WEB" and cli != "Comfrey0s1"  # TODO, obfuscate/hide nonce in core.js and app.py
         or (ws.state.plat == "SQUIRREL" and cli != "BurdockRoot")
         or (ws.state.plat == "DOCREADER" and cli != "Quailfeather")
     ):
@@ -2247,10 +2287,10 @@ async def ws(ws: WebSocket, cli: str, plat: str):
         await manager.send_personal_message({
             "resp": "cfg", 
             "assets": {
-                "bot-actions": "/_static/bot-actions.js?v=74",
-                "user-actions": "/_static/user-actions.js?v=73",
-                "surveys": "/_static/surveys.js?v=72",
-                "apply": "/_static/apply.js?v=79",
+                "bot-actions": "/_static/bot-actions.js?v=75",
+                "user-actions": "/_static/user-actions.js?v=74",
+                "surveys": "/_static/surveys.js?v=73",
+                "apply": "/_static/apply.js?v=80",
             },
             "responses": ['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions"],
             "actions": ['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa'],
@@ -2292,6 +2332,10 @@ async def ws(ws: WebSocket, cli: str, plat: str):
             pass
 
     try:
+        if ws.state.plat == "WEB":
+            # Start notifs
+            asyncio.create_task(notifs(ws))
+
         while True:
             try:
                 if ws.state.debug:

@@ -75,3 +75,5 @@ async function dataDelete() {
     userId = document.querySelector("#user-id-del").value
     wsSend({request: "data_deletion", user: userId})
 }
+
+readyModule("docs")
