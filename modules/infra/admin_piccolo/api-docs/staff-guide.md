@@ -2,10 +2,7 @@
 
 ### Contributing
 
-If you believe you have found a bug or wish to suggest an improvement to these docs, please make a PR [here](https://github.com/Fates-List/apidocs)
-
-**Tip**: When making the PR, clone the Fates-List repository, add `flamepaw` to your PATH and then run the `./build` in your forked/modified repository to build
-the changes. **If you do not have a linux machine or if you do not understand the above, just say so in the PR and allow edits from others so we can build the new site docs for you**
+If you believe you have found a bug or wish to suggest an improvement to these docs, please make a PR [here](https://github.com/Fates-List/infra)
 
 </blockquote>
 

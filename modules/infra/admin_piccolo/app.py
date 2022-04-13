@@ -48,12 +48,6 @@ from piccolo.apps.user.tables import BaseUser
 import secrets
 import aiohttp
 import string
-from markdown_it import MarkdownIt
-from mdit_py_plugins.front_matter import front_matter_plugin
-from mdit_py_plugins.footnote import footnote_plugin
-from mdit_py_plugins.anchors import anchors_plugin
-from mdit_py_plugins.field_list import fieldlist_plugin
-from mdit_py_plugins.container import container_plugin
 from fastapi.staticfiles import StaticFiles
 import msgpack
 import enum
@@ -219,23 +213,6 @@ async def is_staff(user_id: int, base_perm: int) -> Union[bool, int, StaffMember
 
 with open("modules/infra/admin_piccolo/api-docs/staff-guide.md") as f:
     staff_guide_md = f.read()
-
-md = (
-    MarkdownIt()
-        .use(front_matter_plugin)
-        .use(footnote_plugin)
-        .use(anchors_plugin, max_level=5, permalink=True)
-        .use(fieldlist_plugin)
-        .use(container_plugin, name="warning")
-        .use(container_plugin, name="info")
-        .use(container_plugin, name="aonly")
-        .use(container_plugin, name="guidelines")
-        .use(container_plugin, name="generic", validate=lambda *args: True)
-        .enable('table')
-        .enable('image')
-)
-
-staff_guide = md.render(staff_guide_md)
 
 admin = create_admin(
     [Notifications, LynxSurveys, LynxSurveyResponses, LynxRatings, LeaveOfAbsence, Vanity, User, Bot, BotPack, BotCommand, BotTag, BotListTags,
@@ -857,7 +834,7 @@ async def set_flag(request: Request, data: ActionWithReason):
         url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0xe74c3c,
         title="Bot Flag Updated",
-        description=f"<@{request.state.user_id}> has modified the flags of <@{data.bot_id}> with addition of {flag.name} ({flag.value}) -> {flag.__doc__} !\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
+        description=f"<@{request.state.user_id}> has modified the flags of <@{data.bot_id}> with addition of {flag.name} ({flag.value})!\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
     )
 
     embed.add_field(name="Reason", value=data.reason)
@@ -897,7 +874,7 @@ async def unset_flag(request: Request, data: ActionWithReason):
         url=f"https://fateslist.xyz/bot/{data.bot_id}",
         color=0xe74c3c,
         title="Bot Flag Updated",
-        description=f"<@{request.state.user_id}> has modified the flags of <@{data.bot_id}> with removal of {flag.name} ({flag.value}) -> {flag.__doc__} !\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
+        description=f"<@{request.state.user_id}> has modified the flags of <@{data.bot_id}> with removal of {flag.name} ({flag.value})!\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
     )
 
     embed.add_field(name="Reason", value=data.reason)
@@ -929,7 +906,10 @@ class ConnectionManager:
                 print(f"Sending message: {websocket.client.host=}, {message=}")
                 await websocket.send_json(jsonable_encoder(message))
             else:
-                await websocket.send_bytes(msgpack.packb(jsonable_encoder(message)))
+                try:
+                    await websocket.send_bytes(msgpack.packb(message))
+                except:
+                    await websocket.send_bytes(msgpack.packb(jsonable_encoder(message)))
         except RuntimeError as e:
             try:
                 await websocket.close(1008)
@@ -1030,29 +1010,14 @@ async def get_sa_questions(ws: WebSocket, _):
 </form>
     """
 
-    md = (
-        MarkdownIt()
-            .use(front_matter_plugin)
-            .use(footnote_plugin)
-            .use(anchors_plugin, max_level=5, permalink=True)
-            .use(fieldlist_plugin)
-            .use(container_plugin, name="warning")
-            .use(container_plugin, name="info")
-            .use(container_plugin, name="aonly")
-            .use(container_plugin, name="guidelines")
-            .use(container_plugin, name="generic", validate=lambda *args: True)
-            .enable('table')
-            .enable('image')
-    )
-
     return {
         "resp": "get_sa_questions",
         "title": "Apply For Staff",
-        "data": md.render(f"""
+        "data": f"""
 We're always open, don't worry!
 
 {questions}
-        """),
+        """,
         "ext_script": "apply",
     }
 
@@ -1064,26 +1029,11 @@ async def loa(ws: WebSocket, _):
     elif not ws.state.verified:
         return {"resp": "spld", "e": SPLDEvent.verify_needed}
 
-    md = (
-        MarkdownIt()
-            .use(front_matter_plugin)
-            .use(footnote_plugin)
-            .use(anchors_plugin, max_level=5, permalink=True)
-            .use(fieldlist_plugin)
-            .use(container_plugin, name="warning")
-            .use(container_plugin, name="info")
-            .use(container_plugin, name="aonly")
-            .use(container_plugin, name="guidelines")
-            .use(container_plugin, name="generic", validate=lambda *args: True)
-            .enable('table')
-            .enable('image')
-    )
-
     return {
         "resp": "loa",
         "title": "Leave Of Absense",
         "pre": "/links",
-        "data": md.render(f"""
+        "data": f"""
 ::: warning
 
 Please don't abuse this by spamming LOA's non-stop or you **will** be demoted!
@@ -1127,7 +1077,7 @@ There are *two* ways of creating a LOA.
     <li>Fill out the nessesary fields</li>
     <li>Click 'Save'</li>
 </ol>
-    """),
+    """,
     "ext_script": "apply",    
     }
 
@@ -1241,29 +1191,14 @@ async def user_actions(ws: WebSocket, data: dict):
 
     for state in list(enums.UserState):
         user_state_select += f"""
-<option value={state.value}>{state.name} ({state.value}) -> {state.__doc__}</option>
+<option value={state.value}>{state.name} ({state.value})</option>
         """
     user_state_select += "</select>"
-
-    md = (
-        MarkdownIt()
-            .use(front_matter_plugin)
-            .use(footnote_plugin)
-            .use(anchors_plugin, max_level=5, permalink=True)
-            .use(fieldlist_plugin)
-            .use(container_plugin, name="warning")
-            .use(container_plugin, name="info")
-            .use(container_plugin, name="aonly")
-            .use(container_plugin, name="guidelines")
-            .use(container_plugin, name="generic", validate=lambda *args: True)
-            .enable('table')
-            .enable('image')
-    )
 
     return {
         "resp": "user_actions",
         "title": "User Actions",
-        "data": md.render(f"""
+        "data": f"""
 ## For refreshers, the staff guide is here:
 
 {staff_guide_md}
@@ -1315,7 +1250,7 @@ placeholder="Enter reason for state change here!"
 <button onclick="setUserState()">Set State</button>
 
 :::
-        """),
+        """,
         "ext_script": "user-actions",
     }
 
@@ -1364,7 +1299,7 @@ async def bot_actions(ws: WebSocket, _):
     flag_list = list(enums.BotFlag)
     flags_select = "<label>Select Flag</label><select id='flag' name='flag'>"
     for flag in flag_list:
-        flags_select += f"<option value={flag.value}>{flag.name} ({flag.value}) -> {flag.__doc__}</option>"
+        flags_select += f"<option value={flag.value}>{flag.name} ({flag.value})</option>"
     flags_select += "</select>"
 
     flags_bot_select = bot_select("set-flag", await app.state.db.fetch("SELECT bot_id, username_cached FROM bots"),
@@ -1391,26 +1326,11 @@ async def bot_actions(ws: WebSocket, _):
 
 """
 
-    md = (
-        MarkdownIt()
-            .use(front_matter_plugin)
-            .use(footnote_plugin)
-            .use(anchors_plugin, max_level=5, permalink=True)
-            .use(fieldlist_plugin)
-            .use(container_plugin, name="warning")
-            .use(container_plugin, name="info")
-            .use(container_plugin, name="aonly")
-            .use(container_plugin, name="guidelines")
-            .use(container_plugin, name="generic", validate=lambda *args: True)
-            .enable('table')
-            .enable('image')
-    )
-
     return {
         "resp": "bot_actions",
         "title": "Bot Actions",
         "pre": "/links",
-        "data": md.render(f"""
+        "data": f"""
 ## For refreshers, the staff guide is here:
 
 {staff_guide_md}
@@ -1606,7 +1526,7 @@ placeholder="Reason for resetting all votes. Defaults to 'Monthly Votes Reset'"
 
 <button onclick="setFlag()">Update</button>
 :::
-"""),
+""",
         "ext_script": "bot-actions",
     }
 
@@ -1701,6 +1621,7 @@ async def notifs(ws: WebSocket):
 
 @ws_action("docs")
 async def docs(ws: WebSocket, data: dict):
+    time_s = time.time()
     page = data.get("path", "/").split("#")[0]
     source = data.get("source", False)
 
@@ -1740,12 +1661,7 @@ Just want to provide feedback? [Rate this page](#rate-this-page)
 - Starring the repo is also a great way to show your support!
 
 <label for='doc-feedback'>Your Feedback</label>
-<textarea 
-id="doc-feedback"
-name="doc-feedback"
-class="form-control"
-placeholder="I feel like X, Y and Z could change because..."
-></textarea>
+<textarea id="doc-feedback" name="doc-feedback" class="form-control" placeholder="I feel like X, Y and Z could change because..."></textarea>
 
 <button onclick='rateDoc()'>Rate</button>
 
@@ -1755,33 +1671,23 @@ placeholder="I feel like X, Y and Z could change because..."
     # If looking for source
     if source:
         print("Sending source")
+        print(time.time() - time_s)
         return {
             "resp": "docs",
             "title": page.split('/')[-1].replace('-', ' ').title() + " (Source)",
             "data": f"""
     <pre>{md_data.replace('<', '&lt').replace('>', '&gt')}</pre>
             """ if ws.state.plat != "DOCREADER" else md_data,
+            "source": True
         }
 
-    md = (
-        MarkdownIt()
-            .use(front_matter_plugin)
-            .use(footnote_plugin)
-            .use(anchors_plugin, max_level=5, permalink=True)
-            .use(fieldlist_plugin)
-            .use(container_plugin, name="warning")
-            .use(container_plugin, name="info")
-            .use(container_plugin, name="aonly")
-            .use(container_plugin, name="guidelines")
-            .use(container_plugin, name="generic", validate=lambda *args: True)
-            .enable('table')
-            .enable('image')
-    )
-
+    print(time.time() - time_s)
+    
     return {
         "resp": "docs",
         "title": page.split('/')[-1].replace('-', ' ').title(),
-        "data": md.render(md_data).replace("<table", "<table class='table'").replace(".md", ""),
+        "data": md_data,
+        "source": False
     }
 
 @ws_action("eternatus")
@@ -2160,22 +2066,7 @@ async def survey(ws: WebSocket, _):
 :::
     """
 
-    md = (
-        MarkdownIt()
-            .use(front_matter_plugin)
-            .use(footnote_plugin)
-            .use(anchors_plugin, max_level=5, permalink=True)
-            .use(fieldlist_plugin)
-            .use(container_plugin, name="warning")
-            .use(container_plugin, name="info")
-            .use(container_plugin, name="aonly")
-            .use(container_plugin, name="guidelines")
-            .use(container_plugin, name="generic", validate=lambda *args: True)
-            .enable('table')
-            .enable('image')
-    )
-
-    return {"resp": "survey_list", "title": "Survey List", "pre": "/links", "data": md.render(surveys_html), "ext_script": "surveys"}
+    return {"resp": "survey_list", "title": "Survey List", "pre": "/links", "data": surveys_html, "ext_script": "surveys"}
 
 @ws_action("survey")
 async def submit_survey(ws: WebSocket, data: dict):
@@ -2539,7 +2430,7 @@ async def set_user_state(data: UserActionWithReason):
         url=f"https://fateslist.xyz/profile/{data.user_id}",
         color=0xe74c3c,
         title="User State Updated",
-        description=f"<@{data.initiator}> has modified the state of <@{data.user_id}> with new state of {state.name} ({state.value}) -> {state.__doc__} !\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
+        description=f"<@{data.initiator}> has modified the state of <@{data.user_id}> with new state of {state.name} ({state.value})!\n\nThank you for using Fates List and we are sorry for any inconveniences caused :heart:",
     )
 
     embed.add_field(name="Reason", value=data.reason)

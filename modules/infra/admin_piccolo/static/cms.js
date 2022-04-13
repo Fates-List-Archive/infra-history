@@ -1,6 +1,27 @@
 // Content Management System for Lynx
 
 function setData(data, noExtraCode=false) {
+    info("Larksong", "Got docs data, parsing")
+    var md = markdownit({
+        html: true,
+        linkify: true,
+    })
+    md.use(markdownItAnchor, {
+        permalink: true,
+        level: [1, 2, 3, 4, 5]
+    });
+    md.use(markdownitContainer, 'info')
+    md.use(markdownitContainer, 'warning')
+    md.use(markdownitContainer, 'aonly')        
+    md.use(markdownitContainer, 'guidelines')
+    md.use(markdownitContainer, 'generic', {
+        validate: function (...args) {
+            return true;
+        }
+    })
+
+    data.data = md.render(data.data).replaceAll("<table", "<table class='table'");        
+
     refresh = false
     if(data.detail) {
         clearRefresh()
@@ -169,6 +190,9 @@ async function linkMod() {
 }
 
 $(function() {
+    if(!modulesLoaded.includes("cstate")) {
+        let alreadyUp = false
+    }
     if(!alreadyUp) {
         interval = setInterval(function() {
             if(modulesLoaded.includes("ws") && modulesLoaded.includes("cstate") && modulesLoaded.includes("cms") && modulesLoaded.includes("routers") && modulesLoaded.includes("alert")) {

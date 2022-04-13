@@ -9,6 +9,9 @@
     />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.4.0/build/styles/a11y-dark.min.css">
     <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.4.0/build/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@10.0.0/dist/markdown-it.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-anchor@8.4.1/dist/markdownItAnchor.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-container@2.0.0/dist/markdown-it-container.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/RickStrahl/highlightjs-badge@master/highlightjs-badge.min.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://adminlte.io/themes/v3/plugins/jquery/jquery.min.js"></script>
@@ -26,13 +29,13 @@
     />
     <link
       rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.css"
+      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css"
     />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback"
     />
-    <link rel="stylesheet" href="/_static/core.css?v=37" />
+    <link rel="stylesheet" href="/_static/core.css?v=44" />
   </head>
   <body class="sidebar-mini sidebar-closed sidebar-collapse dark-mode layout-navbar-fixed layout-fixed">
     <div id="alert-placer">
@@ -188,6 +191,6 @@
       <div id="sidebar-overlay"></div>
     </div>
   </body>
-  <script>const log=(...a)=>{console[a[0]](`%c[${a[1]}]%c`,"color:purple;font-weight:bold;","",...a.slice(2))},debug=(...a)=>(a.unshift("debug"),log(...a)),info=(...a)=>(a.unshift("info"),log(...a)),warn=(...a)=>(a.unshift("warn"),log(...a)),error=(...a)=>(a.unshift("error"),log(...a));modulesLoaded=[];function readyModule(a){info("StarClan",`Module: ${a} has loaded successfully!`),modulesLoaded.push(a)}function loadModule(a,b,c=()=>{}){if(!modulesLoaded.includes(a)){info("StarClan",`Loading module ${a} (path=${b})`);let d=document.createElement("script");d.src=b,d.async=!1,document.body.appendChild(d),setInterval(function(){modulesLoaded.includes(a)&&(c(),clearInterval(this))})}}loadModule("launcher","/_static/launcher.js?v=m3");</script>
+  <script>const log=(...a)=>{console[a[0]](`%c[${Date.now()}]%c[${a[1]}]%c`,"color:red;font-weight:bold;","color:purple;font-weight:bold;","",...a.slice(2))},debug=(...a)=>(a.unshift("debug"),log(...a)),info=(...a)=>(a.unshift("info"),log(...a)),warn=(...a)=>(a.unshift("warn"),log(...a)),error=(...a)=>(a.unshift("error"),log(...a));modulesLoaded=[],modules={};function readyModule(a){info("StarClan",`Module: ${a} has loaded successfully!`),modulesLoaded.push(a)}function loadModule(a,b,c=()=>{}){if(!modulesLoaded.includes(a)){modules[a]=b,info("StarClan",`Loading module ${a} (path=${b})`);let d=document.createElement("script");d.src=b,d.async=!1,document.body.appendChild(d),setInterval(function(){modulesLoaded.includes(a)&&(c(),clearInterval(this))})}}loadModule("launcher","/_static/launcher.js?v=m31");</script>
   <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.7.2/dist.es5+umd/msgpack.min.js"></script>
 </html>  

@@ -188,3 +188,8 @@ li p {
     margin: 0px !important;
     padding: 0px !important;
 }
+
+.dropdown-item {
+    word-wrap: break-word;
+    white-space: pre-line !important;
+}
