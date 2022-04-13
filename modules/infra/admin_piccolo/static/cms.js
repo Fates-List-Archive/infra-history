@@ -11,7 +11,7 @@ function setData(data, noExtraCode=false) {
             symbol: "\u00B6",
         }),
         slugify: s => {
-            return s.toLowerCase().replaceAll("(", "").replaceAll(")", "").replaceAll(" ", "-").replaceAll("/", "-").replaceAll("\\", "-").replaceAll(".", "").replaceAll("!", "").replaceAll("?", "")
+            return s.toLowerCase().replaceAll(")", "").replaceAll("!", "").replaceAll(".", "").replace(/[^a-zA-Z0-9]/g, '-').replaceAll("--", "-");
         },
         level: [1, 2, 3, 4, 5]
     });
