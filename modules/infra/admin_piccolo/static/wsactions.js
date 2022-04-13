@@ -10,7 +10,7 @@ actions = {
         shadowsightTreeParse(data.tree)
     },
     "spld": (data) => {
-        info("Silverpelt", `Got a spld (server pipeline) message: ${data.e}`)
+        debug("Silverpelt", `Got a spld (server pipeline) message: ${data.e}`)
         if(data.e == "M") {
             info("Silverpelt", "Server is in maintenance mode. Alerting user to this")
             alert("maint", "Maintenance", "Lynx is now down for maintenance, certain actions may be unavailable during this time!")

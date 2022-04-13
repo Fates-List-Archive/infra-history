@@ -91,7 +91,7 @@ async function wsStart() {
 
     ws.onmessage = async function (event) {
         var data = await MessagePack.decodeAsync(event.data.stream())
-        info("Nightheart", "Got new WS message: ", { data })
+        debug("Nightheart", "Got new WS message: ", { data })
         f = actions[data.resp]
         if(f) {
             f(data)
