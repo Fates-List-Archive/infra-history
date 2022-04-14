@@ -14,6 +14,7 @@ var havePerm = false
 var staffPerm = 1
 var alreadyUp = false
 var refresh = false
+var adminPatchCalled = false
 
 var currentLoc = window.location.pathname
 var hasLoadedAdminScript = false

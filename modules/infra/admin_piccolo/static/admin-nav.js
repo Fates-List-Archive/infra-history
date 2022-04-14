@@ -62,6 +62,14 @@ function loadAdmin() {
           </p></a
         >
       </li>
+      <li class="nav-item">
+        <a id="admin-nav" href="https://lynx.fateslist.xyz/admin" class="nav-link"
+          ><i class="far fa-circle nav-icon"></i>
+          <p>
+            Admin
+            <span class="right badge badge-info">Alpha</span>
+          </p></a>
+      </li>
     </ul>
   </li>
     `).insertAfter("#links-nav-li")

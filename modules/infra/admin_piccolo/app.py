@@ -1,56 +1,52 @@
-from base64 import b64decode
-from os import abort
 import pathlib
-from pickletools import int4
 import sys
-
-sys.path.append("modules/infra/admin_piccolo")
-
-import asyncpg
-import asyncio
-
-from pydantic import BaseModel
-from typing import Any, Union
-import orjson
-from http import HTTPStatus
-import hashlib
-import bleach
-import time
-import requests
-import staffapps
-from dateutil import parser
-import datetime
-import signal
+from base64 import b64decode
 
 sys.path.append(".")
 sys.path.append("modules/infra/admin_piccolo")
+
+import asyncio
+import datetime
+import hashlib
+import signal
+import time
+from http import HTTPStatus
+from typing import Any, Union
+import enum
+import secrets
+import string
+
+import asyncpg
+import bleach
+import orjson
+import requests
+from dateutil import parser
+from pydantic import BaseModel
+
+import aiohttp
+import aioredis
+import msgpack
+import orjson
+from discord import Embed
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.encoders import jsonable_encoder
-from typing import Callable, Awaitable, Tuple, Dict, List
-from starlette.responses import Response, StreamingResponse, RedirectResponse, HTMLResponse, PlainTextResponse
-from starlette.requests import Request
-from starlette.concurrency import iterate_in_threadpool
 from fastapi.responses import ORJSONResponse
+from fastapi.staticfiles import StaticFiles
+from modules.models import enums
+from piccolo.apps.user.tables import BaseUser
 from piccolo.engine import engine_finder
 from piccolo_admin.endpoints import create_admin
-from piccolo_api.crud.endpoints import PiccoloCRUD
-from piccolo_api.fastapi.endpoints import FastAPIWrapper
+from starlette.concurrency import iterate_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import HTMLResponse, RedirectResponse
 from starlette.routing import Mount
-from starlette.types import Scope, Message
-from tables import Bot, Reviews, ReviewVotes, BotTag, User, Vanity, BotListTags, ServerTags, BotPack, BotCommand, \
-    LeaveOfAbsence, UserBotLogs, BotVotes, Notifications, LynxRatings, LynxSurveys, LynxSurveyResponses
-import orjson
-import aioredis
-from modules.models import enums
-from discord import Embed
-from piccolo.apps.user.tables import BaseUser
-import secrets
-import aiohttp
-import string
-from fastapi.staticfiles import StaticFiles
-import msgpack
-import enum
+
+import staffapps
+from tables import (Bot, BotCommand, BotListTags, BotPack, BotTag, BotVotes,
+                    LeaveOfAbsence, LynxRatings, LynxSurveyResponses,
+                    LynxSurveys, Notifications, Reviews, ReviewVotes,
+                    ServerTags, User, UserBotLogs, Vanity)
 
 debug = False
 
@@ -255,9 +251,12 @@ async def auth_user_cookies(request: Request):
 
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        if request.url.path.startswith("/_"):
+        if request.url.path == "/_ws":
             return await call_next(request)
-
+        
+        if (not request.headers.get("X-Lynx-Site") and request.url.path not in ("/_admin", "/_admin/")) and not request.url.path.endswith((".css", ".js", ".js.map")):
+            return ORJSONResponse({"detail": "Not in lynx site"}, status_code=401)
+        
         print("[LYNX] Admin request. Middleware started")
 
         await auth_user_cookies(request)
@@ -275,28 +274,28 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             return RedirectResponse("/staff-verify")
 
         # Perm check
-        if request.url.path.startswith("/admin/api"):
-            if request.url.path == "/admin/api/tables/" and perm < 4:
+        if request.url.path.startswith("/_admin/api"):
+            if request.url.path == "/_admin/api/tables/" and perm < 4:
                 return ORJSONResponse(
                     ["reviews", "review_votes", "bot_packs", "vanity", "leave_of_absence", "user_vote_table",
                      "lynx_rating"])
-            elif request.url.path == "/admin/api/tables/users/ids/" and request.method == "GET":
+            elif request.url.path == "/_admin/api/tables/users/ids/" and request.method == "GET":
                 pass
             elif request.url.path in (
-                    "/admin/api/forms/", "/admin/api/user/", "/admin/api/openapi.json") or request.url.path.startswith(
-                "/admin/api/docs"):
+                    "/_admin/api/forms/", "/_admin/api/user/", "/_admin/api/openapi.json") or request.url.path.startswith(
+                "/_admin/api/docs"):
                 pass
             elif perm < 4:
-                if request.url.path.startswith("/admin/api/tables/vanity"):
+                if request.url.path.startswith("/_admin/api/tables/vanity"):
                     if request.method != "GET":
                         return ORJSONResponse({"error": "You do not have permission to update vanity"}, status_code=403)
 
-                elif request.url.path.startswith("/admin/api/tables/bot_packs"):
+                elif request.url.path.startswith("/_admin/api/tables/bot_packs"):
                     if request.method != "GET":
                         return ORJSONResponse({"error": "You do not have permission to update bot packs"},
                                               status_code=403)
 
-                elif request.url.path.startswith("/admin/api/tables/leave_of_absence/") and request.method in (
+                elif request.url.path.startswith("/_admin/api/tables/leave_of_absence/") and request.method in (
                         "PATCH", "DELETE"):
                     ids = request.url.path.split("/")
                     loa_id = None
@@ -305,7 +304,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                             loa_id = int(id)
                             break
                     else:
-                        return abort(404)
+                        return ORJSONResponse({"error": "Invalid leave of absence ID"}, status_code=403)
 
                     user_id = await app.state.db.fetchval("SELECT user_id::text FROM leave_of_absence WHERE id = $1",
                                                           loa_id)
@@ -313,11 +312,11 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                         return ORJSONResponse({"error": "You do not have permission to update this leave of absence"},
                                               status_code=403)
 
-                elif not request.url.path.startswith(("/admin/api/tables/reviews", "/admin/api/tables/review_votes",
-                                                      "/admin/api/tables/bot_packs",
-                                                      "/admin/api/tables/user_vote_table",
-                                                      "/admin/api/tables/leave_of_absence",
-                                                      "/admin/api/tables/lynx_rating")):
+                elif not request.url.path.startswith(("/_admin/api/tables/reviews", "/_admin/api/tables/review_votes",
+                                                      "/_admin/api/tables/bot_packs",
+                                                      "/_admin/api/tables/user_vote_table",
+                                                      "/_admin/api/tables/leave_of_absence",
+                                                      "/_admin/api/tables/lynx_rating")):
                     return ORJSONResponse({"error": "You do not have permission to access this page"}, status_code=403)
 
         key = "rl:%s" % request.scope["sunbeam_user"]["user"]["id"]
@@ -333,24 +332,12 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                 return ORJSONResponse({"detail": f"[LYNX] RatelimitError: {expire=}; API_TOKEN_RESET"},
                                       status_code=429)
 
-        embed = Embed(
-            title="Lynx API Request",
-            description=f"**This is usually malicious. When in doubt DM**",
-            color=0x00ff00,
-        )
-
-        embed.add_field(name="User ID", value=request.scope["sunbeam_user"]["user"]["id"])
-        embed.add_field(name="Username", value=request.scope["sunbeam_user"]["user"]["username"])
-        embed.add_field(name="Request", value=f"{request.method} {request.url}")
-
         if request.url.path.startswith("/meta"):
             return ORJSONResponse({"piccolo_admin_version": "0.1a1", "site_name": "Lynx Admin"})
 
         request.state.user_id = int(request.scope["sunbeam_user"]["user"]["id"])
 
         response = await call_next(request)
-
-        embed.add_field(name="Status Code", value=f"{response.status_code} {HTTPStatus(response.status_code).phrase}")
 
         await app.state.db.execute(
             "INSERT INTO lynx_logs (user_id, method, url, status_code) VALUES ($1, $2, $3, $4)",
@@ -368,7 +355,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         except:
             request.scope["user"] = Unknown()
 
-        if request.url.path.startswith("/admin/api/tables/leave_of_absence") and request.method == "POST":
+        if request.url.path.startswith("/_admin/api/tables/leave_of_absence") and request.method == "POST":
             response_body = [section async for section in response.body_iterator]
             response.body_iterator = iterate_in_threadpool(iter(response_body))
             content = response_body[0]
@@ -377,7 +364,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                                        int(request.scope["sunbeam_user"]["user"]["id"]), content_dict[0]["id"])
             return ORJSONResponse(content_dict)
 
-        if request.url.path.startswith("/admin/api/tables/bots") and request.method == "PATCH":
+        if request.url.path.startswith("/_admin/api/tables/bots") and request.method == "PATCH":
             print("Got bot edit, sending message")
             path = request.url.path.rstrip("/")
             bot_id = int(path.split("/")[-1])
@@ -402,7 +389,7 @@ async def server_error(request, exc):
 
 
 app = FastAPI(routes=[
-    Mount("/admin", admin),
+    Mount("/_admin", admin),
     Mount("/_static", StaticFiles(directory="modules/infra/admin_piccolo/static")),
 ],
     docs_url="/_docs",
@@ -473,13 +460,11 @@ def action(
     async def _core(ws: WebSocket, data: ActionWithReason):
         if ws.state.member.perm < min_perm:
             return {
-                "resp": "bot_action",
                 "detail": f"PermError: {min_perm=}, {ws.state.member.perm=}"
             }
 
         if not data.bot_id.isdigit():
             return {
-                "resp": "bot_action",
                 "detail": "Bot ID is invalid"
             }
 
@@ -487,7 +472,6 @@ def action(
 
         if not await state_check(data.bot_id):
             return {
-                "resp": "bot_action",
                 "detail": replace_if_web(f"Bot state check error: {states=}", ws)
             }
 
@@ -504,7 +488,6 @@ def action(
                 return _data # Already sent ws message, ignore
             if len(data.reason) < 5:
                 return {
-                    "resp": "bot_action",
                     "detail": "Reason must be more than 5 characters"
                 }
 
@@ -886,7 +869,7 @@ async def unset_flag(request: Request, data: ActionWithReason):
 # Lynx base websocket
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -927,25 +910,52 @@ ws_action_dict = {
 }
 
 def ws_action(name: str):
-    def decorator(func: Callable):
+    def decorator(func):
         ws_action_dict[name] = func
         return func
     return decorator
 
+@ws_action("admin")
+async def admin(ws: WebSocket, _: dict):
+    if ws.state.member.perm < 2:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+    elif not ws.state.verified:
+        return {"resp": "spld", "e": SPLDEvent.verify_needed}
+
+    return {
+        "title": "Admin Console",
+        "data": """
+
+<blockquote class="quote">
+
+### Important Information
+
+All things done on the admin console are logged
+
+**Please don't be stupid**
+
+</blockquote>
+
+<iframe id="admin-iframe" data-src="https://lynx.fateslist.xyz/_admin" style="min-height: 1000px;" width="100%" height="100%" frameborder="0"></iframe>
+        """,
+        "ext_script": "admin-iframe"
+    }
+
+
 @ws_action("apply_staff")
 async def apply_staff(ws: WebSocket, data: dict):
     if ws.state.member.perm == -1:
-        return {"resp": "apply_staff", "detail": "You must be logged in to create staff applications!"}
+        return {"detail": "You must be logged in to create staff applications!"}
 
     for pane in staffapps.questions:
         for question in pane.questions:
             answer = data["answers"].get(question.id)
             if not answer:
-                return {"resp": "apply_staff", "detail": f"Missing answer for question {question.id}"}
+                return {"detail": f"Missing answer for question {question.id}"}
             elif len(answer) < question.min_length:
-                return {"resp": "apply_staff", "detail": f"Answer for question {question.id} is too short"}
+                return {"detail": f"Answer for question {question.id} is too short"}
             elif len(answer) > question.max_length:
-                return {"resp": "apply_staff", "detail": f"Answer for question {question.id} is too long"}
+                return {"detail": f"Answer for question {question.id} is too long"}
     
     await app.state.db.execute(
         "INSERT INTO lynx_apps (user_id, questions, answers, app_version) VALUES ($1, $2, $3, $4)",
@@ -955,7 +965,7 @@ async def apply_staff(ws: WebSocket, data: dict):
         3
     )
 
-    return {"resp": "apply_staff", "detail": "Successfully applied for staff!"}
+    return {"detail": "Successfully applied for staff!"}
 
 @ws_action("get_sa_questions")
 async def get_sa_questions(ws: WebSocket, _):
@@ -1011,7 +1021,6 @@ async def get_sa_questions(ws: WebSocket, _):
     """
 
     return {
-        "resp": "get_sa_questions",
         "title": "Apply For Staff",
         "data": f"""
 We're always open, don't worry!
@@ -1030,7 +1039,6 @@ async def loa(ws: WebSocket, _):
         return {"resp": "spld", "e": SPLDEvent.verify_needed}
 
     return {
-        "resp": "loa",
         "title": "Leave Of Absense",
         "pre": "/links",
         "data": f"""
@@ -1086,17 +1094,17 @@ async def send_loa(ws: WebSocket, data: dict):
     if ws.state.member.perm < 2:
         return {"resp": "spld", "e": SPLDEvent.missing_perms}
     if not data.get("answers"):
-        return {"resp": "send_loa", "detail": "You did not fill out the form correctly"}
+        return {"detail": "You did not fill out the form correctly"}
     if not data["answers"]["reason"]:
-        return {"resp": "send_loa", "detail": "You did not fill out the form correctly"}
+        return {"detail": "You did not fill out the form correctly"}
     if not data["answers"]["duration"]:
-        return {"resp": "send_loa", "detail": "You did not fill out the form correctly"}
+        return {"detail": "You did not fill out the form correctly"}
     try:
         date = parser.parse(data["answers"]["duration"])
     except:
-        return {"resp": "send_loa", "detail": "You did not fill out the form correctly"}
+        return {"detail": "You did not fill out the form correctly"}
     if date.year - datetime.datetime.now().year not in (0, 1):
-        return {"resp": "send_loa", "detail": "Duration must be in within this year"}
+        return {"detail": "Duration must be in within this year"}
 
     await app.state.db.execute(
         "INSERT INTO leave_of_absence (user_id, reason, estimated_time, start_date) VALUES ($1, $2, $3, $4)",
@@ -1106,7 +1114,7 @@ async def send_loa(ws: WebSocket, data: dict):
         datetime.datetime.now(),
     )
 
-    return {"resp": "send_loa", "detail": "Submitted LOA successfully"}
+    return {"detail": "Submitted LOA successfully"}
 
 @ws_action("staff_apps")
 async def staff_apps(ws: WebSocket, data: dict):
@@ -1164,13 +1172,12 @@ async def staff_apps(ws: WebSocket, data: dict):
         """
 
     return {
-        "resp": "staff_apps",
         "title": "Staff Application List",
         "pre": "/links",
         "data": f"""
-        <p>Please verify applications fairly</p>
-        {app_html}
-        <br/>
+<p>Please verify applications fairly</p>
+{app_html}
+<br/>
         """,
         "ext_script": "user-actions",
     }
@@ -1196,7 +1203,6 @@ async def user_actions(ws: WebSocket, data: dict):
     user_state_select += "</select>"
 
     return {
-        "resp": "user_actions",
         "title": "User Actions",
         "data": f"""
 ## For refreshers, the staff guide is here:
@@ -1327,7 +1333,6 @@ async def bot_actions(ws: WebSocket, _):
 """
 
     return {
-        "resp": "bot_actions",
         "title": "Bot Actions",
         "pre": "/links",
         "data": f"""
@@ -1535,7 +1540,6 @@ async def staff_verify(ws: WebSocket, _):
     if ws.state.member.perm < 2:
         return {"resp": "spld", "e": SPLDEvent.missing_perms}
     return {
-        "resp": "staff_verify",
         "title": "Fates List Staff Verification",
         "data": """
 <h3>In order to continue, you will need to make sure you are up to date with our rules</h3>
@@ -1632,13 +1636,13 @@ async def docs(ws: WebSocket, data: dict):
         page = "/index"
 
     if not page.replace("-", "").replace("_", "").replace("/", "").replace("!", "").isalnum():
-        return {"resp": "docs", "detail": "Invalid page"}
+        return {"detail": "Invalid page"}
 
     try:
         with open(f"modules/infra/admin_piccolo/api-docs/{page}.md", "r") as f:
             md_data = f.read()
     except FileNotFoundError as exc:
-        return {"resp": "docs", "detail": f"api-docs/{page}.md not found -> {exc}"}
+        return {"detail": f"api-docs/{page}.md not found -> {exc}"}
 
     # Inject rating code if plat != DOCREADER
     if ws.state.plat != "DOCREADER":
@@ -1673,7 +1677,6 @@ Just want to provide feedback? [Rate this page](#rate-this-page)
         print("Sending source")
         print(time.time() - time_s)
         return {
-            "resp": "docs",
             "title": page.split('/')[-1].replace('-', ' ').title() + " (Source)",
             "data": f"""
     <pre>{md_data.replace('<', '&lt').replace('>', '&gt')}</pre>
@@ -1684,7 +1687,6 @@ Just want to provide feedback? [Rate this page](#rate-this-page)
     print(time.time() - time_s)
     
     return {
-        "resp": "docs",
         "title": page.split('/')[-1].replace('-', ' ').title(),
         "data": md_data,
         "source": False
@@ -1693,7 +1695,7 @@ Just want to provide feedback? [Rate this page](#rate-this-page)
 @ws_action("eternatus")
 async def docs_feedback(ws: WebSocket, data: dict):
     if len(data.get("feedback", "")) < 5:
-        return {"resp": "eternatus", "detail": "Feedback must be greater than 10 characters long!"}
+        return {"detail": "Feedback must be greater than 10 characters long!"}
 
     if ws.state.user:
         user_id = int(ws.state.user["id"])
@@ -1703,7 +1705,7 @@ async def docs_feedback(ws: WebSocket, data: dict):
         username = "Anonymous"
 
     if not data.get("page", "").startswith("/"):
-        return {"resp": "eternatus", "detail": "Unexpected page!"}
+        return {"detail": "Unexpected page!"}
 
     await app.state.db.execute(
         "INSERT INTO lynx_ratings (feedback, page, username_cached, user_id) VALUES ($1, $2, $3, $4)",
@@ -1713,7 +1715,7 @@ async def docs_feedback(ws: WebSocket, data: dict):
         user_id
     )
 
-    return {"resp": "eternatus", "detail": "Successfully rated"}
+    return {"detail": "Successfully rated"}
 
 @ws_action("cosmog")
 async def verify_code(ws: WebSocket, data: dict):
@@ -1724,12 +1726,11 @@ async def verify_code(ws: WebSocket, data: dict):
 
     if ws.state.verified:
         return {
-            "resp": "cosmog",
             "detail": "You are already verified"
         }
 
     if not code_check(code, int(ws.state.user["id"])):
-        return {"resp": "cosmog", "detail": "Invalid code"}
+        return {"detail": "Invalid code"}
     else:
         username = ws.state.user["username"]
         password = get_token(96)
@@ -1744,7 +1745,7 @@ async def verify_code(ws: WebSocket, data: dict):
                 admin=True
             )
         except:
-            return {"resp": "cosmog", "detail": "Failed to create user on lynx. Please contact Rootspring#6701"}
+            return {"detail": "Failed to create user on lynx. Please contact Rootspring#6701"}
 
         await app.state.db.execute(
             "UPDATE users SET staff_verify_code = $1 WHERE user_id = $2",
@@ -1755,12 +1756,11 @@ async def verify_code(ws: WebSocket, data: dict):
         await add_role(staff_server, ws.state.user["id"], access_granted_role, "Access granted to server")
         await add_role(staff_server, ws.state.user["id"], ws.state.member.staff_id, "Gets corresponding staff role")
 
-        return {"resp": "cosmog", "detail": "Successfully verified staff member", "pass": password}
+        return {"detail": "Successfully verified staff member", "pass": password}
 
 @ws_action("index")
 async def index(_, __):
     return {
-        "resp": "index", 
         "title": "Welcome To Lynx", 
         "data": """
 <h3>Homepage!</h3>
@@ -1787,7 +1787,7 @@ In case, you haven't went through staff verification and you somehow didn't get 
 
 @ws_action("perms")
 async def perms(ws: WebSocket, _):
-    return {"resp": "perms", "data": ws.state.member.dict()}
+    return {"data": ws.state.member.dict()}
 
 @ws_action("reset")
 async def reset(ws: WebSocket, _):
@@ -1802,12 +1802,11 @@ async def reset(ws: WebSocket, _):
             "DELETE FROM piccolo_user WHERE username = $1",
             ws.state.user["username"]
         )
-        return {"resp": "reset", "data": None}
+        return {}
 
 @ws_action("reset_page")
 async def reset_page(_, __):
     return {
-        "resp": "reset_page",
         "title": "Lynx Credentials Reset",
         "pre": "/links",
         "data": f"""
@@ -1831,7 +1830,6 @@ async def reset_page(_, __):
 async def links(ws: WebSocket, _):
     if ws.state.member.perm > 2:
         return {
-            "resp": "links",
             "title": "Some Useful Links",
             "data": f"""
             <blockquote class="quote">
@@ -1844,7 +1842,6 @@ async def links(ws: WebSocket, _):
                 <a href="/staff-verify">Staff Verification</a> (in case you need it)<br/>
                 <a href="/staff-guide">Staff Guide</a><br/>
                 <a href="/docs/roadmap">Our Roadmap</a><br/>
-                <a href="/admin">Admin Console</a><br/>
                 <a href="/bot-actions">Bot Actions</a><br/>
                 <a href="/user-actions">User Actions</a><br/>
                 <a href="/requests">Requests</a><br/>
@@ -1857,7 +1854,6 @@ async def links(ws: WebSocket, _):
         """}
     else:
         return {
-            "resp": "links",
             "title": "Some Useful Links",
             "data": f"""
             <blockquote class="quote">
@@ -1881,11 +1877,11 @@ async def user_action(ws: WebSocket, data: dict):
     try:
         action = app.state.user_actions[data["action"]]
     except:
-        return {"resp": "user_action", "detail": "Action does not exist!"}
+        return {"detail": "Action does not exist!"}
     try:
         action_data = UserActionWithReason(**data["action_data"])
     except Exception as exc:
-        return {"resp": "user_action", "detail": f"{type(exc)}: {str(exc)}"}
+        return {"detail": f"{type(exc)}: {str(exc)}"}
     return await action(ws, action_data)
 
 @ws_action("bot_action")
@@ -1893,11 +1889,11 @@ async def bot_action(ws: WebSocket, data: dict):
     try:
         action = app.state.bot_actions[data["action"]]
     except:
-        return {"resp": "bot_action", "detail": "Action does not exist!"}
+        return {"detail": "Action does not exist!"}
     try:
         action_data = ActionWithReason(**data["action_data"])
     except Exception as exc:
-        return {"resp": "bot_action", "detail": f"{type(exc)}: {str(exc)}"}
+        return {"detail": f"{type(exc)}: {str(exc)}"}
     return await action(ws, action_data)
 
 @ws_action("request_logs")
@@ -1910,7 +1906,6 @@ async def request_logs(ws: WebSocket, _):
         """
 
     return {
-        "resp": "request_logs",
         "title": "Lynx Request Logs",
         "pre": "/links",
         "data": f"""
@@ -1924,13 +1919,11 @@ async def data_request(ws: WebSocket, data: dict):
 
     if not ws.state.user:
         return {
-            "resp": "data_request",
             "detail": "You must be logged in first!"
         }
 
     if ws.state.member.perm < 7 and ws.state.user["id"] != user_id:
         return {
-            "resp": "data_request",
             "detail": "You must either have permission level 6 or greater or the user id requested must be the same as your logged in user id."
         }
 
@@ -1938,7 +1931,6 @@ async def data_request(ws: WebSocket, data: dict):
         user_id = int(user_id)
     except:
         return {
-            "resp": "data_request",
             "detail": "Invalid User ID"
         }
 
@@ -1969,7 +1961,6 @@ async def data_request(ws: WebSocket, data: dict):
         data["owned_bots"].append(await app.state.db.fetch("SELECT * FROM bots WHERE bot_id = $1", bot["bot_id"]))
 
     return {
-        "resp": "data_request",
         "user": str(user_id),
         "data": data
     }
@@ -1980,13 +1971,11 @@ async def data_deletion(ws: WebSocket, data: dict):
 
     if not ws.state.user:
         return {
-            "resp": "data_deletion",
             "detail": "You must be logged in first!"
         }
 
     if ws.state.member.perm < 7 and ws.state.user["id"] != user_id:
         return {
-            "resp": "data_deletion",
             "detail": "You must either have permission level 6 or greater or the user id requested must be the same as your logged in user id."
         }
 
@@ -1994,7 +1983,6 @@ async def data_deletion(ws: WebSocket, data: dict):
         user_id = int(user_id)
     except:
         return {
-            "resp": "data_deletion",
             "detail": "Invalid User ID"
         }
 
@@ -2027,7 +2015,6 @@ async def data_deletion(ws: WebSocket, data: dict):
     await app.state.redis.close()
 
     return {
-        "resp": "data_deletion",
         "detail": "All found user data deleted"
     }
 
@@ -2066,7 +2053,7 @@ async def survey(ws: WebSocket, _):
 :::
     """
 
-    return {"resp": "survey_list", "title": "Survey List", "pre": "/links", "data": surveys_html, "ext_script": "surveys"}
+    return {"title": "Survey List", "pre": "/links", "data": surveys_html, "ext_script": "surveys"}
 
 @ws_action("survey")
 async def submit_survey(ws: WebSocket, data: dict):
@@ -2075,12 +2062,12 @@ async def submit_survey(ws: WebSocket, data: dict):
 
     questions = await app.state.db.fetchval("SELECT questions FROM lynx_surveys WHERE id = $1", id)
     if not questions:
-        return {"resp": "survey", "detail": "Survey not found"}
+        return {"detail": "Survey not found"}
     
     questions = orjson.loads(questions)
 
     if len(questions) != len(answers):
-        return {"resp": "survey", "detail": "Invalid survey. Refresh and try again"}
+        return {"detail": "Invalid survey. Refresh and try again"}
 
     await app.state.db.execute(
         "INSERT INTO lynx_survey_responses (survey_id, questions, answers, user_id, username_cached) VALUES ($1, $2, $3, $4, $5)",
@@ -2090,12 +2077,13 @@ async def submit_survey(ws: WebSocket, data: dict):
         int(ws.state.user["id"]) if ws.state.user else None,
         ws.state.user["username"] if ws.state.user else "Anonymous"
     )
-    return {"resp": "survey", "detail": "Submitted survey"}
+    return {"detail": "Submitted survey"}
 
 print(ws_action_dict)
 
 async def do_task_and_send(f, ws, data):
     ret = await f(ws, data)
+    ret["resp"] = data.get("request", "")
     await manager.send_personal_message(ret, ws)
 
 async def out_of_date(ws):
@@ -2182,8 +2170,11 @@ async def ws(ws: WebSocket, cli: str, plat: str):
                 "user-actions": "/_static/user-actions.js?v=74",
                 "surveys": "/_static/surveys.js?v=73",
                 "apply": "/_static/apply.js?v=80",
+                "admin-nav": "/_static/admin-nav.js?v=m6",
+                "admin-iframe": "/_static/admin-iframe.js?v=m45",
+                "admin-console": "/_static/admin-console.js?v=m37",
             },
-            "responses": ['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions"],
+            "responses": ['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions", "admin"],
             "actions": ['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa'],
             "tree": docs
         }, ws)
@@ -2307,7 +2298,6 @@ def user_action(
     async def _core(ws: WebSocket, data: UserActionWithReason):
         if ws.state.member.perm < min_perm:
             return {
-                "resp": "user_action",
                 "detail": f"PermError: {min_perm=}, {ws.state.member.perm=}"
             }
         
@@ -2315,7 +2305,6 @@ def user_action(
 
         if not data.user_id.isdigit():
             return {
-                "resp": "user_action",
                 "detail": "User ID is invalid"
             }
 
@@ -2323,7 +2312,6 @@ def user_action(
 
         if not await state_check(data.user_id):
             return {
-                "resp": "user_action",
                 "detail": replace_if_web(f"User state check error: {states=}", ws)
             }
 
@@ -2333,7 +2321,6 @@ def user_action(
                 return _data # Exit if true, we've already sent
             if len(data.reason) < 5:
                 return {
-                    "resp": "user_action",
                     "detail": "Reason must be more than 5 characters"
                 }
             res = await function(data)

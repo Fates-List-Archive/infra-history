@@ -227,10 +227,10 @@ def db_setup():
         ]
         env_pg.write("\n".join(lines))
 
-    shutil.copytree("data/snowfall/docker/scripts",
+    shutil.copytree("data/docker/scripts",
                     "/snowfall/docker/scripts",
                     dirs_exist_ok=True)
-    shutil.copy2("data/snowfall/docker/config/docker-compose.yml",
+    shutil.copy2("data/docker/config/docker-compose.yml",
                  "/snowfall/docker")
 
     logger.info("Starting up docker compose...")
@@ -350,6 +350,17 @@ def db_setup():
             sf_s2_f.write("\n".join(lines))
 
         with Popen(["bash", "/tmp/s2.bash"]) as proc:
+            proc.wait()
+    else:
+        logger.info("No backup found. Creating new database... [UNTESTED!]")
+        with open("/tmp/s3.bash", "w") as sf_s3_f:
+            lines = [
+                "source /snowfall/userenv",
+                'psql -f "data/sql/schema.sql"'
+            ]
+            sf_s3_f.write("\n".join(lines))
+
+        with Popen(["bash", "/tmp/s3.bash"]) as proc:
             proc.wait()
 
     Path("/snowfall/docker/env_done").touch()

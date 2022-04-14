@@ -51,7 +51,10 @@ function setData(data, noExtraCode=false) {
     }
 
     if(window.location.hash) {
-	setTimeout(() => document.querySelector(`${window.location.hash}`).scrollIntoView(), 300)
+	setTimeout(() => {
+        try {document.querySelector(`${window.location.hash}`).scrollIntoView() }
+        catch { warn("Larksong", "Scroll failed") }
+    }, 300)
     }    
 
     if(!noExtraCode) {
@@ -63,6 +66,10 @@ function setData(data, noExtraCode=false) {
 
     contentLoadedOnce = true
     contentCurrPage = window.location.pathname
+
+    if(data.resp == "admin" && adminPatchCalled) {
+        loadAdminConsole()
+    }
 
     $('#sidebar-search').SidebarSearch('init')
 
@@ -79,12 +86,14 @@ async function extraCode() {
 
     var pathSplit = currentURL.split('/')
 
-    currentURL = currentURL.replace('/', '') // Replace first
+    currentURL = currentURL.replace('/', '') // Replace first and remove //'s
 
-    var currentURLID = '#' + currentURL.replaceAll('/', '-') + "-nav"
+    var currentURLID = '#' + currentURL.replaceAll("//", "").replaceAll('/', '-') + "-nav"
     if(currentURL == "") {
         currentURLID = "#home-nav"
     }
+
+    currentURLID = currentURLID.replaceAll("--", "-") // Coalesce multiple dashes
 
     if(currentURL == 'bot-actions') {
         document.querySelector("#admin-panel-nav").classList.add("menu-open")

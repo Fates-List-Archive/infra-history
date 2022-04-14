@@ -1,0 +1,18 @@
+fastapi
+asyncpg
+bleach
+orjson
+requests
+python-dateutil
+pydantic
+msgpack
+aiohttp
+aioredis
+piccolo
+piccolo_admin
+uvicorn
+tomli # maturin doesnt properly define its dependencies
+
+
+# Install below manually
+# git+https://github.com/Rapptz/discord.py

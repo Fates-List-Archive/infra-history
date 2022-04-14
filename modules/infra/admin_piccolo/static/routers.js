@@ -142,8 +142,12 @@ async function loadContent(loc) {
             wsSend({request: "staff_verify"})
         })
         return
-    } else if(loc.startsWith("/admin")) {
-        window.location.href = loc
+    } else if(loc == "/admin" || loc == "/admin/") {
+        waitForWsAndLoad({loc: loc}, (data) => {
+            info("Lionblaze", "Requested for admin")
+            wsSend({request: "admin"})
+        })
+        return
     } else if(loc.startsWith("/apply")) { 
         waitForWsAndLoad({loc: loc}, (data) => {
             info("Lionblaze", "Requested for apply")
