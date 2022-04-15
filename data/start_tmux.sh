@@ -7,8 +7,6 @@ tmux new-session -d -s flamepaw
 tmux send-keys -t flamepaw ' cd ~/FatesList/modules/infra/flamepaw && ./flamepaw --cmd server; exec $SHELL' Enter
 tmux new-session -d -s squirrelflight 
 tmux send-keys -t squirrelflight ' cd ~/squirrelflight && target/release/squirrelflight; exec $SHELL' Enter
-tmux new-session -d -s serverlist 
-tmux send-keys -t serverlist ' cd ~/serverlist-bot && target/release/serverlist-bot; exec $SHELL' Enter
 tmux new-session -d -s widgets 
 tmux send-keys -t widgets ' flamepaw --cmd site.run; exec $SHELL' Enter
 tmux new-session -d -s api 
