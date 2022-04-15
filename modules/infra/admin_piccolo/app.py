@@ -1928,7 +1928,7 @@ async def data_request(ws: WebSocket, data: dict):
 
     if ws.state.member.perm < 7 and ws.state.user["id"] != user_id:
         return {
-            "detail": "You must either have permission level 6 or greater or the user id requested must be the same as your logged in user id."
+            "detail": "You must either have permission level 7 or greater or the user id requested must be the same as your logged in user id."
         }
 
     try:
@@ -1998,7 +1998,7 @@ async def data_deletion(ws: WebSocket, data: dict):
 
     if ws.state.member.perm < 7 and ws.state.user["id"] != user_id:
         return {
-            "detail": "You must either have permission level 6 or greater or the user id requested must be the same as your logged in user id."
+            "detail": "You must either have permission level 7 or greater or the user id requested must be the same as your logged in user id."
         }
 
     try:
@@ -2163,7 +2163,7 @@ async def ws(ws: WebSocket, cli: str, plat: str):
         return await out_of_date(ws)
 
     # Check nonce to ensure client is up to date
-    if (ws.state.plat == "WEB" and cli != "Comfrey0s1"  # TODO, obfuscate/hide nonce in core.js and app.py
+    if (ws.state.plat == "WEB" and cli != "Comfrey0s3"  # TODO, obfuscate/hide nonce in core.js and app.py
         or (ws.state.plat == "SQUIRREL" and cli != "BurdockRoot")
         or (ws.state.plat == "DOCREADER" and cli != "Quailfeather")
     ):

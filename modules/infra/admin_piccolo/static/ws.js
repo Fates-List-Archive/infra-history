@@ -7,11 +7,6 @@ var wsFatal = false
 var wsContentResp = new Set([])
 var wsContentSpecial = new Set([])
 
-function getNonce() {
-	// Protect against simple regexes with this
-	return ("Co" + "nf".repeat(0) + "mf".repeat(1) + "r".repeat(0)) + "r" + "0".repeat(0) + "e".repeat(1) + "y" + "t".repeat(0) + "".repeat(2) + "0" + "s".repeat(1) + 1
-}
-
 async function wsSend(data) {
     if(!wsUp) {
         info("Nightheart", "Waiting for ws to come up to start recieving notification")
@@ -51,6 +46,11 @@ async function wsStart() {
 
     // Select the client
     let cliExt = Date.now()
+
+    function getNonce() {
+        // Protect against simple regexes with this
+        return ("Co" + "nf".repeat(0) + "mf".repeat(1) + "r".repeat(0)) + "r" + "0".repeat(0) + "e".repeat(1) + "y" + "t".repeat(0) + "".repeat(2) + "0" + "s".repeat(1) + (1 + 1 + 0 + 1)
+    }    
     
     ws = new WebSocket(`wss://lynx.fateslist.xyz/_ws?cli=${getNonce()}@${cliExt}&plat=WEB`)
     ws.onopen = function (event) {
