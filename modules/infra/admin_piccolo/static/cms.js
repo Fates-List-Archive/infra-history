@@ -67,8 +67,12 @@ function setData(data, noExtraCode=false) {
     contentLoadedOnce = true
     contentCurrPage = window.location.pathname
 
-    if(data.resp == "admin" && adminPatchCalled) {
-        loadAdminConsole()
+    if(data.resp == "admin") {
+        try {
+            loadAdminConsole()
+        } catch (err) {
+            info("Larksong", "loadAdminConsole not yet ready, ignoring", { err })
+        }
     }
 
     $('#sidebar-search').SidebarSearch('init')

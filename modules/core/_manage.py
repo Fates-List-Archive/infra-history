@@ -107,7 +107,7 @@ def db_backup():
 
     logger.info("Schema backup done")
 
-    conf_pwd = getpass(prompt="Enter rclone conf password: ")
+    conf_pwd = os.environ.get("RCLONE_PWD") or getpass(prompt="Enter rclone conf password: ")
     for bak_type in ("full", "schema"):
         cmd = (
             f"rclone copy /backups/{bak_type}-{bak_id}.bak 'Fates List:fates_backups' "

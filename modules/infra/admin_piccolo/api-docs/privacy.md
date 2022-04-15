@@ -140,6 +140,7 @@ These are our guidelines you must follow and adhere to when using Fates List!
 10. You must follow Discord's Terms Of Service
 11. All user information on the site is cached for 8 hours. Data is kept only for the amount of time required
 12. All complaints and legal issues regarding the site should be made to Rootspring#6701
+13. Fates List probihits the monetization or resale of coins or any part of Fates List for real money.
 
 </blockquote>
 
@@ -264,6 +265,8 @@ This section was made to handle GDPR requirements such as data requests and dele
 ::: action-gdpr-request
 
 ### Request Data
+
+To see how to decode this raw data into any target electronic format of your choosing, click [here](https://lynx.fateslist.xyz/docs/read-data-requests)
 
 <div class="form-group">
     <label for='user-id'>User ID</label>

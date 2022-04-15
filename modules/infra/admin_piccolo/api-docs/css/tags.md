@@ -1,5 +1,7 @@
 ## Tag Types
 
+**This may not be always accurate, use 'Inspect Element' when in doubt**
+
 | Type ID | Description |
 | :--- | :--- |
 | 0    | Global Tag (both bot+server tag) |
@@ -7,6 +9,8 @@
 | 2    | Server Tag |
 
 ## Tag Info
+
+**This may not be always accurate, use 'Inspect Element' when in doubt**
 
 | Internal Name/ID | Icon | Type |
 | :--- | :--- | :--- |

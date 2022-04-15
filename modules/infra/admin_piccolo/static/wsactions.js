@@ -121,7 +121,7 @@ actions = {
             document.querySelector("#request-btn").innerText = "Request"
             return
         } else if(data.data) {
-            downloadTextFile(JSON.stringify(data.data), `data-request-${data.user}.json`)
+            downloadTextFile(data.data, `data-request-${data.user}.fates`)
             hljs.highlightAll();
             window.highlightJsBadge();
             document.querySelector("#request-btn").innerText = "Requested"

@@ -74,6 +74,12 @@ async function loadContent(loc) {
         return
     } else if(loc.startsWith("/my-perms")) {
         myPermsInterval = setInterval(() => {
+            if(!user) {
+                alert("log-in", "Login Needed", "You need to be logged in to view your permissions")
+                loadContent("/")
+                return
+            }
+
             if(user.token) {
                 user.username = user.user.username
                 user.id = user.user.id

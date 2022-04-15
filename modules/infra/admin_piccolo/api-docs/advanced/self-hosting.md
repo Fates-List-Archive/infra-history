@@ -34,30 +34,37 @@ Fates List also uses quite a few moving parts including PostgreSQL 14 (older ver
 
 8. Repeat step for 4 with a A/CNAME record called lynx pointing to the same ip/hostname.
 
-## VPS Setup
+## VPS Initial Setup
 
 - Run ``cd ~/FatesList`` between every step
 
-0. Create a user account named ``meow``. This is the username that Fates List currently requires.
-
-1. Download the Fates List infra repo on the VPS using `git clone https://github.com/Fates-List/infra FatesList`. Make sure the location it is downloaded to is publicly accessible AKA not in a /root folder or anything like that. Make sure you have the following dependencies installed:
+0. Install the below dependencies:
 
 - python 3.10 or newer
 - *nightly* rust, 
 - go 1.18 or newer
-- docker-compose
 - gcc-c++ (required for cython)
 - libffi-devel (required for cython)
 - libxslt-devel (required by some python dependencies we use such as lxml)
 - libxml2-devel (required by some python dependencies we use such as lxml)- libpq-devel (required by some python dependencies we use such as asyncpg)
+- tmux
 
-2. Enter the ``modules/infra/flamepaw`` folder and run `make && make install`. This will build and install flamepaw on your system.
+The two below dependencies can also be replaced by having a PostgreSQL 14+ server listening at port 1000 and a Redis 6.2+ server listening at port 1001.
 
-3. Enter the ``FatesList/config/data`` folder and fill in the required information in the JSON files there. This should be self-explanatory but feel free to ask for help on our support server.
+- docker
+- docker-compose
 
-4. (optional) If you have a database backup, copy it to ``/backups/latest.bak`` where ``/`` is the root of your hard disk
+1. Create a user account named ``meow``. This is the username that Fates List currently requires.
 
-5. Run ``flamepaw --cmd db.setup`` to setup your database. This may fail, if so, report it on our support server and/or try manually creating the schema (if postgres docker setup succeeds) using the below commands:
+2. Download the Fates List infra repo on the VPS using `git clone https://github.com/Fates-List/infra FatesList`. Make sure the location it is downloaded to is publicly accessible AKA not in a /root folder or anything like that.
+
+3. Enter the ``modules/infra/flamepaw`` folder and run `make && make install`. This will build and install flamepaw on your system.
+
+4. Enter the ``FatesList/config/data`` folder and fill in the required information in the JSON files there. This should be self-explanatory but feel free to ask for help on our support server.
+
+5. (optional) If you have a database backup, copy it to ``/backups/latest.bak`` where ``/`` is the root of your hard disk
+
+6. Run ``flamepaw --cmd db.setup`` to setup your database. This may fail, if so, report it on our support server and/or try manually creating the schema (if postgres docker setup succeeds) using the below commands:
 
 ```bash
 
@@ -68,24 +75,26 @@ psql # If this fails then postgres docker setup failed and you should report thi
 \i schema.sql
 ```
 
-6. Install the lynx python dependencies with ``pip install -r modules/infra/admin_piccolo/deps.txt``
+7. Install the lynx python dependencies with ``pip install -r modules/infra/admin_piccolo/deps.txt``
 
-7. Install ``git+https://github.com/Rapptz/discord.py`` manually (due to python 3.11 and aiohttp issues)
+8. Install ``git+https://github.com/Rapptz/discord.py`` manually (due to python 3.11 and aiohttp issues)
 
-8. Copy the nginx conf in data/nginx to /etc/nginx
+9. Copy the nginx conf in data/nginx to /etc/nginx
 
-9. Restart nginx using ``systemctl restart nginx``
+10. Restart nginx using ``systemctl restart nginx``
 
 ### Compiling actual site 
 
 - Do all steps below apart from ``make`` and ``git`` commands on server reboot/full site restart/``tmux`` server kill as well
 
-9. Clone baypaw using ``git clone https://github.com/Fates-List/baypaw``, enter the folder, run ``make`` to compile baypaw which is a microservice for global API requests across Fates List services.
+1. Clone baypaw using ``git clone https://github.com/Fates-List/baypaw``, enter the folder, run ``make`` to compile baypaw which is a microservice for global API requests across Fates List services.
 
-10. Clone api-v3 using ``git clone https://github.com/Fates-List/api-v3``, enter the folder, run ``make`` to compile the api.
+2. Clone api-v3 using ``git clone https://github.com/Fates-List/api-v3``, enter the folder, run ``make`` to compile the api.
 
-11. Clone squirrelflight using ``git clone https://github.com/Fates-List/squirrelflight``, enter the folder, run ``make`` to compile squirrelflight, our vote reminders bot.
+3. Clone squirrelflight using ``git clone https://github.com/Fates-List/squirrelflight``, enter the folder, run ``make`` to compile squirrelflight, our vote reminders bot.
 
-12. (optional, not done on Fates due to issues) Follow [this](https://stevescargall.com/2020/05/13/how-to-install-prometheus-and-grafana-on-fedora-server/) to set up Prometheus and Grafana for monitoring. Set Grafanas port to 5050. Use a firewall or the digital ocean firewall to block other ports. Do not open prometheus's port in the firewall, only open Grafana's.
+4. (optional, not done on Fates due to issues) Follow [this](https://stevescargall.com/2020/05/13/how-to-install-prometheus-and-grafana-on-fedora-server/) to set up Prometheus and Grafana for monitoring. Set Grafanas port to 5050. Use a firewall or the digital ocean firewall to block other ports. Do not open prometheus's port in the firewall, only open Grafana's.
 
-Fates List probihits the monetization or resale of coins or any part of Fates List for real money.
+### Running the site
+
+Run ``FatesList/data/start_tmux.sh`` to start Fates List

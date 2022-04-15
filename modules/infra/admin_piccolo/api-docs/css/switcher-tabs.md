@@ -1,4 +1,4 @@
-## Switcher Tabs
+**This may not be always accurate, use 'Inspect Element' when in doubt**
 
 | Internal Name/ID | Display Name | Description  |
 | :--- | :--- | :--- |

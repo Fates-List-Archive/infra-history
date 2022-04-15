@@ -21,28 +21,13 @@ A BaseUser represents a user on Fates List (See [https://github.com/Fates-List/F
 
 Fates List also records the users status as well. With API v3, this is now a string, Usually ``Unknown`` at least until Baypaw is updated with proper status detection
 
-| Status |
-| :--- |
-| Unknown |
-| Online |
-| Offline |
-| Idle |
-| DoNotDisturb |
+See [Status](https://lynx.fateslist.xyz/docs/enums-ref#status) for the statuses available
 
 ### Bot State
 
 Fates List has an advanced moderation system based on something called a state. Every bot has a state which is an integer which dictates what the current state of the bot is, whether it is banned, in queue, under review, certified etc. and more. It is the most important attribute about a bot on Fates List. Users and servers have this as well
 
-| State Number | Corresponding State |
-| :--- | :--- |
-| 0 | Verified/Approved |
-| 1 | In Queue |
-| 2 | Denied |
-| 3 | Hidden/Private (internal, only settable by staff) |
-| 4 | Banned |
-| 5 | Under Review (set by running +claim in Test Server by staff) |
-| 6 | Certified |
-| 7 | Archived (set to read only by owner) |
+See [State](https://lynx.fateslist.xyz/docs/enums-ref#state) for the states available
 
 ### User State
 

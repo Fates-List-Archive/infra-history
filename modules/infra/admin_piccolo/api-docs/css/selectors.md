@@ -2,6 +2,8 @@
 
 TYPE() means that there are many TYPEs as subchildren of this object and TYPE[] means that there are multiple of these TYPES retrieved as an array and not as subchildren when you use document.querySelectorAll on it. TYPE{} means both and is equivalent to TYPE()[]. Anything in bold is a variable and you should see the description for information about it.
 
+**This may not be always accurate, use 'Inspect Element' when in doubt**
+
 | Name | Description | Tag  | Type | Object | Selector |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | content | The entire div your bot page is in | div | id | Bot | #content |
@@ -21,9 +23,6 @@ TYPE() means that there are many TYPEs as subchildren of this object and TYPE[] 
 | promo-container | This is the container for a promo | div[] | class | Promotion[] | .promo-container |
 | promo-container-**index** | This is one promo based on jinja2 loop.index which is a number going from 0 to the N-1th promo index | div | id | Promotion | #promo-container-**index** |
 | long-description | The bots long description. All links are given the long-desc-link class (selector: .long-desc-link) | div | id | LongDescription | #long-description |
-| long-description-container | The container around the long description | div | id | LongDescriptionContainer | #long-description-container |
-| long-desc-link | All links in long descriptiom get this class making it grey by default. Use ldlink class instead as this class causes side effects | a[] | class | LongDescriptionInternalLink[] | .long-desc-link |
-| ldlink | All links in long description get this as well. It is highly recommended to use this over long-desc-link as this doesn’t break other things in your bot page | a[] | class | LongDescriptionLink[] | .ldlink |
 | switcher | This is the bot switcher (The Description, Review, Commands, About and Admin tabs) | div | id | BotSwitcher | #switcher |
 | tablinks | All of the tabs currently | button[] | class | Tab[] | .tablinks |
 | **tab_name**-tab-button | The actual switcher tab, see the [Switcher Tabs](tabs.md) section for more information on the tab names  | button | id | Tab | #**tab_name**-tab-button |

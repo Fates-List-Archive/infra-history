@@ -161,25 +161,29 @@ CREATE TABLE bot_stats_votes_pm (
 CREATE TABLE bot_voters (
     bot_id bigint not null,
     user_id bigint not null,
-    timestamps timestamptz[] DEFAULT '{NOW()}'
+    timestamps timestamptz[] DEFAULT '{NOW()}',
+    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE server_voters (
     guild_id bigint not null,
     user_id bigint not null,
-    timestamps timestamptz[] DEFAULT '{NOW()}'
+    timestamps timestamptz[] DEFAULT '{NOW()}',
+    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE user_vote_table (
 	user_id bigint PRIMARY KEY,
 	bot_id bigint NOT NULL,
-	expires_on timestamptz DEFAULT NOW() + '8 hours'
+	expires_on timestamptz DEFAULT NOW() + '8 hours',
+    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE user_server_vote_table (
 	user_id bigint PRIMARY KEY,
 	guild_id bigint NOT NULL,
-	expires_on timestamptz DEFAULT NOW() + '8 hours'
+	expires_on timestamptz DEFAULT NOW() + '8 hours',
+    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE users (
@@ -224,6 +228,7 @@ CREATE TABLE review_votes (
     id uuid not null REFERENCES reviews (id) ON DELETE CASCADE ON UPDATE CASCADE,
     user_id bigint not null,
     upvote BOOLEAN NOT NULL,
+    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
     PRIMARY KEY(id, user_id)
 );
 
@@ -243,7 +248,8 @@ CREATE TABLE user_payments (
     stripe_id TEXT DEFAULT '',
     livemode BOOLEAN DEFAULT FALSE,
     coins INTEGER NOT NULL,
-    paid BOOLEAN DEFAULT FALSE
+    paid BOOLEAN DEFAULT FALSE,
+    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE events (
@@ -282,7 +288,7 @@ CREATE TABLE vanity (
 
 CREATE TABLE servers (
     guild_id bigint not null unique,
-    owner_id bigint not null default 0,
+    owner_id bigint not null,
     name_cached text not null default 'Unlisted',
     avatar_cached text default 'Unlisted',
     votes bigint default 0,   
@@ -315,7 +321,8 @@ CREATE TABLE servers (
     tags text[] default '{}',
     deleted boolean default false,
     flags integer[] default '{}',
-    autorole_votes bigint[] default '{}'
+    autorole_votes bigint[] default '{}',
+    CONSTRAINT user_fk FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE server_audit_logs (
@@ -327,7 +334,8 @@ CREATE TABLE server_audit_logs (
     value text not null,
     action_time timestamptz not null default now(),
     action_id uuid primary key default uuid_generate_v4(),
-    CONSTRAINT servers_fk FOREIGN KEY (guild_id) REFERENCES servers(guild_id) ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT servers_fk FOREIGN KEY (guild_id) REFERENCES servers(guild_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT user_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- In server tags, owner_guild is the first guild a tag was given to
@@ -339,6 +347,12 @@ CREATE TABLE leave_of_absence (
     reason text not null,
     estimated_time interval not null,
     start_date timestamptz not null default now()
+);
+
+CREATE TABLE lynx_exp_features (
+    user_id bigint,
+    features text[],
+    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE lynx_apps (
@@ -356,7 +370,8 @@ CREATE TABLE lynx_logs (
     method text not null,
     url text not null,
     status_code integer not null,
-    request_time timestamptz default NOW()
+    request_time timestamptz default NOW(),
+    CONSTRAINT user_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE lynx_notifications (
@@ -372,7 +387,8 @@ CREATE TABLE lynx_ratings (
     feedback text not null,
     page text not null,
     username_cached text not null,
-    user_id bigint
+    user_id bigint,
+    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE lynx_surveys (
@@ -388,5 +404,6 @@ CREATE TABLE lynx_survey_responses (
     questions jsonb not null,
     answers jsonb not null,
     username_cached text not null,
-    user_id bigint
+    user_id bigint,
+    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );

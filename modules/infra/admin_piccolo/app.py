@@ -256,7 +256,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
         
         if (not request.headers.get("X-Lynx-Site") and request.url.path not in ("/_admin", "/_admin/")) and not request.url.path.endswith((".css", ".js", ".js.map")):
             return ORJSONResponse({"detail": "Not in lynx site"}, status_code=401)
-        
+
         print("[LYNX] Admin request. Middleware started")
 
         await auth_user_cookies(request)
@@ -278,7 +278,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
             if request.url.path == "/_admin/api/tables/" and perm < 4:
                 return ORJSONResponse(
                     ["reviews", "review_votes", "bot_packs", "vanity", "leave_of_absence", "user_vote_table",
-                     "lynx_rating"])
+                     "lynx_surveys", "lynx_survey_responses"])
             elif request.url.path == "/_admin/api/tables/users/ids/" and request.method == "GET":
                 pass
             elif request.url.path in (
@@ -316,7 +316,7 @@ class CustomHeaderMiddleware(BaseHTTPMiddleware):
                                                       "/_admin/api/tables/bot_packs",
                                                       "/_admin/api/tables/user_vote_table",
                                                       "/_admin/api/tables/leave_of_absence",
-                                                      "/_admin/api/tables/lynx_rating")):
+                                                      "/_admin/api/tables/lynx_survey")):
                     return ORJSONResponse({"error": "You do not have permission to access this page"}, status_code=403)
 
         key = "rl:%s" % request.scope["sunbeam_user"]["user"]["id"]
@@ -933,6 +933,10 @@ async def admin(ws: WebSocket, _: dict):
 All things done on the admin console are logged
 
 **Please don't be stupid**
+
+Username is your discord account username and password is the password given to you when you first verified
+
+Use https://lynx.fateslist.xyz/reset to reset your admin password
 
 </blockquote>
 
@@ -1810,12 +1814,12 @@ async def reset_page(_, __):
         "title": "Lynx Credentials Reset",
         "pre": "/links",
         "data": f"""
-        <p>If you're locked out of your discord account or otherwise need to reset your credentials, just click the 'Reset' button. It will do the same
-        thing as <strong>/lynxreset</strong> used to</p>
+<p>If you're locked out of your discord account or otherwise need to reset your credentials, just click the 'Reset' button. It will do the same
+thing as <strong>/lynxreset</strong> used to</p>
 
-        <div id="verify-parent">
-            <button id="verify-btn" onclick="reset()">Reset</button>
-        </div>
+<div id="verify-parent">
+    <button id="verify-btn" onclick="reset()">Reset</button>
+</div>
         """,
         "script": """
             async function reset() {
@@ -1832,44 +1836,44 @@ async def links(ws: WebSocket, _):
         return {
             "title": "Some Useful Links",
             "data": f"""
-            <blockquote class="quote">
-                <h5>Some Nice Links</h5>
-                <a href="/my-perms">My Permissions</a><br/>
-                <a href="/reset">Lynx Credentials Reset</a><br/>
-                <a href="/loa">Leave Of Absense</a><br/>
-                <a href="/staff-apps">Staff Applications</a><br/>
-                <a href="/links">Some Useful Links</a><br/>
-                <a href="/staff-verify">Staff Verification</a> (in case you need it)<br/>
-                <a href="/staff-guide">Staff Guide</a><br/>
-                <a href="/docs/roadmap">Our Roadmap</a><br/>
-                <a href="/bot-actions">Bot Actions</a><br/>
-                <a href="/user-actions">User Actions</a><br/>
-                <a href="/requests">Requests</a><br/>
-            </blockquote>
-            <blockquote class="quote">
-                <h5 id="credits">Credits</h5>
-                <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
-                </p>
-            </blockquote>
+<blockquote class="quote">
+    <h5>Some Nice Links</h5>
+    <a href="/my-perms">My Permissions</a><br/>
+    <a href="/reset">Lynx Credentials Reset</a><br/>
+    <a href="/loa">Leave Of Absense</a><br/>
+    <a href="/staff-apps">Staff Applications</a><br/>
+    <a href="/links">Some Useful Links</a><br/>
+    <a href="/staff-verify">Staff Verification</a> (in case you need it)<br/>
+    <a href="/staff-guide">Staff Guide</a><br/>
+    <a href="/docs/roadmap">Our Roadmap</a><br/>
+    <a href="/bot-actions">Bot Actions</a><br/>
+    <a href="/user-actions">User Actions</a><br/>
+    <a href="/requests">Requests</a><br/>
+</blockquote>
+<blockquote class="quote">
+    <h5 id="credits">Credits</h5>
+    <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
+    </p>
+</blockquote>
         """}
     else:
         return {
             "title": "Some Useful Links",
             "data": f"""
-            <blockquote class="quote">
-                <h5>Some Nice Links</h5>
-                <strong>Some links hidden as you are not logged in or are not staff</strong>
-                <a href="/my-perms">My Permissions</a><br/>
-                <a href="/links">Some Useful Links</a><br/>
-                <a href="/staff-guide">Staff Guide</a><br/>
-                <a href="/docs/roadmap">Our Roadmap</a><br/>
-                <a href="/requests">Requests</a><br/>
-            </blockquote>
-            <blockquote class="quote">
-                <h5 id="credits">Credits</h5>
-                <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
-                </p>
-            </blockquote>
+<blockquote class="quote">
+    <h5>Some Nice Links</h5>
+    <strong>Some links hidden as you are not logged in or are not staff</strong>
+    <a href="/my-perms">My Permissions</a><br/>
+    <a href="/links">Some Useful Links</a><br/>
+    <a href="/staff-guide">Staff Guide</a><br/>
+    <a href="/docs/roadmap">Our Roadmap</a><br/>
+    <a href="/requests">Requests</a><br/>
+</blockquote>
+<blockquote class="quote">
+    <h5 id="credits">Credits</h5>
+    <p>Special Thanks to <strong><a href="https://adminlte.io/">AdminLTE</a></strong> for thier awesome contents!
+    </p>
+</blockquote>
         """}
 
 @ws_action("user_action")
@@ -1909,7 +1913,7 @@ async def request_logs(ws: WebSocket, _):
         "title": "Lynx Request Logs",
         "pre": "/links",
         "data": f"""
-        {requests_html}
+{requests_html}
         """
     }
 
@@ -1936,24 +1940,42 @@ async def data_request(ws: WebSocket, data: dict):
 
     user = await app.state.db.fetchrow("select * from users where user_id = $1", user_id)
     owners = await app.state.db.fetch("SELECT * FROM bot_owner WHERE owner = $1", user_id)
-    bot_voters = await app.state.db.fetch("SELECT * FROM bot_voters WHERE user_id = $1", user_id)
-    user_vote_table = await app.state.db.fetch("SELECT * FROM user_vote_table WHERE user_id = $1", user_id)
-    reviews = await app.state.db.fetch("SELECT * FROM reviews WHERE user_id = $1", user_id)
-    review_votes = await app.state.db.fetch("SELECT * FROM review_votes WHERE user_id = $1", user_id)
-    user_bot_logs = await app.state.db.fetch("SELECT * FROM user_bot_logs WHERE user_id = $1", user_id)
-    user_payments = await app.state.db.fetch("SELECT * FROM user_payments WHERE user_id = $1", user_id)
-    servers = await app.state.db.fetch("SELECT * FROM servers WHERE owner_id = $1", user_id)
-    lynx_apps = await app.state.db.fetch("SELECT * FROM lynx_apps WHERE user_id = $1", user_id)
-    lynx_logs = await app.state.db.fetch("SELECT * FROM lynx_logs WHERE user_id = $1", user_id)
+
+    # handle all fk key cases
+    fk_keys = await app.state.db.fetch("""
+SELECT sh.nspname AS table_schema,
+  tbl.relname AS table_name,
+  col.attname AS column_name,
+  referenced_sh.nspname AS foreign_table_schema,
+  referenced_tbl.relname AS foreign_table_name,
+  referenced_field.attname AS foreign_column_name
+FROM pg_constraint c
+    INNER JOIN pg_namespace AS sh ON sh.oid = c.connamespace
+    INNER JOIN (SELECT oid, unnest(conkey) as conkey FROM pg_constraint) con ON c.oid = con.oid
+    INNER JOIN pg_class tbl ON tbl.oid = c.conrelid
+    INNER JOIN pg_attribute col ON (col.attrelid = tbl.oid AND col.attnum = con.conkey)
+    INNER JOIN pg_class referenced_tbl ON c.confrelid = referenced_tbl.oid
+    INNER JOIN pg_namespace AS referenced_sh ON referenced_sh.oid = referenced_tbl.relnamespace
+    INNER JOIN (SELECT oid, unnest(confkey) as confkey FROM pg_constraint) conf ON c.oid = conf.oid
+    INNER JOIN pg_attribute referenced_field ON (referenced_field.attrelid = c.confrelid AND referenced_field.attnum = conf.confkey)
+WHERE c.contype = 'f'""")
+
+    related_data = {}
+
+    for fk in fk_keys:
+        if fk["foreign_table_name"] == "users":
+            related_data[fk["table_name"]] = await app.state.db.fetch(f"SELECT * FROM {fk['table_name']} WHERE {fk['column_name']} = $1", user_id)
+
+
     lynx_notifications = await app.state.db.fetch("SELECT * FROM lynx_notifications, unnest(acked_users) AS "
                                                     "user_id WHERE user_id = $1", user_id)
-    lynx_ratings = await app.state.db.fetch("SELECT * FROM lynx_ratings WHERE user_id = $1", user_id)
 
-    data = {"user": user, "owners": owners, "bot_voters": bot_voters, "user_vote_table": user_vote_table,
-            "reviews": reviews, "review_votes": review_votes, "user_bot_logs": user_bot_logs,
-            "user_payments": user_payments, "servers": servers,
-            "lynx_apps": lynx_apps, "lynx_logs": lynx_logs, "lynx_notifications": lynx_notifications,
-            "lynx_ratings": lynx_ratings, "owned_bots": [],
+    data = {"user": user, 
+            "owners": owners, 
+            "lynx_notifications": lynx_notifications,
+            "owned_bots": [],
+            "fk_keys": fk_keys,
+            "related_data": related_data,
             "privacy": "Fates list does not profile users or use third party cookies for tracking other than what "
                         "is used by cloudflare for its required DDOS protection"}
 
@@ -1962,7 +1984,7 @@ async def data_request(ws: WebSocket, data: dict):
 
     return {
         "user": str(user_id),
-        "data": data
+        "data": msgpack.packb(jsonable_encoder(data))
     }
 
 @ws_action("data_deletion")
@@ -1984,6 +2006,19 @@ async def data_deletion(ws: WebSocket, data: dict):
     except:
         return {
             "detail": "Invalid User ID"
+        }
+    
+    # Some sanity checks before allowing a DDR
+    votes_check = await app.state.db.fetchrow("SELECT expires_on FROM user_vote_table WHERE user_id = $1", user_id)
+    if votes_check and votes_check["expires_on"] > datetime.datetime.now():
+        return {
+            "detail": "You cannot delete data for a user who has a vote for a bot that has not expired yet. Please wait until all bot votes have expired before making a request"
+        }
+
+    votes_check = await app.state.db.fetchrow("SELECT expires_on FROM user_server_vote_table WHERE user_id = $1", user_id)
+    if votes_check and votes_check["expires_on"] > datetime.datetime.now():
+        return {
+            "detail": "You cannot delete data for a user who has a vote for a server that has not expired yet. Please wait until all server votes have expired before making a request"
         }
 
     print("[LYNX] Wiping user info in db")
@@ -2083,7 +2118,8 @@ print(ws_action_dict)
 
 async def do_task_and_send(f, ws, data):
     ret = await f(ws, data)
-    ret["resp"] = data.get("request", "")
+    if not ret.get("resp"):
+        ret["resp"] = data.get("request", "")
     await manager.send_personal_message(ret, ws)
 
 async def out_of_date(ws):
@@ -2155,30 +2191,6 @@ async def ws(ws: WebSocket, cli: str, plat: str):
 
     await manager.connect(ws)
 
-    if ws.state.plat == "WEB":
-        docs = []
-
-        for path in pathlib.Path("modules/infra/admin_piccolo/api-docs").rglob("*.md"):
-            proper_path = str(path).replace("modules/infra/admin_piccolo/api-docs/", "")
-            
-            docs.append(proper_path.split("/"))
-        
-        await manager.send_personal_message({
-            "resp": "cfg", 
-            "assets": {
-                "bot-actions": "/_static/bot-actions.js?v=75",
-                "user-actions": "/_static/user-actions.js?v=74",
-                "surveys": "/_static/surveys.js?v=73",
-                "apply": "/_static/apply.js?v=80",
-                "admin-nav": "/_static/admin-nav.js?v=m6",
-                "admin-iframe": "/_static/admin-iframe.js?v=m45",
-                "admin-console": "/_static/admin-console.js?v=m37",
-            },
-            "responses": ['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions", "admin"],
-            "actions": ['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa'],
-            "tree": docs
-        }, ws)
-
     if ws.cookies.get("sunbeam-session:warriorcats") and ws.state.plat != "DOCREADER":
         print(f"WS Cookies: {ws.cookies}")
         try:
@@ -2200,8 +2212,6 @@ async def ws(ws: WebSocket, cli: str, plat: str):
             ws.state.user = await fetch_user(int(sunbeam_user["user"]["id"]))
 
             _, _, ws.state.member = await is_staff(int(sunbeam_user["user"]["id"]), 2)
-            await manager.send_personal_message({"resp": "perms", "data": ws.state.member.dict()}, ws)
-            await manager.send_personal_message({"resp": "user_info", "user": ws.state.user}, ws)
             ws.state.verified = True
 
             if not code_check(data["staff_verify_code"], int(sunbeam_user["user"]["id"])) and ws.state.member.perm >= 2:
@@ -2212,6 +2222,41 @@ async def ws(ws: WebSocket, cli: str, plat: str):
             # Let them stay unauthenticated
             print(exc)
             pass
+
+    if ws.state.plat in ("WEB", "DOCREADER"):
+        docs = []
+
+        for path in pathlib.Path("modules/infra/admin_piccolo/api-docs").rglob("*.md"):
+            proper_path = str(path).replace("modules/infra/admin_piccolo/api-docs/", "")
+            
+            docs.append(proper_path.split("/"))
+        
+        features = []
+
+        if ws.state.plat == "WEB":
+            if ws.state.member.perm == 7:
+                features.append("dev-mode")
+
+        await manager.send_personal_message({
+            "resp": "cfg", 
+            "assets": {
+                "bot-actions": "/_static/bot-actions.js?v=75",
+                "user-actions": "/_static/user-actions.js?v=74",
+                "surveys": "/_static/surveys.js?v=73",
+                "apply": "/_static/apply.js?v=80",
+                "admin-nav": "/_static/admin-nav.js?v=m6",
+                "admin-iframe": "/_static/admin-iframe.js?v=m3822",
+                "admin-console": "/_static/admin-console.js?v=m37",
+            },
+            "responses": ['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions", "admin"],
+            "actions": ['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa'],
+            "tree": docs,
+            "features": features
+        }, ws)
+
+        if ws.state.plat == "WEB":
+            await manager.send_personal_message({"resp": "perms", "data": ws.state.member.dict()}, ws)
+            await manager.send_personal_message({"resp": "user_info", "user": ws.state.user}, ws)
 
     try:
         if ws.state.plat == "WEB":
@@ -2445,13 +2490,15 @@ def handle_kill(*args, **kwargs):
     async def _close():
         await asyncio.sleep(0)
         await manager.broadcast({"resp": "spld", "e": SPLDEvent.maint})
+        await asyncio.sleep(0)
+        await app.state.engine.close_connection_pool()
+
+    def _gohome(_):
+        task.cancel()
+        sys.exit(0)
 
     print("Broadcasting maintenance")
-    asyncio.create_task(_close())
-
-@app.on_event("shutdown")
-async def close():
-    await app.state.engine.close_connection_pool()
-
+    task = asyncio.create_task(_close())
+    task.add_done_callback(_gohome)
 
 app.add_middleware(CustomHeaderMiddleware)

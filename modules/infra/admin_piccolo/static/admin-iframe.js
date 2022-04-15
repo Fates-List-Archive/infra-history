@@ -1,4 +1,5 @@
 var interval = -1
+var sentExit = false
 
 function modConsole() {
     // Modify console before it's used
@@ -25,6 +26,7 @@ function modConsole() {
 function loadAdminConsole() {
     // Inject primitives
     adminPatchCalled = false
+    sentExit = false
     window.log = log
     window.info = info
     window.debug = debug
@@ -61,7 +63,10 @@ function loadAdminConsole() {
 
     interval = setInterval(() => {
         if(!currentLoc.startsWith("/admin")) {
-            info("Poppypaw", "Exiting admin iframe")
+            if(!sentExit) {
+                info("Poppypaw", "Exiting admin iframe")
+                sentExit = true
+            }
             clearInterval(interval)
             return
         } else {
