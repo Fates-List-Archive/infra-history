@@ -49,7 +49,6 @@ function loadAdmin() {
         <i class="far fa-circle nav-icon"></i>
           <p>
             Bot Actions
-            <span class="right badge badge-info">Beta</span>
           </p>
         </a>
       </li>
@@ -58,11 +57,10 @@ function loadAdmin() {
           ><i class="far fa-circle nav-icon"></i>
           <p>
             User Actions
-            <span class="right badge badge-info">Beta</span>
           </p></a
         >
       </li>
-      <li class="nav-item">
+      <li class="nav-item" id="l-admin-item">
         <a id="admin-nav" href="https://lynx.fateslist.xyz/admin" class="nav-link"
           ><i class="far fa-circle nav-icon"></i>
           <p>
@@ -73,6 +71,19 @@ function loadAdmin() {
     </ul>
   </li>
     `).insertAfter("#links-nav-li")
+
+    if(experiments.hasExperiment(UserExperiments.LynxExperimentRolloutView)) {
+        $(`
+        <li class="nav-item">
+        <a id="exp-rollout-nav" href="https://lynx.fateslist.xyz/exp-rollout" class="nav-link"
+          ><i class="far fa-circle nav-icon"></i>
+          <p>
+            Experiment Rollout
+          </p></a>
+      </li>
+        `).insertAfter("#l-admin-item")
+    }
+
     $('.admin-only').css("display", "block")
     adminLoaded = true
 }

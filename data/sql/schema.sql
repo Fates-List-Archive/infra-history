@@ -204,7 +204,8 @@ CREATE TABLE users (
     vote_reminder_servers_channel bigint,
     vote_reminders_last_acked timestamptz not null default now(),
     vote_reminders_servers_last_acked timestamptz not null default now(),
-    staff_verify_code text
+    staff_verify_code text,
+    experiments integer[] not null default '{}'
 );
 
 CREATE TABLE reviews (

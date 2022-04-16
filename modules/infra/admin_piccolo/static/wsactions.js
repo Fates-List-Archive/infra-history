@@ -7,6 +7,7 @@ actions = {
         assetList = data.assets
         wsContentResp = new Set(data.responses)
         wsContentSpecial = new Set(data.actions)
+        experiments = UserExperiments.from(data.experiments)
         shadowsightTreeParse(data.tree)
     },
     "spld": (data) => {
@@ -128,6 +129,10 @@ actions = {
             document.querySelector("#request-btn").ariaDisabled = true
             document.querySelector("#request-btn").setAttribute("disabled", "true")
         }
+    },
+    "experiments": (data) => {
+        console.log("Got experiments")
+        experiments = UserExperiments.from(data.experiments)
     }
 }
 

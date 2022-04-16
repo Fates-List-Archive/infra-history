@@ -22,10 +22,11 @@ var perms = {name: "Please wait for websocket to finish loading", perm: 0}
 var user = {id: "0", username: "Please wait for websocket to finish loading"}
 var assetList = {};
 
+var experiments = [];
+
 contentLoadedOnce = false
 contentCurrPage = window.location.pathname
 waitInterval = -1
 myPermsInterval = -1
-
 
 readyModule("cstate")

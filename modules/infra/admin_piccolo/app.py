@@ -2163,7 +2163,7 @@ async def ws(ws: WebSocket, cli: str, plat: str):
         return await out_of_date(ws)
 
     # Check nonce to ensure client is up to date
-    if (ws.state.plat == "WEB" and cli != "Comfrey0s3"  # TODO, obfuscate/hide nonce in core.js and app.py
+    if (ws.state.plat == "WEB" and cli != "Comfrey0s4"  # TODO, obfuscate/hide nonce in core.js and app.py
         or (ws.state.plat == "SQUIRREL" and cli != "BurdockRoot")
         or (ws.state.plat == "DOCREADER" and cli != "Quailfeather")
     ):
@@ -2223,6 +2223,11 @@ async def ws(ws: WebSocket, cli: str, plat: str):
             print(exc)
             pass
 
+    if ws.state.user:
+        ws.state.experiments = await app.state.db.fetchval("SELECT experiments FROM users WHERE user_id = $1", int(ws.state.user["id"]))   
+    else:
+        ws.state.experiments = []
+
     if ws.state.plat in ("WEB", "DOCREADER"):
         docs = []
 
@@ -2230,12 +2235,6 @@ async def ws(ws: WebSocket, cli: str, plat: str):
             proper_path = str(path).replace("modules/infra/admin_piccolo/api-docs/", "")
             
             docs.append(proper_path.split("/"))
-        
-        features = []
-
-        if ws.state.plat == "WEB":
-            if ws.state.member.perm == 7:
-                features.append("dev-mode")
 
         await manager.send_personal_message({
             "resp": "cfg", 
@@ -2244,14 +2243,14 @@ async def ws(ws: WebSocket, cli: str, plat: str):
                 "user-actions": "/_static/user-actions.js?v=74",
                 "surveys": "/_static/surveys.js?v=73",
                 "apply": "/_static/apply.js?v=80",
-                "admin-nav": "/_static/admin-nav.js?v=m6",
+                "admin-nav": "/_static/admin-nav.js?v=m8",
                 "admin-iframe": "/_static/admin-iframe.js?v=m3822",
                 "admin-console": "/_static/admin-console.js?v=m37",
             },
             "responses": ['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions", "admin"],
             "actions": ['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa'],
             "tree": docs,
-            "features": features
+            "experiments": ws.state.experiments
         }, ws)
 
         if ws.state.plat == "WEB":
@@ -2269,6 +2268,17 @@ async def ws(ws: WebSocket, cli: str, plat: str):
                     data = await ws.receive_json()
                 else:
                     data = msgpack.unpackb(await ws.receive_bytes())
+
+                # Recompute user experiment list
+                old_feature_list = ws.state.experiments
+                if ws.state.user:
+                    ws.state.experiments = await app.state.db.fetchval("SELECT experiments FROM users WHERE user_id = $1", int(ws.state.user["id"]))   
+                else:
+                    ws.state.experiments = []
+
+                if ws.state.experiments != old_feature_list:
+                    await manager.send_personal_message({"resp": "experiments", "experiments": ws.state.experiments}, ws)
+
             except Exception as exc:
                 if isinstance(exc, RuntimeError):
                     return

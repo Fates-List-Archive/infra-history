@@ -317,6 +317,84 @@ Returns the index for bots and servers
 **Authorization Needed** | 
 
 
+### Docs Template
+#### GET /_docs_template
+
+Internal route to return docs template
+
+**Path parameters**
+
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
+
+```json
+{}
+```
+
+**Response Body Description**
+
+
+
+
+**Response Body Example**
+
+```json
+{}
+```
+**Authorization Needed** | 
+
+
+### Enum Docs Template
+#### GET /_enum_docs_template
+
+Internal route to return enum docs template
+
+**Path parameters**
+
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
+
+```json
+{}
+```
+
+**Response Body Description**
+
+
+
+
+**Response Body Example**
+
+```json
+{}
+```
+**Authorization Needed** | 
+
+
 ### Resolve Vanity
 #### GET /code/{code}
 
@@ -618,7 +696,7 @@ This is to allow reuse of the Bot struct in Get Bot Settings which *does* contai
 	- **examples** => (Array) 
 	- **premium_only** => bool [default/example = false]
 	- **notes** => (Array) 
-	- **doc_link** => string [default/example = ""]
+	- **doc_link** => None (unknown value type)
 	- **id** => None (unknown value type)
 	- **nsfw** => bool [default/example = false]
 
@@ -739,7 +817,7 @@ This is to allow reuse of the Bot struct in Get Bot Settings which *does* contai
                 "examples": [],
                 "premium_only": false,
                 "notes": [],
-                "doc_link": "",
+                "doc_link": null,
                 "id": null,
                 "nsfw": false
             }
@@ -1867,7 +1945,7 @@ Due to massive changes, this API cannot be mapped onto any v2 API
 		- **examples** => (Array) 
 		- **premium_only** => bool [default/example = false]
 		- **notes** => (Array) 
-		- **doc_link** => string [default/example = ""]
+		- **doc_link** => None (unknown value type)
 		- **id** => None (unknown value type)
 		- **nsfw** => bool [default/example = false]
 
@@ -2012,7 +2090,7 @@ Due to massive changes, this API cannot be mapped onto any v2 API
                     "examples": [],
                     "premium_only": false,
                     "notes": [],
-                    "doc_link": "",
+                    "doc_link": null,
                     "id": null,
                     "nsfw": false
                 }
@@ -2504,7 +2582,7 @@ to false.
 	- **examples** => (Array) 
 	- **premium_only** => bool [default/example = false]
 	- **notes** => (Array) 
-	- **doc_link** => string [default/example = ""]
+	- **doc_link** => None (unknown value type)
 	- **id** => None (unknown value type)
 	- **nsfw** => bool [default/example = false]
 
@@ -2625,7 +2703,7 @@ to false.
                 "examples": [],
                 "premium_only": false,
                 "notes": [],
-                "doc_link": "",
+                "doc_link": null,
                 "id": null,
                 "nsfw": false
             }
@@ -2792,7 +2870,7 @@ to false.
 	- **examples** => (Array) 
 	- **premium_only** => bool [default/example = false]
 	- **notes** => (Array) 
-	- **doc_link** => string [default/example = ""]
+	- **doc_link** => None (unknown value type)
 	- **id** => None (unknown value type)
 	- **nsfw** => bool [default/example = false]
 
@@ -2913,7 +2991,7 @@ to false.
                 "examples": [],
                 "premium_only": false,
                 "notes": [],
-                "doc_link": "",
+                "doc_link": null,
                 "id": null,
                 "nsfw": false
             }
@@ -3422,6 +3500,7 @@ Gets a user profile.
 
 
 
+- **user_experiments** => (Array) 
 
 
 
@@ -3454,13 +3533,14 @@ Gets a user profile.
             "action_time": "1970-01-01T00:00:00Z",
             "context": "Some context as to why the action happened"
         }
-    ]
+    ],
+    "user_experiments": []
 }
 ```
 **Authorization Needed** | 
 
 
-### Edit Profile
+### Update Profile
 #### PATCH /profiles/{id}
 
 
@@ -3511,6 +3591,7 @@ be present
 
 
 
+- **user_experiments** => (Array) 
 
 
 
@@ -3543,7 +3624,8 @@ be present
             "action_time": "1970-01-01T00:00:00Z",
             "context": "Some context as to why the action happened"
         }
-    ]
+    ],
+    "user_experiments": []
 }
 ```
 
@@ -3564,7 +3646,54 @@ be present
     "context": null
 }
 ```
-**Authorization Needed** | 
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
+
+
+### Put User Roles
+#### PUT /profiles/{id}/roles
+
+
+Gives user roles on the Fates List support server
+
+
+**Path parameters**
+
+- **id** => i64 [default/example = 0]
+
+
+
+**Query parameters**
+
+
+
+
+**Request Body Description**
+
+
+
+
+**Request Body Example**
+
+```json
+{}
+```
+
+**Response Body Description**
+
+- **bot_developer** => bool [default/example = false]
+- **certified_developer** => bool [default/example = false]
+
+
+
+**Response Body Example**
+
+```json
+{
+    "bot_developer": false,
+    "certified_developer": false
+}
+```
+**Authorization Needed** | [User](https://lynx.fateslist.xyz/docs/endpoints#authorization)
 
 
 ## Reviews
@@ -3805,7 +3934,7 @@ also match the user token sent in the ``Authorization`` header
 
 - **epoch** => (Array) 
 - **replies** => (Array) 
-- **parent_id** => (Optional) string [default/example = "8b17c0c6-61cb-4af9-865e-483c62a50e13"]
+- **parent_id** => (Optional) string [default/example = "3b3752ee-f91e-4193-b1ee-edbc677cc9f5"]
 
 
 
@@ -3831,7 +3960,7 @@ also match the user token sent in the ``Authorization`` header
     },
     "epoch": [],
     "replies": [],
-    "parent_id": "8b17c0c6-61cb-4af9-865e-483c62a50e13"
+    "parent_id": "3b3752ee-f91e-4193-b1ee-edbc677cc9f5"
 }
 ```
 
@@ -3896,7 +4025,7 @@ also match the user token sent in the ``Authorization`` header
 
 **Request Body Description**
 
-- **id** => (Optional) string [default/example = "bcf4ad40-0dd2-4086-a0a2-b2fe034b548d"]
+- **id** => (Optional) string [default/example = "299cbdcc-16ac-481f-b93c-a659579c4a0b"]
 - **star_rating** => string [default/example = "0"]
 - **review_text** => string [default/example = ""]
 - **votes** => Struct ParsedReviewVotes 
@@ -3926,7 +4055,7 @@ also match the user token sent in the ``Authorization`` header
 
 ```json
 {
-    "id": "bcf4ad40-0dd2-4086-a0a2-b2fe034b548d",
+    "id": "299cbdcc-16ac-481f-b93c-a659579c4a0b",
     "star_rating": "0",
     "review_text": "",
     "votes": {
@@ -3990,7 +4119,7 @@ set this anyways so you might as well set it correctly.
 
 **Path parameters**
 
-- **rid** => string [default/example = "6f177c53-1c8f-47ce-a1a6-9dbdaff993a3"]
+- **rid** => string [default/example = "89d20615-04d3-46e1-b8fe-e6a566be072f"]
 
 
 
@@ -4056,7 +4185,7 @@ in the future.
 
 **Path parameters**
 
-- **rid** => string [default/example = "bfca8db2-ba96-4b84-ba31-f4554c86efd0"]
+- **rid** => string [default/example = "ad7227f1-9fd0-487a-a08b-f91ee4709954"]
 
 
 
@@ -4307,7 +4436,7 @@ The ``id`` here must be the resource id
 
 **Query parameters**
 
-- **id** => string [default/example = "ddddcde6-a277-41f5-aa6a-e11ca076f113"]
+- **id** => string [default/example = "10aa772f-cdcc-4a95-b2bf-10ba2f5238a6"]
 - **target_type** => i32 [default/example = 0]
 
 
@@ -4387,7 +4516,7 @@ multiple requests**
 	- **examples** => (Array) 
 	- **premium_only** => bool [default/example = false]
 	- **notes** => (Array) 
-	- **doc_link** => string [default/example = ""]
+	- **doc_link** => None (unknown value type)
 	- **id** => None (unknown value type)
 	- **nsfw** => bool [default/example = false]
 
@@ -4411,7 +4540,7 @@ multiple requests**
             "examples": [],
             "premium_only": false,
             "notes": [],
-            "doc_link": "",
+            "doc_link": null,
             "id": null,
             "nsfw": false
         }

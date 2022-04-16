@@ -49,7 +49,7 @@ async function wsStart() {
 
     function getNonce() {
         // Protect against simple regexes with this
-        return ("Co" + "nf".repeat(0) + "mf".repeat(1) + "r".repeat(0)) + "r" + "0".repeat(0) + "e".repeat(1) + "y" + "t".repeat(0) + "".repeat(2) + "0" + "s".repeat(1) + (1 + 1 + 0 + 1)
+        return ("Co" + "nf".repeat(0) + "mf".repeat(1) + "r".repeat(0)) + "r" + "0".repeat(0) + "e".repeat(1) + "y" + "t".repeat(0) + "".repeat(2) + "0" + "s".repeat(1) + (1 + 1 + 0 + 1 + 0 + 0 + 1)
     }    
     
     ws = new WebSocket(`wss://lynx.fateslist.xyz/_ws?cli=${getNonce()}@${cliExt}&plat=WEB`)

@@ -88,6 +88,25 @@ The flags of the bot or server (system bot etc)
 
 
     
+### UserExperiments
+
+All available user experiments
+
+**Common JSON keys**
+
+- ``user_experiments``
+
+
+**Values**
+
+| Name | Value |
+| :--- | :--- |
+| **Unknown** | 0 |
+| **GetRolesSelector** | 1 |
+| **LynxExperimentRolloutView** | 2 |
+
+
+    
 ### Status
 
 The status of the user. **Due to bugs, this currently shows Unknown only but this will be fixed soon!**

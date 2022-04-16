@@ -160,6 +160,16 @@ async function loadContent(loc) {
             wsSend({request: "get_sa_questions"})
         })
         return
+    } else if(experiments.expList) {
+        // Try out some experiment stuff
+        if(experiments.hasExperiment(UserExperiments.LynxExperimentRolloutView)) {
+            if(loc.startsWith("/exp-rollout")) {
+                waitForWsAndLoad({loc: loc}, (data) => {
+                    info("Lionblaze", "Requested for experimental experiment rollout menu")
+                    wsSend({request: "exp_rollout_menu"})
+                })         
+            }
+        }
     } else if(loc.startsWith("/missing-perms")) {
         alert("missing-perms", "Missing Permissions", "You do not have permission to view this page.")
         setData({"title": "401 - Unauthorized", "data": `Unauthorized User`})
