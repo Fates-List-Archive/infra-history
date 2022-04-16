@@ -167,15 +167,15 @@ async function loadContent(loc) {
                 waitForWsAndLoad({loc: loc}, (data) => {
                     info("Lionblaze", "Requested for experimental experiment rollout menu")
                     wsSend({request: "exp_rollout_menu"})
-                })         
+                })     
+                return    
             }
         }
     } else if(loc.startsWith("/missing-perms")) {
         alert("missing-perms", "Missing Permissions", "You do not have permission to view this page.")
         setData({"title": "401 - Unauthorized", "data": `Unauthorized User`})
     } else {
-        document.querySelector("#verify-screen").innerHTML = "Animus magic is broken today!"
-        setData({"title": "404 - Not Found", "data": `<h4>404<h4><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a></h4>`})
+        setData({"title": "404 - Not Found", "data": `<h4>404<h4><a href='/'>Index</a><br/><a href='/links'>Some Useful Links</a></h4><h5>Animus magic is broken today! If you are trying to view a experimental page, click the White reload icon at the bottom right corner of your screen</h5>`})
     }
 
     linkMod()

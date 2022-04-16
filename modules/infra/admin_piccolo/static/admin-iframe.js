@@ -3,6 +3,10 @@ var sentExit = false
 
 function modConsole() {
     // Modify console before it's used
+    if(!window.frames[0]) {
+        return
+    }
+
     window.frames[0].console.log = function(...args) {
         info("Poppypaw", ...args)
     }

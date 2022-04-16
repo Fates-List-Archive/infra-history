@@ -15,6 +15,7 @@ from typing import Any, Union
 import enum
 import secrets
 import string
+import math
 
 import asyncpg
 import bleach
@@ -43,6 +44,7 @@ from starlette.responses import HTMLResponse, RedirectResponse
 from starlette.routing import Mount
 
 import staffapps
+from experiments import Experiments, exp_props
 from tables import (Bot, BotCommand, BotListTags, BotPack, BotTag, BotVotes,
                     LeaveOfAbsence, LynxRatings, LynxSurveyResponses,
                     LynxSurveys, Notifications, Reviews, ReviewVotes,
@@ -914,6 +916,201 @@ def ws_action(name: str):
         ws_action_dict[name] = func
         return func
     return decorator
+
+# Experimental, remove if broken
+@ws_action("exp_rollout_menu")
+async def exp_rollout_menu(ws: WebSocket, _: dict):
+    # Possible remove on experiment over
+    if Experiments.LynxExperimentRolloutView not in ws.state.experiments:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+
+    if ws.state.member.perm < 5:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+    elif not ws.state.verified:
+        return {"resp": "spld", "e": SPLDEvent.verify_needed}
+
+    exp_initial = """
+| Name | Value | Count | Users |
+| :--- | :--- | :-- | :-- |
+"""
+
+    exp_details = ""
+
+    for exp in list(Experiments):
+        exp_prop = exp_props.get(exp.name)
+        if exp_prop:
+            exp_details += f"""
+#### {exp.name}
+- Description: **{exp_prop.description}**
+- Status: **{exp_prop.status.name} ({exp_prop.status.value})**
+            """
+
+        users = await app.state.db.fetch("SELECT user_id FROM users WHERE experiments && $1", [exp.value])
+
+        user_txt = "User count too low/high to display or rollout already complete"
+
+        if len(users) < 5 and len(users) > 0:
+            user_txt = []
+            for user in users:
+                user_txt.append(str(user["user_id"]))
+            user_txt = ", ".join(user_txt)
+
+        exp_initial += f"{exp.name} | {exp.value} | {len(users)} | {user_txt} |\n"
+
+    return {
+        "resp": "index",
+        "title": "Experiment Rollout",
+        "data": f"""
+## Overview
+
+{exp_initial}
+
+## Experiments
+
+{exp_details}
+
+## Add User To Experiment
+
+<div class="form-group">
+    <label for="exp_add-value">Experiment Value</label>
+    <input type="number" class="form-control" id="exp_add-value" placeholder="Experiment Value">
+    <label for="exp_add-id">User ID</label>
+    <input type="number" class="form-control" id="exp_add-id" placeholder="User ID">
+    <button onclick="addUserToExp()">Add</button>
+</div>
+
+## Remove User From Experiment
+
+<div class="form-group">
+    <label for="exp_del-value">Experiment Value</label>
+    <input type="number" class="form-control" id="exp_del-value" placeholder="Experiment Value">
+    <label for="exp_del-id">User ID</label>
+    <input type="number" class="form-control" id="exp_del-id" placeholder="User ID">
+    <button onclick="delUserFromExp()">Remove</button>
+</div>
+
+## Controlled Rollout Experiment
+
+<div class="form-group">
+    <label for="exp_rollout_controlled-value">Experiment Value</label>
+    <input type="number" class="form-control" id="exp_rollout_controlled-value" placeholder="Experiment Value">
+    <label for="exp_rollout_controlled-limit">Rollout Limit (suffix with % for percentage)</label>
+    <input type="text" class="form-control" id="exp_rollout_controlled-limit" placeholder="Experiment Limit">
+    <button onclick="rolloutControlled()">Rollout</button>
+</div>
+
+## Rollout Experiment
+
+<div class="form-group">
+    <label for="exp_rollout-value">Experiment Value</label>
+    <input type="number" class="form-control" id="exp_rollout-value" placeholder="Experiment Value">
+    <button onclick="rolloutExp()">Rollout</button>
+</div>
+
+## Undo Rollout Experiment
+
+<div class="form-group">
+    <label for="exp_rollout_undo-value">Experiment Value</label>
+    <input type="number" class="form-control" id="exp_rollout_undo-value" placeholder="Experiment Value">
+    <button onclick="rolloutExpUndo()">Undo</button>
+</div>
+        """,
+        "ext_script": "exp-rollout"
+    }
+
+@ws_action("exp_rollout_add")
+async def exp_rollout_add(ws: WebSocket, data: dict):
+    # Possible remove on experiment over
+    if Experiments.LynxExperimentRolloutView not in ws.state.experiments:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+
+    if ws.state.member.perm < 5:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+    elif not ws.state.verified:
+        return {"resp": "spld", "e": SPLDEvent.verify_needed}
+    
+    try:
+        await app.state.db.execute("UPDATE users SET experiments = array_append(experiments, $1) WHERE user_id = $2", int(data["exp"]), int(data["id"]))
+    except:
+        return {"detail": "Invalid experiment data"}
+
+    await manager.broadcast({"resp": "spld", "e": SPLDEvent.refresh_needed, "loc": "/exp-rollout"})
+    return {"detail": "Added"}
+
+@ws_action("exp_rollout_del")
+async def exp_rollout_add(ws: WebSocket, data: dict):
+    # Possible remove on experiment over
+    if Experiments.LynxExperimentRolloutView not in ws.state.experiments:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+
+    if ws.state.member.perm < 5:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+    elif not ws.state.verified:
+        return {"resp": "spld", "e": SPLDEvent.verify_needed}
+    
+    try:
+        await app.state.db.execute("UPDATE users SET experiments = array_remove(experiments, $1) WHERE user_id = $2", int(data["exp"]), int(data["id"]))
+    except:
+        return {"detail": "Invalid experiment data"}
+
+    await manager.broadcast({"resp": "spld", "e": SPLDEvent.refresh_needed, "loc": "/exp-rollout"})
+    return {"detail": "Removed"}
+
+@ws_action("exp_rollout_all")
+async def exp_rollout_all(ws: WebSocket, data: dict):
+    if Experiments.LynxExperimentRolloutView not in ws.state.experiments:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+
+    if ws.state.member.perm < 7:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+    elif not ws.state.verified:
+        return {"resp": "spld", "e": SPLDEvent.verify_needed}
+
+    await app.state.db.execute("UPDATE users SET experiments = array_append(experiments, $1)", int(data["exp"]))
+
+    await manager.broadcast({"resp": "spld", "e": SPLDEvent.refresh_needed, "loc": "/exp-rollout"})
+    return {"detail": "Rolled out"}
+
+@ws_action("exp_rollout_undo")
+async def exp_rollout_all(ws: WebSocket, data: dict):
+    if Experiments.LynxExperimentRolloutView not in ws.state.experiments:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+
+    if ws.state.member.perm < 7:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+    elif not ws.state.verified:
+        return {"resp": "spld", "e": SPLDEvent.verify_needed}
+
+    await app.state.db.execute("UPDATE users SET experiments = array_remove(experiments, $1)", int(data["exp"]))
+
+    await manager.broadcast({"resp": "spld", "e": SPLDEvent.refresh_needed, "loc": "/exp-rollout"})
+    return {"detail": "Rolled out undone"}
+
+@ws_action("exp_rollout_controlled")
+async def exp_rollout_all(ws: WebSocket, data: dict):
+    if Experiments.LynxExperimentRolloutView not in ws.state.experiments:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+
+    if ws.state.member.perm < 7:
+        return {"resp": "spld", "e": SPLDEvent.missing_perms}
+    elif not ws.state.verified:
+        return {"resp": "spld", "e": SPLDEvent.verify_needed}
+
+    # Check percent prefix
+    try:
+        if data["limit"].endswith("%"):     
+            user_count = await app.state.db.fetchval("SELECT COUNT(1) FROM users")
+            data["limit"] = math.ceil((float(data["limit"][:-1]) / 100) * user_count)
+    except:
+        return {"detail": "Invalid experiment data"}
+
+    users = await app.state.db.fetch("SELECT user_id, experiments FROM users WHERE NOT (experiments && $1) ORDER BY RANDOM() LIMIT $2", [int(data["exp"])], int(data["limit"]))        
+
+    for fetch in users:
+        await app.state.db.execute("UPDATE users SET experiments = array_append(experiments, $1) WHERE user_id = $2", int(data["exp"]), fetch["user_id"])
+
+    await manager.broadcast({"resp": "spld", "e": SPLDEvent.refresh_needed, "loc": "/exp-rollout"})
+    return {"detail": f"Pushed controlled roll out to {data['limit']} users"}
 
 @ws_action("admin")
 async def admin(ws: WebSocket, _: dict):
@@ -2244,11 +2441,12 @@ async def ws(ws: WebSocket, cli: str, plat: str):
                 "surveys": "/_static/surveys.js?v=73",
                 "apply": "/_static/apply.js?v=80",
                 "admin-nav": "/_static/admin-nav.js?v=m8",
-                "admin-iframe": "/_static/admin-iframe.js?v=m3822",
+                "admin-iframe": "/_static/admin-iframe.js?v=m3823",
                 "admin-console": "/_static/admin-console.js?v=m37",
+                "exp-rollout": "/_static/exp-rollout.js?v=m3298",
             },
             "responses": ['docs', 'links', 'staff_guide', 'index', "request_logs", "reset_page", "staff_apps", "loa", "user_actions", "bot_actions", "staff_verify", "survey_list", "get_sa_questions", "admin"],
-            "actions": ['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa'],
+            "actions": ['user_action', 'bot_action', 'eternatus', 'survey', 'data_deletion', 'apply_staff', 'send_loa', 'exp_rollout_add', 'exp_rollout_del', 'exp_rollout_all', 'exp_rollout_undo', 'exp_rollout_controlled'],
             "tree": docs,
             "experiments": ws.state.experiments
         }, ws)

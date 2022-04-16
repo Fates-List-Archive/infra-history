@@ -16,9 +16,8 @@ class ExperimentList {
 }
 
 class UserExperiments {
-    // These are the supported experiments
+    // These are the supported experiments by lynx
     static Unknown = new UserExperiments(0)
-    static GetRolesSelector = new UserExperiments(1)
     static LynxExperimentRolloutView = new UserExperiments(2)
   
     constructor(id) {
