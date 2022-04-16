@@ -59,8 +59,8 @@ CREATE TABLE bots (
     webhook text,
     webhook_secret text,
     webhook_hmac_only boolean default false,
-    description text,
-    long_description text,
+    description text not null,
+    long_description text not null,
     long_description_parsed text,
     long_description_type integer not null default 0,
     page_style integer not null default 0,
@@ -76,7 +76,7 @@ CREATE TABLE bots (
     keep_banner_decor boolean default true,
     created_at timestamptz not null DEFAULT NOW(),
     last_updated_at timestamptz not null DEFAULT NOW(),
-    invite text,
+    invite text not null default '',
     invite_amount integer DEFAULT 0,
     github TEXT,
     donate text,
@@ -140,12 +140,12 @@ CREATE TABLE bot_commands (
    cmd_type integer not null, -- 0 = no, 1 = guild, 2 = global
    groups text[] not null default '{Default}',
    name text not null unique, -- command name
-   vote_locked boolean default false, -- friendly name
-   description text, -- command description
-   args text[], -- list of arguments
-   examples text[], -- examples
-   premium_only boolean default false, -- premium status
-   notes text[], -- notes on said command
+   vote_locked boolean not null default false, -- friendly name
+   description text not null, -- command description
+   args text[] not null default '{}', -- list of arguments
+   examples text[] not null default '{}', -- examples
+   premium_only boolean not null default false, -- premium status
+   notes text[] not null default '{}', -- notes on said command
    doc_link text, -- link to documentation of command
    nsfw boolean default false,
    CONSTRAINT bots_fk FOREIGN KEY (bot_id) REFERENCES bots(bot_id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -297,12 +297,12 @@ CREATE TABLE servers (
     webhook text,
     webhook_secret text,
     webhook_hmac_only boolean default false,
-    description text,
+    description text not null default 'No description set',
     user_blacklist text[] default '{}',
     user_whitelist text[] default '{}',
     whitelist_only boolean default false,
     whitelist_form text,
-    long_description text default 'No long description set! Set one with /settings longdesc Long description',
+    long_description text not null default 'No long description set! Set one with /settings longdesc Long description',
     long_description_type integer default 0,
     css text default '',
     api_token text not null unique,
