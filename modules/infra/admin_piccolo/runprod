@@ -1,3 +1,0 @@
-cd ~/FatesList
-python --version
-MAIN_TOKEN="" CLIENT_SECRET="" python3.10 -m uvicorn modules.infra.admin_piccolo.app:app --port 10000 --host 0.0.0.0
