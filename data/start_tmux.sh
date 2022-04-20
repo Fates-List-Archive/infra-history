@@ -6,7 +6,7 @@ tmux send-keys -t baypaw ' cd ~/baypaw && target/release/baypaw; exec $SHELL' En
 tmux new-session -d -s flamepaw 
 tmux send-keys -t flamepaw ' cd ~/FatesList/modules/infra/flamepaw && ./flamepaw --cmd server; exec $SHELL' Enter
 tmux new-session -d -s squirrelflight 
-tmux send-keys -t squirrelflight ' cd ~/squirrelflight && target/release/squirrelflight; exec $SHELL' Enter
+tmux send-keys -t squirrelflight ' cd ~/fates-list-helper && target/release/fateslisthelper; exec $SHELL' Enter
 tmux new-session -d -s widgets 
 tmux send-keys -t widgets ' flamepaw --cmd site.run; exec $SHELL' Enter
 tmux new-session -d -s api 

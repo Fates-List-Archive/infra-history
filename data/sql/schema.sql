@@ -308,7 +308,7 @@ CREATE TABLE servers (
     css text default '',
     api_token text not null unique,
     website text,
-    login_required boolean default false,
+    login_required boolean default true,
     created_at timestamptz not null default now(),
     invite_amount integer DEFAULT 0,
     invite_url text,
@@ -320,7 +320,7 @@ CREATE TABLE servers (
     keep_banner_decor boolean default true,
     guild_count bigint default 0,
     tags text[] default '{}',
-    deleted boolean default false,
+    old_state int not null default 0,
     flags integer[] default '{}',
     autorole_votes bigint[] default '{}',
     CONSTRAINT user_fk FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
@@ -408,3 +408,8 @@ CREATE TABLE lynx_survey_responses (
     user_id bigint,
     CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+create table lynx_data (default_user_experiments integer[]);
+
+-- Be careful to not insert multiple
+insert into lynx_data VALUES ('{}');
