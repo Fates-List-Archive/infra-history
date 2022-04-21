@@ -299,8 +299,8 @@ CREATE TABLE servers (
     webhook_secret text,
     webhook_hmac_only boolean default false,
     description text not null default 'No description set',
-    user_blacklist text[] default '{}',
-    user_whitelist text[] default '{}',
+    user_blacklist bigint[] not null default '{}';
+    user_whitelist bigint[] not null default '{}';
     whitelist_only boolean default false,
     whitelist_form text,
     long_description text not null default 'No long description set! Set one with /settings longdesc Long description',
