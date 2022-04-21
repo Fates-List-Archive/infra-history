@@ -29,13 +29,6 @@ def confirm(msg, abort: bool = True):
             return False
 
 
-def site_run():
-    """Runs the Fates List site"""
-    import uvicorn
-    from modules.infra.widgets.widgets import app
-
-    uvicorn.run(app, host="127.0.0.1", port=9999, log_level="info")
-
 def site_gensecret():
     """Generates a random secret"""
     print(secrets.token_urlsafe())
