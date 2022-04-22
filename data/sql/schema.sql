@@ -42,7 +42,7 @@ INSERT INTO features VALUES (
 
 CREATE TABLE bots (
     id BIGINT NOT NULL, -- Used by piccolo, must be equal to bot_id
-    flags integer[] default '{}',
+    flags integer[] not null default '{}',
     username_cached text DEFAULT '',
     bot_id bigint not null unique,
     client_id bigint,
@@ -205,7 +205,8 @@ CREATE TABLE users (
     vote_reminders_last_acked timestamptz not null default now(),
     vote_reminders_servers_last_acked timestamptz not null default now(),
     staff_verify_code text,
-    experiments integer[] not null default '{}'
+    experiments integer[] not null default '{}',
+    flags integer[] not null default '{}'
 );
 
 CREATE TABLE reviews (
@@ -299,8 +300,8 @@ CREATE TABLE servers (
     webhook_secret text,
     webhook_hmac_only boolean default false,
     description text not null default 'No description set',
-    user_blacklist bigint[] not null default '{}';
-    user_whitelist bigint[] not null default '{}';
+    user_blacklist bigint[] not null default '{}',
+    user_whitelist bigint[] not null default '{}',
     whitelist_only boolean default false,
     whitelist_form text,
     long_description text not null default 'No long description set! Set one with /settings longdesc Long description',
@@ -321,7 +322,7 @@ CREATE TABLE servers (
     guild_count bigint default 0,
     tags text[] default '{}',
     old_state int not null default 0,
-    flags integer[] default '{}',
+    flags integer[] not null default '{}',
     autorole_votes bigint[] default '{}',
     CONSTRAINT user_fk FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
