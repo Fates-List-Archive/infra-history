@@ -413,4 +413,4 @@ CREATE TABLE lynx_survey_responses (
 create table lynx_data (default_user_experiments integer[]);
 
 -- Be careful to not insert multiple
-insert into lynx_data VALUES ('{}');
+insert into lynx_data VALUES ('{5,2,3}');
