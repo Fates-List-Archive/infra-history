@@ -416,7 +416,7 @@ CREATE TABLE lynx_survey_responses (
     CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-create table lynx_data (default_user_experiments integer[]);
+create table lynx_data (id SERIAL PRIMARY KEY, default_user_experiments integer[]);
 
 -- Be careful to not insert multiple
 insert into lynx_data VALUES ('{5,2,3}');
