@@ -46,7 +46,6 @@ CREATE TABLE bots (
     username_cached text DEFAULT '',
     bot_id bigint not null unique,
     client_id bigint,
-    locks integer[] default '{}',
     votes bigint default 0,
     total_votes bigint default 0,
     guild_count bigint DEFAULT 0,
@@ -103,6 +102,23 @@ CREATE TABLE bot_list_tags (
     id TEXT NOT NULL UNIQUE,
     icon TEXT NOT NULL UNIQUE
 );
+
+INSERT INTO bot_list_tags VALUES ('music', 'fa-solid:music');
+INSERT INTO bot_list_tags VALUES ('moderation', 'fa-solid:hammer');
+INSERT INTO bot_list_tags VALUES ('economy', 'fa-solid:coins');
+INSERT INTO bot_list_tags VALUES ('fun', 'fa-solid:heart');
+INSERT INTO bot_list_tags VALUES ('anime', 'fa-solid:camera');
+INSERT INTO bot_list_tags VALUES ('games', 'fa-solid:smile');
+INSERT INTO bot_list_tags VALUES ('web_dashboard', 'fa-solid:chart-bar');
+INSERT INTO bot_list_tags VALUES ('logging', 'fa-solid:chart-line');
+INSERT INTO bot_list_tags VALUES ('game_stats', 'fa-solid:chart-pie');
+INSERT INTO bot_list_tags VALUES ('leveling', 'fa-solid:arrow-up');
+INSERT INTO bot_list_tags VALUES ('roleplay', 'fa-solid:cat');
+INSERT INTO bot_list_tags VALUES ('utility', 'fa-solid:desktop');
+INSERT INTO bot_list_tags VALUES ('social', 'fa-solid:users');
+INSERT INTO bot_list_tags VALUES ('meme', 'cib:happycow');
+INSERT INTO bot_list_tags VALUES ('reddit', 'akar-icons:reddit-fill');
+INSERT INTO bot_list_tags VALUES ('pokemon', 'mdi-pokemon-go');
 
 CREATE INDEX bot_list_tags_index ON bot_list_tags (id, icon);
 
@@ -241,16 +257,6 @@ CREATE TABLE user_bot_logs (
     action_time timestamptz NOT NULL DEFAULT NOW(),
     action integer not null, -- 0 = approve
     context text, -- Optional context field
-    CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
-);
-
-CREATE TABLE user_payments (
-    user_id bigint NOT NULL,
-    token TEXT NOT NULL,
-    stripe_id TEXT DEFAULT '',
-    livemode BOOLEAN DEFAULT FALSE,
-    coins INTEGER NOT NULL,
-    paid BOOLEAN DEFAULT FALSE,
     CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
