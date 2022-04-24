@@ -132,7 +132,7 @@ CREATE TABLE bot_tags (
 
 
 CREATE TABLE bot_owner (
-    _id SERIAL,
+    id SERIAL,
     bot_id BIGINT not null,
     owner BIGINT not null,
     main BOOLEAN DEFAULT false,
@@ -177,14 +177,14 @@ CREATE TABLE bot_stats_votes_pm (
 CREATE TABLE bot_voters (
     bot_id bigint not null,
     user_id bigint not null,
-    timestamps timestamptz[] DEFAULT '{NOW()}',
+    timestamps timestamptz[] not null DEFAULT '{NOW()}',
     CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE server_voters (
     guild_id bigint not null,
     user_id bigint not null,
-    timestamps timestamptz[] DEFAULT '{NOW()}',
+    timestamps timestamptz[] not null DEFAULT '{NOW()}',
     CONSTRAINT users_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
