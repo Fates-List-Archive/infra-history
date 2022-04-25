@@ -4,7 +4,7 @@ import (
 	"context"
 	"flamepaw/common"
 	"flamepaw/tests"
-	"flamepaw/types"
+	"flamepaw/uptime"
 	"flamepaw/webserver"
 	"io"
 	"math/rand"
@@ -16,20 +16,16 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-redis/redis/v8"
-	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	db             *pgxpool.Pool
-	discord        *discordgo.Session
-	rdb            *redis.Client
-	ctx            context.Context = context.Background()
-	uptimeFirstRun bool
-	errBots        []string = []string{} // List of bots that actually don't exist on main server
-	errBotOffline  []string = []string{} // List of bots that are offline
-	uptimeRunning  bool
+	db      *pgxpool.Pool
+	discord *discordgo.Session
+	rdb     *redis.Client
+	ctx     context.Context = context.Background()
+	err     error
 )
 
 func Test() {
@@ -40,6 +36,9 @@ func Test() {
 	}
 
 	logFile, err := os.OpenFile("modules/infra/flamepaw/_logs/dragon-"+common.CreateUUID(), os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		log.Error(err)
+	}
 	defer logFile.Close()
 	if err != nil {
 		panic(err.Error())
@@ -73,7 +72,7 @@ func Test() {
 }
 
 func Server() {
-	db, err := pgxpool.Connect(ctx, "")
+	db, err = pgxpool.Connect(ctx, "")
 	if err != nil {
 		panic(err)
 	}
@@ -84,70 +83,19 @@ func Server() {
 	}
 	discord.SyncEvents = false
 
-	common.DiscordMain = discord
-
 	discord.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildPresences | discordgo.IntentsGuildMembers
 
 	// https://gist.github.com/ryanfitz/4191392
-	doEvery := func(d time.Duration, f func(time.Time)) {
-		f(time.Now())
-		for x := range time.Tick(d) {
-			f(x)
-		}
-	}
-
-	uptimeFunc := func(t time.Time) {
-		uptimeRunning = true
-		log.Info("Called uptime function at time: ", t)
-		bots, err := db.Query(ctx, "SELECT bot_id::text FROM bots WHERE state = $1 OR state = $2", types.BotStateApproved.Int(), types.BotStateCertified.Int())
-		if err != nil {
-			log.Error(err)
-			return
-		}
-		defer bots.Close()
-		i := 0
-		errBots = []string{}
-		errBotOffline = []string{}
-		for bots.Next() {
-			var botId pgtype.Text
-			bots.Scan(&botId)
-			if botId.Status != pgtype.Present {
-				log.Error("Bot ID is not present during uptime checks...: ", i)
-				continue
-			}
-			status, err := discord.State.Presence(common.MainServer, botId.String)
-			if err != nil {
-				_, err := discord.State.Member(common.MainServer, botId.String)
-				if err != nil {
-					// Bot doesn't actually exist!
-					errBots = append(errBots, botId.String)
-					continue
-				}
-			}
-			if status == nil || status.Status == discordgo.StatusOffline {
-				log.Warning(botId.String, " is offline right now!")
-				_, err := db.Exec(ctx, "UPDATE bots SET uptime_checks_failed = uptime_checks_failed + 1, uptime_checks_total = uptime_checks_total + 1 WHERE bot_id = $1", botId.String)
-				if err != nil {
-					log.Error(err)
-				}
-				errBotOffline = append(errBotOffline, botId.String)
-				continue
-			}
-			_, err = db.Exec(ctx, "UPDATE bots SET uptime_checks_total = uptime_checks_total + 1 WHERE bot_id = $1", botId.String)
-			if err != nil {
-				log.Error(err)
-			}
-			i += 1
-		}
-		log.Info("Finished uptime checks at time: ", time.Now(), ".\nBots Not Found: ", len(errBots))
-		uptimeRunning = false
-	}
-
 	onReady := func(s *discordgo.Session, m *discordgo.Ready) {
 		log.Info("Logged in as ", m.User.Username)
-		if !uptimeFirstRun {
-			uptimeFirstRun = true
-			go doEvery(15*time.Minute, uptimeFunc)
+		if !uptime.UptimeFirstRun {
+			go func() {
+				d := 5 * time.Minute
+				uptime.UptimeFunc(ctx, db, discord, time.Now())
+				for x := range time.Tick(d) {
+					uptime.UptimeFunc(ctx, db, discord, x)
+				}
+			}()
 		}
 	}
 
@@ -158,7 +106,7 @@ func Server() {
 
 		log.Info("New user found. Handling them...")
 
-		if m.Member.GuildID == common.TestServer {
+		if m.Member.GuildID == common.StaffServer {
 			if !m.Member.User.Bot {
 				_, isStaff, _ := common.GetPerms(s, m.Member.User.ID, 5)
 				if isStaff {
@@ -172,39 +120,15 @@ func Server() {
 
 		if m.Member.GuildID == common.MainServer && m.Member.User.Bot {
 			// Auto kick code. Minotaur handles autoroles and does it better than me
-			_, err := s.State.Member(common.TestServer, m.Member.User.ID)
+			_, err := s.State.Member(common.StaffServer, m.Member.User.ID)
 			if err != nil {
 				return
 			}
-			s.GuildMemberDeleteWithReason(common.TestServer, m.Member.User.ID, "Done testing and invited to main server")
+			s.GuildMemberDeleteWithReason(common.StaffServer, m.Member.User.ID, "Done testing and invited to main server")
 		}
 	})
 
 	discord.AddHandler(onReady)
-
-	/*
-		discordServerBot.AddHandler(func(s *discordgo.Session, gc *discordgo.GuildCreate) {
-			defer func() { recover() }()
-			if common.IPCOnly {
-				return
-			}
-			log.Info("Adding guild " + gc.Guild.ID + " (" + gc.Guild.Name + ")")
-			rdb.Del(ctx, "pendingdel-"+gc.Guild.ID)
-			db.Exec(ctx, "UPDATE servers SET state = $1, deleted = false WHERE guild_id = $2 AND deleted = true AND state = $3", types.BotStateApproved.Int(), gc.Guild.ID, types.BotStatePrivateViewable.Int())
-		})
-		discordServerBot.AddHandler(func(s *discordgo.Session, gc *discordgo.GuildDelete) {
-			if common.IPCOnly {
-				return
-			}
-			log.Info("Left guild " + gc.Guild.ID + "(" + gc.Guild.Name + ")")
-			rdb.Set(ctx, "pendingdel-"+gc.Guild.ID, 0, 0)
-
-			time.AfterFunc(1*time.Minute, func() {
-				if rdb.Exists(ctx, "pendingdel-"+gc.Guild.ID).Val() != 0 {
-					db.Exec(ctx, "UPDATE servers SET state = $1, deleted = true WHERE guild_id = $1", types.BotStatePrivateViewable.Int(), gc.Guild.ID)
-				}
-			})
-		}) */
 
 	err = discord.Open()
 	if err != nil {
@@ -231,7 +155,7 @@ func Server() {
 	// Start IPC code
 	if !common.RegisterCommands {
 		if !common.IPCOnly {
-			go webserver.StartWebserver(db, rdb)
+			go webserver.StartWebserver(db, rdb, discord)
 		}
 	}
 	s := <-sigs

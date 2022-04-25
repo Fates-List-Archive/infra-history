@@ -23,41 +23,19 @@ var (
 )
 
 var (
-	MainBotToken            string
-	SquirrelflightToken     string
-	fetchBot1Token          string // Used for fetching
-	ClientSecret            string
-	GHWebhookSecret         string
-	VoteTokenAccessKey      string
-	VoteTokenAccessKeyBytes []byte
-	JAPIKey                 string
-	MainServer              string
-	TestServer              string
-	StaffServer             string
-	SiteLogs                string
-	AppealsChannel          string
-	MainSupportChannel      string
-	GithubChannel           string
-	VoteReminderChannel     string
-	CertifiedBotRole        string
-	CertifiedDevRole        string
-	BotDevRole              string
-	RolesChannel            string
-	StatsChannel            string
-	AccessGrantedRole       string
-	TestServerStaffRole     string
-	TestServerBotsRole      string
-	StaffPingAddRole        string
-	ILovePingsRole          string
-	NewsPingRole            string
-	GiveawayPingRole        string
-	BronzeUserRole          string
-	CliCmd                  string
-	RootPath                string
-	PythonPath              string
-	Debug                   bool
-	RegisterCommands        bool
-	IPCOnly                 bool
+	MainBotToken        string
+	ClientSecret        string
+	GHWebhookSecret     string
+	MainServer          string
+	StaffServer         string
+	GithubChannel       string
+	TestServerStaffRole string
+	CliCmd              string
+	RootPath            string
+	PythonPath          string
+	Debug               bool
+	RegisterCommands    bool
+	IPCOnly             bool
 )
 
 func init() {
@@ -97,11 +75,7 @@ func init() {
 
 	MainBotToken = fastjson.GetString(secretsJson, "token_main")
 	ClientSecret = fastjson.GetString(secretsJson, "client_secret")
-	SquirrelflightToken = fastjson.GetString(secretsJson, "token_squirrelflight")
-	JAPIKey = fastjson.GetString(secretsJson, "japi_key")
 	GHWebhookSecret = fastjson.GetString(secretsJson, "gh_webhook_secret")
-	VoteTokenAccessKey = fastjson.GetString(secretsJson, "vote_token_access_key")
-	VoteTokenAccessKeyBytes = []byte(VoteTokenAccessKey)
 
 	var p fastjson.Parser
 
@@ -114,31 +88,11 @@ func init() {
 	var servers = v.GetObject("servers")
 
 	MainServer = string(servers.Get("main").GetStringBytes())
-	TestServer = string(servers.Get("testing").GetStringBytes())
 	StaffServer = string(servers.Get("staff").GetStringBytes())
 
 	var channels = v.GetObject("channels")
 
-	SiteLogs = string(channels.Get("bot_logs").GetStringBytes())
-	MainSupportChannel = string(channels.Get("main_support_channel").GetStringBytes())
 	GithubChannel = string(channels.Get("github_channel").GetStringBytes())
-	RolesChannel = string(channels.Get("roles_channel").GetStringBytes())
-	AppealsChannel = string(channels.Get("appeals_channel").GetStringBytes())
-	VoteReminderChannel = string(channels.Get("vote_reminder_channel").GetStringBytes())
-	StatsChannel = string(channels.Get("stats_channel").GetStringBytes())
-
-	var roles = v.GetObject("roles")
-
-	CertifiedBotRole = string(roles.Get("certified_bots_role").GetStringBytes())
-	CertifiedDevRole = string(roles.Get("certified_dev_role").GetStringBytes())
-	BotDevRole = string(roles.Get("bot_dev_role").GetStringBytes())
-	AccessGrantedRole = string(roles.Get("staff_server_access_granted_role").GetStringBytes())
-	StaffPingAddRole = string(roles.Get("staff_ping_add_role").GetStringBytes())
-	ILovePingsRole = string(roles.Get("i_love_pings_role").GetStringBytes())
-	NewsPingRole = string(roles.Get("news_ping_role").GetStringBytes())
-	GiveawayPingRole = string(roles.Get("giveaway_ping_role").GetStringBytes())
-	BronzeUserRole = string(roles.Get("bronze_user_role").GetStringBytes())
-	TestServerBotsRole = string(roles.Get("test_server_bots_role").GetStringBytes())
 
 	permInit()
 

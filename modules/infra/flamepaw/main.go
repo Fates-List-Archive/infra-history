@@ -7,46 +7,12 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"os/signal"
-	"runtime"
 	"strings"
-	"syscall"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
-	defer common.PanicDump()
-	go func() {
-		// Based on answers to this stackoverflow question:
-		// https://stackoverflow.com/questions/19094099/how-to-dump-goroutine-stacktraces
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, syscall.SIGQUIT)
-		for {
-			<-sigs
-
-			log.Error("=== received SIGQUIT ===")
-			log.Error("*** goroutine dump...")
-
-			var buf []byte
-			var bufsize int
-			var stacklen int
-
-			// Create a stack buffer of 1MB and grow it to at most 100MB if
-			// necessary
-			for bufsize = 1e6; bufsize < 100e6; bufsize *= 2 {
-				buf = make([]byte, bufsize)
-				stacklen = runtime.Stack(buf, true)
-				if stacklen < bufsize {
-					break
-				}
-			}
-			os.WriteFile("modules/infra/flamepaw/dump-"+common.CatName+".txt", buf[:stacklen], 0644)
-			log.Error(string(buf[:stacklen]))
-			log.Error("*** end of dump...")
-		}
-	}()
-
 	lvl, ok := os.LookupEnv("LOG_LEVEL")
 	if !ok {
 		lvl = "debug"

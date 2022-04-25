@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"flamepaw/common"
 	"flamepaw/types"
+	"flamepaw/uptime"
 	"fmt"
 	"io/ioutil"
 	"strconv"
@@ -58,7 +59,7 @@ func apiReturn(c *gin.Context, statusCode int, done bool, reason interface{}, co
 	c.String(statusCode, body)
 }
 
-func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
+func StartWebserver(db *pgxpool.Pool, redis *redis.Client, discord *discordgo.Session) {
 	r := gin.New()
 
 	r.Use(ginlogrus.Logger(logger), gin.Recovery())
@@ -72,10 +73,19 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 		apiReturn(c, 200, true, nil, nil)
 	})
 
+	router.GET("/_uptime", func(c *gin.Context) {
+		apiReturn(c, 200, true, map[string]any{
+			"UptimeRunning":  uptime.UptimeRunning,
+			"ErrBots":        uptime.ErrBots,
+			"ErrBotOffline":  uptime.ErrBotOffline,
+			"UptimeFirstRun": uptime.UptimeFirstRun,
+		}, nil)
+	})
+
 	router.GET("/_roles", func(c *gin.Context) {
 		userId := c.Query("user_id")
 
-		member, err := common.DiscordMain.State.Member(common.MainServer, userId)
+		member, err := discord.State.Member(common.MainServer, userId)
 		var res string
 		if err != nil {
 			log.Warn(err)
@@ -89,7 +99,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 	router.GET("/_getperm", func(c *gin.Context) {
 		userId := c.Query("user_id")
 
-		perms, _, _ := common.GetPerms(common.DiscordMain, userId, 0)
+		perms, _, _ := common.GetPerms(discord, userId, 0)
 		res, err := json.Marshal(perms)
 		if err != nil {
 			log.Warn(err)
@@ -389,7 +399,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client) {
 			}
 		}
 
-		_, err = common.DiscordMain.ChannelMessageSendComplex(common.GithubChannel, &messageSend)
+		_, err = discord.ChannelMessageSendComplex(common.GithubChannel, &messageSend)
 
 		if err != nil {
 			log.Error(err)
