@@ -76,27 +76,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client, discord *discordgo.Se
 	})
 
 	router.GET("/_uptime", func(c *gin.Context) {
-		apiReturn(c, 200, true, map[string]any{
-			"UptimeRunning":  uptime.UptimeRunning,
-			"ErrBots":        uptime.ErrBots,
-			"ErrBotOffline":  uptime.ErrBotOffline,
-			"UptimeFirstRun": uptime.UptimeFirstRun,
-			"UptimeCount":    uptime.UptimeCount,
-		}, nil)
-	})
-
-	router.GET("/_roles", func(c *gin.Context) {
-		userId := c.Query("user_id")
-
-		member, err := discord.State.Member(common.MainServer, userId)
-		var res string
-		if err != nil {
-			log.Warn(err)
-		} else {
-			res = strings.Join(member.Roles, " ")
-		}
-
-		c.Data(200, "application/fates-roles", []byte(res))
+		c.JSON(200, uptime.Uptime)
 	})
 
 	router.GET("/_getperm", func(c *gin.Context) {
