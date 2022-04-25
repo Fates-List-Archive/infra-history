@@ -60,6 +60,8 @@ func apiReturn(c *gin.Context, statusCode int, done bool, reason interface{}, co
 }
 
 func StartWebserver(db *pgxpool.Pool, redis *redis.Client, discord *discordgo.Session) {
+	gin.SetMode(gin.ReleaseMode)
+
 	r := gin.New()
 
 	r.Use(ginlogrus.Logger(logger), gin.Recovery())
@@ -79,6 +81,7 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client, discord *discordgo.Se
 			"ErrBots":        uptime.ErrBots,
 			"ErrBotOffline":  uptime.ErrBotOffline,
 			"UptimeFirstRun": uptime.UptimeFirstRun,
+			"UptimeCount":    uptime.UptimeCount,
 		}, nil)
 	})
 

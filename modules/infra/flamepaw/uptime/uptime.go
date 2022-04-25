@@ -15,11 +15,13 @@ import (
 var (
 	UptimeRunning  bool
 	UptimeFirstRun bool
+	UptimeCount    int
 	ErrBots        []string = []string{} // List of bots that actually don't exist on main server
 	ErrBotOffline  []string = []string{} // List of bots that are offline
 )
 
 func UptimeFunc(ctx context.Context, db *pgxpool.Pool, discord *discordgo.Session, t time.Time) {
+	UptimeCount++
 	if !UptimeFirstRun {
 		UptimeFirstRun = true
 		log.Info("Uptime subsystem now up at time: ", time.Now())

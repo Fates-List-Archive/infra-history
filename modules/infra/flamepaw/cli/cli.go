@@ -88,15 +88,13 @@ func Server() {
 	// https://gist.github.com/ryanfitz/4191392
 	onReady := func(s *discordgo.Session, m *discordgo.Ready) {
 		log.Info("Logged in as ", m.User.Username)
-		if !uptime.UptimeFirstRun {
-			go func() {
-				d := 5 * time.Minute
-				uptime.UptimeFunc(ctx, db, discord, time.Now())
-				for x := range time.Tick(d) {
-					uptime.UptimeFunc(ctx, db, discord, x)
-				}
-			}()
-		}
+		go func() {
+			d := 5 * time.Minute
+			uptime.UptimeFunc(ctx, db, discord, time.Now())
+			for x := range time.Tick(d) {
+				uptime.UptimeFunc(ctx, db, discord, x)
+			}
+		}()
 	}
 
 	discord.AddHandler(func(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
