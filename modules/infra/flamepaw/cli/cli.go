@@ -73,7 +73,7 @@ func Test() {
 	var i int
 	for i <= 10 {
 		for _, bot := range bots {
-			tests.TestURLStatus("GET", "https://api.fateslist.xyz/_sunbeam/reviews/"+bot+"?target_type=0&page="+rPage(), 200, 404, 400, 422)
+			tests.TestURLStatus("GET", "https://api.fateslist.xyz/reviews/"+bot+"?target_type=0&page="+rPage(), 200, 404, 400, 422)
 		}
 		i += 1
 	}
