@@ -79,18 +79,6 @@ func StartWebserver(db *pgxpool.Pool, redis *redis.Client, discord *discordgo.Se
 		c.JSON(200, uptime.Uptime)
 	})
 
-	router.GET("/_getperm", func(c *gin.Context) {
-		userId := c.Query("user_id")
-
-		perms, _, _ := common.GetPerms(discord, userId, 0)
-		res, err := json.Marshal(perms)
-		if err != nil {
-			log.Warn(err)
-			res = []byte("-1")
-		}
-		c.Data(200, "application/fates-gp", res)
-	})
-
 	router.POST("/github", func(c *gin.Context) {
 		var bodyBytes []byte
 		if c.Request.Body != nil {

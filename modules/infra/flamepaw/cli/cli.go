@@ -16,6 +16,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-redis/redis/v8"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
 	log "github.com/sirupsen/logrus"
 )
@@ -28,6 +29,14 @@ var (
 	err     error
 )
 
+func CreateUUID() string {
+	uuid, err := uuid.NewRandom()
+	if err != nil || uuid.String() == "" {
+		return CreateUUID()
+	}
+	return uuid.String()
+}
+
 func Test() {
 	rPage := func() string {
 		rand.Seed(time.Now().UnixNano())
@@ -35,7 +44,7 @@ func Test() {
 		return pageRand
 	}
 
-	logFile, err := os.OpenFile("modules/infra/flamepaw/_logs/dragon-"+common.CreateUUID(), os.O_RDWR|os.O_CREATE, 0600)
+	logFile, err := os.OpenFile("modules/infra/flamepaw/_logs/dragon-"+CreateUUID(), os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		log.Error(err)
 	}
@@ -103,18 +112,6 @@ func Server() {
 		}
 
 		log.Info("New user found. Handling them...")
-
-		if m.Member.GuildID == common.StaffServer {
-			if !m.Member.User.Bot {
-				_, isStaff, _ := common.GetPerms(s, m.Member.User.ID, 5)
-				if isStaff {
-					err := s.GuildMemberRoleAdd(m.Member.GuildID, m.Member.User.ID, common.TestServerStaffRole)
-					if err != nil {
-						log.Error(err)
-					}
-				}
-			}
-		}
 
 		if m.Member.GuildID == common.MainServer && m.Member.User.Bot {
 			// Auto kick code. Minotaur handles autoroles and does it better than me

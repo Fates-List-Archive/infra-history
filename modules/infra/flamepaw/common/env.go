@@ -49,7 +49,6 @@ func init() {
 
 	secretsJsonFile = RootPath + "/config/data/secrets.json"
 	discordJsonFile = RootPath + "/config/data/discord.json"
-	staffRoleFilePath = RootPath + "/config/data/staff_roles.json"
 
 	if CliCmd == "" && !RegisterCommands && !IPCOnly {
 		fmt.Println("Version:", version, "\nBuilt with:", runtime.Version())
@@ -93,8 +92,6 @@ func init() {
 	var channels = v.GetObject("channels")
 
 	GithubChannel = string(channels.Get("github_channel").GetStringBytes())
-
-	permInit()
 
 	log.Info("Environment setup successfully!")
 }
