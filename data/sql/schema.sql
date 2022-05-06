@@ -333,6 +333,13 @@ CREATE TABLE servers (
     CONSTRAINT user_fk FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE user_connections (
+   user_id bigint not null,
+   client_id text not null,
+   refresh_token text not null,
+   CONSTRAINT user_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TABLE server_audit_logs (
     guild_id bigint not null,
     user_id bigint not null,
@@ -348,6 +355,14 @@ CREATE TABLE server_audit_logs (
 
 -- In server tags, owner_guild is the first guild a tag was given to
 create table server_tags (id TEXT NOT NULL UNIQUE, name TEXT NOT NULL UNIQUE, iconify_data TEXT NOT NULL, owner_guild BIGINT NOT NULL);
+
+create table frostpaw_clients (
+	id text not null,
+	name text not null,
+	domain text not null,
+	privacy_policy text not null,
+	secret text not null
+);
 
 CREATE TABLE leave_of_absence (
     id serial primary key,
