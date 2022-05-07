@@ -43,7 +43,9 @@ INSERT INTO features VALUES (
 CREATE TABLE bots (
     id BIGINT NOT NULL, -- Used by piccolo, must be equal to bot_id
     flags integer[] not null default '{}',
-    username_cached text DEFAULT '',
+    username_cached text not null DEFAULT '',
+    avatar_cached text not null DEFAULT '',
+    disc_cached text not null DEFAULT '',
     bot_id bigint not null unique,
     client_id bigint,
     votes bigint default 0,
@@ -337,6 +339,7 @@ CREATE TABLE user_connections (
    user_id bigint not null,
    client_id text not null,
    refresh_token text not null,
+   expires_on timestamptz NOW() + interval '1 week';
    CONSTRAINT user_fk FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
