@@ -43,6 +43,17 @@
 				"discord": "https://discord.gg/z3a2QAgFHr",
 				"website": "https://fateslist.xyz/server/949526728651440198"
 			}
+		},
+		{
+			"id": "minato-namikaze",
+			"name": "Minato Namikaze",
+			"owner": "887549958931247137",
+			"image": "https://i.imgur.com/FzgLCHM.jpeg",
+			"description": "Konichiwa 👋, myself Minato Namikaze, Konohagakure Yondaime Hokage. I do every work of a Hokage in a swift and clean way ⚡",
+			"links": {
+				"discord": "https://discord.gg/vfXHwS3nmQ",
+				"website": "https://minato-namikaze.readthedocs.io"
+			}
 		}
 	],
 	"icons": {
