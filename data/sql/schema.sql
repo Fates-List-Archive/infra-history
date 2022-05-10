@@ -62,7 +62,6 @@ CREATE TABLE bots (
     webhook_hmac_only boolean default false,
     description text not null,
     long_description text not null,
-    long_description_parsed text,
     long_description_type integer not null default 0,
     page_style integer not null default 0,
     css text default '',
@@ -364,7 +363,9 @@ create table frostpaw_clients (
 	name text not null,
 	domain text not null,
 	privacy_policy text not null,
-	secret text not null
+	owner_id bigint not null,
+	secret text not null,
+	CONSTRAINT user_fk FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE leave_of_absence (
