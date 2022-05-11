@@ -77,14 +77,13 @@ CREATE TABLE bots (
     last_updated_at timestamptz not null DEFAULT NOW(),
     invite text not null default '',
     invite_amount integer DEFAULT 0,
-    nsfw boolean DEFAULT false,
     verifier bigint,
     uptime_checks_total integer default 0,
     uptime_checks_failed integer default 0,
     di_text text
 );
 
-CREATE INDEX bots_ext_index ON bots (username_cached, created_at, nsfw, prefix, privacy_policy, page_style); 
+CREATE INDEX bots_ext_index ON bots (username_cached, created_at, prefix, privacy_policy, page_style); 
 
 CREATE TABLE resources (
     id uuid primary key DEFAULT uuid_generate_v4(),
@@ -318,10 +317,8 @@ CREATE TABLE servers (
     invite_url text,
     invite_channel bigint,
     state int not null default 0,
-    nsfw boolean default false,
     banner_card text,
     banner_page text,
-    keep_banner_decor boolean default true,
     guild_count bigint default 0,
     tags text[] default '{}',
     old_state int not null default 0,
