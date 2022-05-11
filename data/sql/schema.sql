@@ -205,6 +205,7 @@ CREATE TABLE users (
     description text DEFAULT 'This user prefers to be an enigma',
     badges text[],
     username text,
+    extra_links jsonb not null default '{}',
     user_css text not null default '',
     profile_css text not null default '',
     state integer not null default 0, -- 0 = No Ban, 1 = Global Ban
