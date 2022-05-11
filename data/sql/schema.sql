@@ -305,7 +305,6 @@ CREATE TABLE servers (
     description text not null default 'No description set',
     user_blacklist bigint[] not null default '{}',
     user_whitelist bigint[] not null default '{}',
-    whitelist_only boolean default false,
     whitelist_form text,
     long_description text not null default 'No long description set! Set one with /settings longdesc Long description',
     long_description_type integer default 0,
