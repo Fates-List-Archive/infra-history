@@ -148,10 +148,10 @@ CREATE TABLE bot_packs (
 
 CREATE TABLE bot_commands (
    id uuid DEFAULT not null uuid_generate_v4(),
-   bot_id bigint,
+   bot_id bigint not null,
    cmd_type integer not null, -- 0 = no, 1 = guild, 2 = global
    groups text[] not null default '{Default}',
-   name text not null unique, -- command name
+   name text not null, -- command name
    vote_locked boolean not null default false, -- friendly name
    description text not null, -- command description
    args text[] not null default '{}', -- list of arguments
@@ -312,7 +312,6 @@ CREATE TABLE servers (
     api_token text not null unique,
     extra_links jsonb not null default '{}'
     website text,
-    login_required boolean default true,
     created_at timestamptz not null default now(),
     invite_amount integer DEFAULT 0,
     invite_url text,
