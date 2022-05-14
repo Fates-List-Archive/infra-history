@@ -12,6 +12,7 @@ import uuid
 from getpass import getpass
 from pathlib import Path
 from subprocess import DEVNULL, Popen
+import requests
 
 def error(msg: str, code: int = 1):
     print(msg)
@@ -100,15 +101,28 @@ def db_backup():
 
     logger.info("Schema backup done")
 
+    local_recv = os.environ.get("UPLOAD_DIR") or getpass(prompt="Enter server upload dir (optional)")
+
     conf_pwd = os.environ.get("RCLONE_PWD") or getpass(prompt="Enter rclone conf password: ")
     for bak_type in ("full", "schema"):
+        os.chdir("/tmp")
         cmd = (
-            f"rclone copy /backups/{bak_type}-{bak_id}.bak 'Fates List:/fates_backups' "
+            f"rclone copy /backups/{bak_type}-{bak_id}.bak 'Fates List:' "
         )
         cmd += f"--password-command 'printf {conf_pwd}'"
 
         with Popen(cmd, env=os.environ, shell=True) as proc:
             proc.wait()
+
+        # Copy out of FatesList directory
+        for f in Path("FatesList").glob("*.bin"):
+            if local_recv:
+                print(f, f" is being pushed on to {local_recv}")
+                with open(str(f), "rb") as f:
+                    files = {"file": ("fb/"+f.name, f, "multipart/form-data")}
+                    requests.post(url=f"{local_recv.rstrip('/')}/recv", files=files)
+
+        shutil.rmtree("FatesList")
 
     logger.success("Backups done!")
 
